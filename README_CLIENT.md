@@ -7,6 +7,7 @@ Il ne contient pas le code source de l'application.
 
 ```text
 install-client.ps1          # Installation initiale Windows
+check-update.ps1            # Verification automatique des versions
 update-client.ps1           # Mise a jour Windows
 docker-compose.release.yml  # Compose client sans build source
 ```
@@ -47,13 +48,34 @@ API health: http://localhost:8000/health
 
 ## Mise a jour simple
 
-Quand une nouvelle version est annoncee :
+Verifier automatiquement si une nouvelle version stable est disponible :
+
+```powershell
+.\check-update.ps1
+```
+
+Mettre a jour automatiquement vers la derniere version stable disponible, avec confirmation manuelle :
+
+```powershell
+.\update-client.ps1
+```
+
+Le script :
+
+- lit la version installee dans `C:\ai-deep-monitor\.env` ;
+- interroge GHCR ;
+- compare les tags stables `vX.Y.Z` ;
+- annonce la derniere version disponible ;
+- demande confirmation avant modification ;
+- modifie `APP_VERSION` dans `.env` ;
+- telecharge les nouvelles images Docker ;
+- relance les services.
+
+Mise a jour forcee vers une version precise :
 
 ```powershell
 .\update-client.ps1 -AppVersion v0.2.0
 ```
-
-Le script modifie `APP_VERSION` dans `.env`, telecharge les nouvelles images Docker et relance les services.
 
 ## Rollback
 
