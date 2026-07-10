@@ -1,0 +1,67 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ai-monitor-client-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_USER: "${MYSQL_USER}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+    volumes:
+      - client_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  api:
+    image: "ghcr.io/${GITHUB_OWNER:-jimmindev}/ai-deep-monitor-api:${APP_VERSION:-latest}"
+    container_name: ai-monitor-client-api
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_USER: "${MYSQL_USER}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
+      DB_INIT_RETRIES: "30"
+      DB_INIT_RETRY_DELAY: "2"
+      CORS_ORIGINS: "${CORS_ORIGINS}"
+      PYTHONPATH: /app
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - client_api_data:/app/data
+      - client_uploaded_mibs:/app/uploaded_mibs
+      - client_generated_backups:/app/generated_backups
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  frontend:
+    image: "ghcr.io/${GITHUB_OWNER:-jimmindev}/ai-deep-monitor-frontend:${APP_VERSION:-latest}"
+    container_name: ai-monitor-client-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  client_mysql_data:
+  client_api_data:
+  client_uploaded_mibs:
+  client_generated_backups:
