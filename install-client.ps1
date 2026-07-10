@@ -30,6 +30,21 @@ function Require-Command {
   }
 }
 
+function Write-DotEnvValue {
+  param(
+    [string]$Path,
+    [string]$Key,
+    [string]$Value
+  )
+  $content = Get-Content -LiteralPath $Path -Raw
+  if ($content -match "(?m)^$([regex]::Escape($Key))=") {
+    $content = $content -replace "(?m)^$([regex]::Escape($Key))=.*$", "$Key=$Value"
+  } else {
+    $content = "$content`r`n$Key=$Value"
+  }
+  Set-Content -LiteralPath $Path -Value $content -Encoding UTF8
+}
+
 if (-not $CorsOrigins) {
   if ($FrontendPort -eq 80) {
     $CorsOrigins = "http://localhost"
@@ -55,6 +70,9 @@ if (-not (Test-Path -LiteralPath $envTarget)) {
   $envContent = @"
 GITHUB_OWNER=$GithubOwner
 APP_VERSION=$AppVersion
+UPDATE_CHECK_ENABLED=true
+UPDATE_CHECK_USER=
+UPDATE_CHECK_TOKEN=
 
 MYSQL_ROOT_PASSWORD=$mysqlRootPassword
 MYSQL_DATABASE=ai_monitor_prod
@@ -89,6 +107,9 @@ if (-not $SkipDockerLogin) {
   try {
     $plainToken = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($tokenPtr)
     $plainToken | docker login ghcr.io -u $githubUser --password-stdin
+    Write-DotEnvValue -Path $envTarget -Key "UPDATE_CHECK_ENABLED" -Value "true"
+    Write-DotEnvValue -Path $envTarget -Key "UPDATE_CHECK_USER" -Value $githubUser
+    Write-DotEnvValue -Path $envTarget -Key "UPDATE_CHECK_TOKEN" -Value $plainToken
   } finally {
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($tokenPtr)
   }

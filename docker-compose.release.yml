@@ -34,6 +34,11 @@ services:
       DB_INIT_RETRY_DELAY: "2"
       CORS_ORIGINS: "${CORS_ORIGINS}"
       PYTHONPATH: /app
+      APP_VERSION: "${APP_VERSION:-latest}"
+      GITHUB_OWNER: "${GITHUB_OWNER:-jimmindev}"
+      UPDATE_CHECK_ENABLED: "${UPDATE_CHECK_ENABLED:-true}"
+      UPDATE_CHECK_USER: "${UPDATE_CHECK_USER:-}"
+      UPDATE_CHECK_TOKEN: "${UPDATE_CHECK_TOKEN:-}"
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:

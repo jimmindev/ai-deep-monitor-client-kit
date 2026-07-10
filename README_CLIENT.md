@@ -71,6 +71,14 @@ Le script :
 - telecharge les nouvelles images Docker ;
 - relance les services.
 
+## Version visible dans l'application
+
+La barre du haut affiche la version installee.
+Si `UPDATE_CHECK_ENABLED=true` et que `UPDATE_CHECK_USER` / `UPDATE_CHECK_TOKEN` sont renseignes dans `.env`, l'API verifie les tags GHCR et l'application affiche une notification quand une nouvelle version stable est disponible.
+
+Le token reste cote serveur dans `C:\ai-deep-monitor\.env`.
+Il n'est jamais envoye au navigateur.
+
 Mise a jour forcee vers une version precise :
 
 ```powershell

@@ -85,8 +85,14 @@ if (-not $currentVersion) {
 
 Write-Host "Version installee: $currentVersion"
 
-$githubUser = Read-Host "Utilisateur GitHub"
-$plainToken = Read-PlainToken
+$githubUser = $envValues["UPDATE_CHECK_USER"]
+$plainToken = $envValues["UPDATE_CHECK_TOKEN"]
+if (-not $githubUser -or -not $plainToken) {
+  $githubUser = Read-Host "Utilisateur GitHub"
+  $plainToken = Read-PlainToken
+} else {
+  Write-Host "Verification avec les identifiants GHCR configures dans .env."
+}
 
 $frontendBearer = Get-GhcrBearerToken -Owner $githubOwner -ImageName "ai-deep-monitor-frontend" -GithubUser $githubUser -GithubToken $plainToken
 $apiBearer = Get-GhcrBearerToken -Owner $githubOwner -ImageName "ai-deep-monitor-api" -GithubUser $githubUser -GithubToken $plainToken
