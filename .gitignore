@@ -1,0 +1,9 @@
+.env
+.env.*
+*.log
+*.tmp
+*.bak
+data/
+backups/
+generated_backups/
+uploaded_mibs/
