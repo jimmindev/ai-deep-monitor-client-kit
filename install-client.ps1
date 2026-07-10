@@ -69,8 +69,12 @@ if (-not (Test-Path -LiteralPath $envTarget)) {
   $mysqlPassword = New-Secret
   $envContent = @"
 GITHUB_OWNER=$GithubOwner
+GITHUB_REPOSITORY_NAME=ai-deep-monitor
 APP_VERSION=$AppVersion
+APP_CHANNEL=stable
 UPDATE_CHECK_ENABLED=true
+UPDATE_CHECK_CHANNEL=stable
+UPDATE_CHECK_BRANCH=preprod
 UPDATE_CHECK_USER=
 UPDATE_CHECK_TOKEN=
 
