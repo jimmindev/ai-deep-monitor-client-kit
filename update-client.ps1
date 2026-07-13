@@ -98,6 +98,19 @@ function Get-LatestStableTag {
 
 $composePath = Join-Path $InstallDir "docker-compose.release.yml"
 $envPath = Join-Path $InstallDir ".env"
+$composeSource = Join-Path $PSScriptRoot "docker-compose.release.yml"
+
+if (Test-Path -LiteralPath $composeSource) {
+  $sourcePath = (Resolve-Path -LiteralPath $composeSource).Path
+  $targetPath = $composePath
+  if (Test-Path -LiteralPath $composePath) {
+    $targetPath = (Resolve-Path -LiteralPath $composePath).Path
+  }
+  if ($sourcePath -ne $targetPath) {
+    Copy-Item -LiteralPath $composeSource -Destination $composePath -Force
+    Write-Host "Compose client mis a jour: $composePath"
+  }
+}
 
 if (-not (Test-Path -LiteralPath $composePath)) {
   throw "Compose introuvable: $composePath. Lance d'abord install-client.ps1."

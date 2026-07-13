@@ -43,6 +43,11 @@ services:
       UPDATE_CHECK_BRANCH: "${UPDATE_CHECK_BRANCH:-preprod}"
       UPDATE_CHECK_USER: "${UPDATE_CHECK_USER:-}"
       UPDATE_CHECK_TOKEN: "${UPDATE_CHECK_TOKEN:-}"
+      OLLAMA_HOST: "http://ollama:11434"
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.1}"
+      OLLAMA_TEMPERATURE: "${OLLAMA_TEMPERATURE:-0.2}"
+      OLLAMA_NUM_PREDICT: "${OLLAMA_NUM_PREDICT:-512}"
+      CHATBOT_DATA_DIR: /app/data
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
@@ -52,12 +57,42 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      ollama:
+        condition: service_healthy
+      ollama-models:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
       interval: 10s
       timeout: 5s
       retries: 12
       start_period: 20s
+
+  ollama:
+    image: "${OLLAMA_IMAGE:-ollama/ollama:latest}"
+    container_name: ai-monitor-client-ollama
+    restart: unless-stopped
+    volumes:
+      - client_ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  ollama-models:
+    image: "${OLLAMA_IMAGE:-ollama/ollama:latest}"
+    container_name: ai-monitor-client-ollama-models
+    restart: "no"
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.1}"
+    entrypoint: ["/bin/sh", "-c"]
+    command: "ollama pull \"$${OLLAMA_MODEL}\""
+    depends_on:
+      ollama:
+        condition: service_healthy
 
   frontend:
     image: "ghcr.io/${GITHUB_OWNER:-jimmindev}/ai-deep-monitor-frontend:${APP_VERSION:-latest}"
@@ -74,3 +109,4 @@ volumes:
   client_api_data:
   client_uploaded_mibs:
   client_generated_backups:
+  client_ollama_data:

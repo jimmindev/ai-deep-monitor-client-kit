@@ -17,6 +17,7 @@ docker-compose.release.yml  # Compose client sans build source
 - Docker Desktop installe et demarre
 - Acces au registry prive `ghcr.io`
 - Token GitHub avec permission `read:packages`
+- Espace disque suffisant pour le modele Ollama telecharge au premier lancement
 
 ## Installation simple
 
@@ -24,7 +25,7 @@ Ouvrir PowerShell dans ce dossier :
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\install-client.ps1 -AppVersion v0.1.1
+.\install-client.ps1 -AppVersion v0.1.2
 ```
 
 Par defaut, l'application est installee dans :
@@ -43,7 +44,7 @@ API health: http://localhost:8000/health
 ## Installation avec dossier ou ports personnalises
 
 ```powershell
-.\install-client.ps1 -InstallDir "D:\Apps\ai-deep-monitor" -AppVersion v0.1.1 -FrontendPort 8081 -ApiPort 8001
+.\install-client.ps1 -InstallDir "D:\Apps\ai-deep-monitor" -AppVersion v0.1.2 -FrontendPort 8081 -ApiPort 8001
 ```
 
 ## Mise a jour simple
@@ -68,6 +69,7 @@ Le script :
 - annonce la derniere version disponible ;
 - demande confirmation avant modification ;
 - modifie `APP_VERSION` dans `.env` ;
+- remplace le compose installe si le kit contient une version plus recente ;
 - telecharge les nouvelles images Docker ;
 - relance les services.
 
@@ -100,7 +102,19 @@ cd C:\ai-deep-monitor
 docker compose -f docker-compose.release.yml --env-file .env ps
 docker compose -f docker-compose.release.yml --env-file .env logs -f
 docker compose -f docker-compose.release.yml --env-file .env down
+docker exec ai-monitor-client-ollama ollama list
 ```
+
+## Chatbot Ollama
+
+Le kit lance un conteneur `ollama` et telecharge automatiquement le modele defini dans `.env` :
+
+```env
+OLLAMA_MODEL=llama3.1
+```
+
+Le premier demarrage peut etre long, le temps de telecharger le modele.
+Pour changer de modele, modifie `OLLAMA_MODEL`, puis relance `.\update-client.ps1`.
 
 ## Securite
 

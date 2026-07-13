@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [string]$AppVersion = "v0.1.1",
+  [string]$AppVersion = "v0.1.2",
   [string]$GithubOwner = "jimmindev",
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
@@ -77,6 +77,11 @@ UPDATE_CHECK_CHANNEL=stable
 UPDATE_CHECK_BRANCH=preprod
 UPDATE_CHECK_USER=
 UPDATE_CHECK_TOKEN=
+
+OLLAMA_IMAGE=ollama/ollama:latest
+OLLAMA_MODEL=llama3.1
+OLLAMA_TEMPERATURE=0.2
+OLLAMA_NUM_PREDICT=512
 
 MYSQL_ROOT_PASSWORD=$mysqlRootPassword
 MYSQL_DATABASE=ai_monitor_prod
