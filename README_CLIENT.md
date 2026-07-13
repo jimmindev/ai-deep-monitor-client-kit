@@ -24,7 +24,7 @@ Ouvrir PowerShell dans ce dossier :
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\install-client.ps1 -AppVersion v0.1.0
+.\install-client.ps1 -AppVersion v0.1.1
 ```
 
 Par defaut, l'application est installee dans :
@@ -43,7 +43,7 @@ API health: http://localhost:8000/health
 ## Installation avec dossier ou ports personnalises
 
 ```powershell
-.\install-client.ps1 -InstallDir "D:\Apps\ai-deep-monitor" -AppVersion v0.1.0 -FrontendPort 8081 -ApiPort 8001
+.\install-client.ps1 -InstallDir "D:\Apps\ai-deep-monitor" -AppVersion v0.1.1 -FrontendPort 8081 -ApiPort 8001
 ```
 
 ## Mise a jour simple
