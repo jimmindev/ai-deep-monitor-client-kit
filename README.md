@@ -25,7 +25,7 @@ Ouvrir PowerShell dans ce dossier :
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\install-client.ps1 -AppVersion v0.1.2
+.\install-client.ps1 -AppVersion v0.1.3
 ```
 
 Par defaut, l'application est installee dans :
@@ -44,10 +44,12 @@ API health: http://localhost:8000/health
 ## Installation personnalisee
 
 ```powershell
-.\install-client.ps1 -InstallDir "D:\Apps\ai-deep-monitor" -AppVersion v0.1.2 -FrontendPort 8081 -ApiPort 8001
+.\install-client.ps1 -InstallDir "D:\Apps\ai-deep-monitor" -AppVersion v0.1.3 -FrontendPort 8081 -ApiPort 8001
 ```
 
 ## Verification de mise a jour
+
+La version client actuelle est `v0.1.3`. Les versions restent en `v0.x` tant que l'application n'est pas fonctionnellement complete; `v1.0.0` marquera la premiere version finale validee.
 
 ```powershell
 .\check-update.ps1
