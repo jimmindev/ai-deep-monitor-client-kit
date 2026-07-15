@@ -9,6 +9,9 @@ Il ne contient pas le code source de l'application.
 install-client.ps1          # Installation initiale Windows
 check-update.ps1            # Verification automatique des versions
 update-client.ps1           # Mise a jour Windows
+backup-client.ps1           # Sauvegarde MySQL et donnees API
+restore-client.ps1          # Restauration controlee
+uninstall-client.ps1        # Desinstallation partielle ou complete
 docker-compose.release.yml  # Compose client sans build source
 ```
 
@@ -27,6 +30,8 @@ Ouvrir PowerShell dans ce dossier :
 Set-ExecutionPolicy -Scope Process Bypass
 .\install-client.ps1 -AppVersion v0.1.3
 ```
+
+Les ports sont choisis automatiquement si les ports proposes sont occupes. Une installation existante est reprise sans recreer les secrets ni les volumes. Des volumes existants sans ancien `.env` bloquent volontairement l'installation afin de proteger les donnees MySQL.
 
 Par defaut, l'application est installee dans :
 
@@ -68,8 +73,9 @@ Le script :
 - compare les tags stables `vX.Y.Z` ;
 - annonce la derniere version disponible ;
 - demande confirmation avant modification ;
+- sauvegarde les donnees avant la mise a jour ;
 - modifie `APP_VERSION` dans `.env` ;
-- remplace le compose installe si le kit contient une version plus recente ;
+- remplace le compose et les scripts installes si le kit contient une version plus recente ;
 - telecharge les nouvelles images Docker ;
 - relance les services.
 
@@ -94,6 +100,36 @@ Revenir a une version precedente :
 
 ```powershell
 .\update-client.ps1 -AppVersion v0.1.0
+```
+
+## Sauvegarde et restauration
+
+Creer un ZIP portable dans `C:\ai-deep-monitor-backups` :
+
+```powershell
+.\backup-client.ps1
+```
+
+Restaurer MySQL, les donnees API, les MIB et les sauvegardes applicatives :
+
+```powershell
+.\restore-client.ps1 -BackupFile "C:\ai-deep-monitor-backups\ai-deep-monitor-v0.1.3-AAAAMMJJ-HHMMSS.zip"
+```
+
+Le modele Ollama n'est pas archive : il est retelcharge automatiquement si necessaire.
+
+## Desinstallation
+
+Conserver les donnees et retirer uniquement les conteneurs :
+
+```powershell
+.\uninstall-client.ps1 -Mode Partial
+```
+
+Sauvegarder puis supprimer l'installation et ses volumes :
+
+```powershell
+.\uninstall-client.ps1 -Mode Full
 ```
 
 ## Commandes utiles

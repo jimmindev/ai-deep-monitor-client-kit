@@ -6,6 +6,7 @@ param(
   [int]$ApiPort = 8000,
   [string]$CorsOrigins = "",
   [switch]$SkipDockerLogin,
+  [switch]$StrictPorts,
   [switch]$NoStart
 )
 
@@ -30,6 +31,69 @@ function Require-Command {
   }
 }
 
+function Read-DotEnv {
+  param([string]$Path)
+  $values = @{}
+  if (-not (Test-Path -LiteralPath $Path)) { return $values }
+  foreach ($line in Get-Content -LiteralPath $Path) {
+    if ($line -match "^\s*#" -or $line -match "^\s*$") { continue }
+    if ($line -match "^\s*([^=]+?)\s*=\s*(.*)\s*$") {
+      $values[$Matches[1].Trim()] = $Matches[2].Trim().Trim('"').Trim("'")
+    }
+  }
+  return $values
+}
+
+function Test-PortAvailable {
+  param([int]$Port)
+  $listener = $null
+  try {
+    $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Any, $Port)
+    $listener.Server.ExclusiveAddressUse = $true
+    $listener.Start()
+    return $true
+  } catch {
+    return $false
+  } finally {
+    if ($listener) { $listener.Stop() }
+  }
+}
+
+function Get-AvailablePort {
+  param(
+    [int]$PreferredPort,
+    [int[]]$ExcludedPorts = @()
+  )
+  for ($port = $PreferredPort; $port -le [Math]::Min($PreferredPort + 200, 65535); $port++) {
+    if ($port -notin $ExcludedPorts -and (Test-PortAvailable -Port $port)) { return $port }
+  }
+  throw "Aucun port disponible trouve a partir de $PreferredPort."
+}
+
+function Get-ExistingDataVolumes {
+  param([string]$ProjectName)
+  if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { return @() }
+  try {
+    $expectedNames = @(
+      "${ProjectName}_client_mysql_data",
+      "${ProjectName}_client_api_data",
+      "${ProjectName}_client_uploaded_mibs",
+      "${ProjectName}_client_generated_backups",
+      "${ProjectName}_client_ollama_data"
+    )
+    $volumes = @(& docker volume ls --format "{{.Name}}" 2>$null | Where-Object { $_ -in $expectedNames })
+    foreach ($containerName in @("ai-monitor-client-mysql", "ai-monitor-client-api", "ai-monitor-client-ollama")) {
+      $containerRows = @(& docker ps -a --filter "name=^/${containerName}$" --format "{{.ID}}" 2>$null)
+      if ($containerRows.Count -eq 0) { continue }
+      $mounted = @(& docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{println}}{{end}}{{end}}' $containerRows[0] 2>$null)
+      $volumes += $mounted | Where-Object { $_ -and $_ -match "client_(mysql_data|api_data|uploaded_mibs|generated_backups|ollama_data)$" }
+    }
+    return @($volumes | Sort-Object -Unique)
+  } catch {
+    return @()
+  }
+}
+
 function Write-DotEnvValue {
   param(
     [string]$Path,
@@ -45,14 +109,6 @@ function Write-DotEnvValue {
   Set-Content -LiteralPath $Path -Value $content -Encoding UTF8
 }
 
-if (-not $CorsOrigins) {
-  if ($FrontendPort -eq 80) {
-    $CorsOrigins = "http://localhost"
-  } else {
-    $CorsOrigins = "http://localhost:$FrontendPort"
-  }
-}
-
 $installPath = New-Item -ItemType Directory -Force -Path $InstallDir
 $composeSource = Join-Path $PSScriptRoot "docker-compose.release.yml"
 if (-not (Test-Path -LiteralPath $composeSource)) {
@@ -61,10 +117,66 @@ if (-not (Test-Path -LiteralPath $composeSource)) {
 
 $composeTarget = Join-Path $installPath.FullName "docker-compose.release.yml"
 $envTarget = Join-Path $installPath.FullName ".env"
+$projectName = ([IO.Path]::GetFileName($installPath.FullName)).ToLowerInvariant() -replace "[^a-z0-9_-]", ""
+if (-not $projectName) { $projectName = "ai-deep-monitor" }
 
-Copy-Item -LiteralPath $composeSource -Destination $composeTarget -Force
+$kitFiles = @(
+  "docker-compose.release.yml",
+  "install-client.ps1",
+  "update-client.ps1",
+  "check-update.ps1",
+  "backup-client.ps1",
+  "restore-client.ps1",
+  "uninstall-client.ps1",
+  "README_CLIENT.md"
+)
+foreach ($fileName in $kitFiles) {
+  $source = Join-Path $PSScriptRoot $fileName
+  if (Test-Path -LiteralPath $source) {
+    $target = Join-Path $installPath.FullName $fileName
+    if ((Resolve-Path -LiteralPath $source).Path -ne $target) {
+      Copy-Item -LiteralPath $source -Destination $target -Force
+    }
+  }
+}
 
-if (-not (Test-Path -LiteralPath $envTarget)) {
+$existingEnv = Test-Path -LiteralPath $envTarget
+$existingVolumes = Get-ExistingDataVolumes -ProjectName $projectName
+if (-not $existingEnv -and $existingVolumes.Count -gt 0) {
+  throw "Des volumes AI Deep Monitor existent deja mais .env est absent. Restaure l'ancien .env ou lance une desinstallation Full explicite; de nouveaux mots de passe rendraient MySQL inaccessible. Volumes: $($existingVolumes -join ', ')"
+}
+
+if ($existingEnv) {
+  $existingValues = Read-DotEnv -Path $envTarget
+  if ($existingValues["FRONTEND_PORT"]) { $FrontendPort = [int]$existingValues["FRONTEND_PORT"] }
+  if ($existingValues["API_PORT"]) { $ApiPort = [int]$existingValues["API_PORT"] }
+  if (-not $CorsOrigins -and $existingValues["CORS_ORIGINS"]) { $CorsOrigins = $existingValues["CORS_ORIGINS"] }
+  Write-Host "Installation existante detectee: configuration et volumes conserves."
+} else {
+  if (-not $NoStart) {
+    Require-Command "docker"
+    docker version | Out-Null
+  }
+  if (-not (Test-PortAvailable -Port $FrontendPort)) {
+    if ($StrictPorts) { throw "Le port frontend $FrontendPort est deja utilise." }
+    $newPort = Get-AvailablePort -PreferredPort $FrontendPort
+    Write-Host "Port frontend $FrontendPort occupe; port $newPort selectionne automatiquement."
+    $FrontendPort = $newPort
+  }
+  if (-not (Test-PortAvailable -Port $ApiPort) -or $ApiPort -eq $FrontendPort) {
+    if ($StrictPorts) { throw "Le port API $ApiPort est deja utilise." }
+    $newPort = Get-AvailablePort -PreferredPort $ApiPort -ExcludedPorts @($FrontendPort)
+    Write-Host "Port API $ApiPort indisponible; port $newPort selectionne automatiquement."
+    $ApiPort = $newPort
+  }
+}
+
+if (-not $CorsOrigins) {
+  if ($FrontendPort -eq 80) { $CorsOrigins = "http://localhost" }
+  else { $CorsOrigins = "http://localhost:$FrontendPort" }
+}
+
+if (-not $existingEnv) {
   $mysqlRootPassword = New-Secret
   $mysqlPassword = New-Secret
   $envContent = @"
@@ -107,6 +219,11 @@ if ($NoStart) {
 Require-Command "docker"
 docker version | Out-Null
 docker compose version | Out-Null
+docker compose -f $composeTarget --env-file $envTarget config --quiet
+
+if ($existingVolumes.Count -gt 0) {
+  Write-Host "Volumes existants reutilises: $($existingVolumes -join ', ')"
+}
 
 if (-not $SkipDockerLogin) {
   Write-Host "Connexion au registry prive GHCR."

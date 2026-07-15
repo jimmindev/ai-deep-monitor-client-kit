@@ -2,6 +2,7 @@ param(
   [string]$InstallDir = "C:\ai-deep-monitor",
   [string]$AppVersion = "",
   [switch]$SkipDockerLogin,
+  [switch]$SkipBackup,
   [switch]$NoStart,
   [switch]$Yes
 )
@@ -98,17 +99,26 @@ function Get-LatestStableTag {
 
 $composePath = Join-Path $InstallDir "docker-compose.release.yml"
 $envPath = Join-Path $InstallDir ".env"
-$composeSource = Join-Path $PSScriptRoot "docker-compose.release.yml"
 
-if (Test-Path -LiteralPath $composeSource) {
-  $sourcePath = (Resolve-Path -LiteralPath $composeSource).Path
-  $targetPath = $composePath
-  if (Test-Path -LiteralPath $composePath) {
-    $targetPath = (Resolve-Path -LiteralPath $composePath).Path
-  }
+$kitFiles = @(
+  "docker-compose.release.yml",
+  "install-client.ps1",
+  "update-client.ps1",
+  "check-update.ps1",
+  "backup-client.ps1",
+  "restore-client.ps1",
+  "uninstall-client.ps1",
+  "README_CLIENT.md"
+)
+foreach ($fileName in $kitFiles) {
+  $source = Join-Path $PSScriptRoot $fileName
+  if (-not (Test-Path -LiteralPath $source)) { continue }
+  $target = Join-Path $InstallDir $fileName
+  $sourcePath = (Resolve-Path -LiteralPath $source).Path
+  $targetPath = $target
+  if (Test-Path -LiteralPath $target) { $targetPath = (Resolve-Path -LiteralPath $target).Path }
   if ($sourcePath -ne $targetPath) {
-    Copy-Item -LiteralPath $composeSource -Destination $composePath -Force
-    Write-Host "Compose client mis a jour: $composePath"
+    Copy-Item -LiteralPath $source -Destination $target -Force
   }
 }
 
@@ -174,6 +184,15 @@ if (-not $AppVersion) {
       exit 0
     }
   }
+}
+
+if (-not $SkipBackup -and -not $NoStart) {
+  $backupScript = Join-Path $InstallDir "backup-client.ps1"
+  if (-not (Test-Path -LiteralPath $backupScript)) {
+    throw "backup-client.ps1 introuvable. Utilise -SkipBackup uniquement si une sauvegarde externe existe deja."
+  }
+  Write-Host "Sauvegarde automatique avant mise a jour..."
+  & $backupScript -InstallDir $InstallDir
 }
 
 $backupPath = Join-Path $InstallDir (".env.backup-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
