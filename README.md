@@ -28,7 +28,7 @@ Ouvrir PowerShell dans ce dossier :
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\install-client.ps1 -AppVersion v0.1.3
+.\install-client.ps1 -AppVersion v0.1.4
 ```
 
 Le script choisit automatiquement d'autres ports si `80` ou `8000` sont deja occupes. Il conserve un `.env` et des volumes existants. S'il trouve des volumes sans leur ancien `.env`, il s'arrete pour eviter de rendre MySQL inaccessible avec de nouveaux mots de passe.
@@ -49,12 +49,12 @@ API health: http://localhost:8000/health
 ## Installation personnalisee
 
 ```powershell
-.\install-client.ps1 -InstallDir "D:\Apps\ai-deep-monitor" -AppVersion v0.1.3 -FrontendPort 8081 -ApiPort 8001
+.\install-client.ps1 -InstallDir "D:\Apps\ai-deep-monitor" -AppVersion v0.1.4 -FrontendPort 8081 -ApiPort 8001
 ```
 
 ## Verification de mise a jour
 
-La version client actuelle est `v0.1.3`. Les versions restent en `v0.x` tant que l'application n'est pas fonctionnellement complete; `v1.0.0` marquera la premiere version finale validee.
+La version client actuelle est `v0.1.4`. Les versions restent en `v0.x` tant que l'application n'est pas fonctionnellement complete; `v1.0.0` marquera la premiere version finale validee.
 
 ```powershell
 .\check-update.ps1
@@ -100,7 +100,7 @@ Le modele Ollama n'est pas inclus car il peut etre retelcharge et occupe plusieu
 ## Restauration
 
 ```powershell
-.\restore-client.ps1 -BackupFile "C:\ai-deep-monitor-backups\ai-deep-monitor-v0.1.3-20260715-120000.zip"
+.\restore-client.ps1 -BackupFile "C:\ai-deep-monitor-backups\ai-deep-monitor-v0.1.4-20260720-120000.zip"
 ```
 
 Le checksum du dump est controle avant remplacement des donnees. L'application est arretee pendant l'operation puis relancee automatiquement.

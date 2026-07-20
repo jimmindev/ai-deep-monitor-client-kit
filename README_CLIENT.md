@@ -28,7 +28,7 @@ Ouvrir PowerShell dans ce dossier :
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\install-client.ps1 -AppVersion v0.1.3
+.\install-client.ps1 -AppVersion v0.1.4
 ```
 
 Les ports sont choisis automatiquement si les ports proposes sont occupes. Une installation existante est reprise sans recreer les secrets ni les volumes. Des volumes existants sans ancien `.env` bloquent volontairement l'installation afin de proteger les donnees MySQL.
@@ -49,7 +49,7 @@ API health: http://localhost:8000/health
 ## Installation avec dossier ou ports personnalises
 
 ```powershell
-.\install-client.ps1 -InstallDir "D:\Apps\ai-deep-monitor" -AppVersion v0.1.3 -FrontendPort 8081 -ApiPort 8001
+.\install-client.ps1 -InstallDir "D:\Apps\ai-deep-monitor" -AppVersion v0.1.4 -FrontendPort 8081 -ApiPort 8001
 ```
 
 ## Mise a jour simple
@@ -82,7 +82,7 @@ Le script :
 ## Version visible dans l'application
 
 La barre du haut affiche la version installee.
-La version client actuelle est `v0.1.3`. La version `v1.0.0` ne sera publiee qu'une fois l'application fonctionnellement complete et validee.
+La version client actuelle est `v0.1.4`. La version `v1.0.0` ne sera publiee qu'une fois l'application fonctionnellement complete et validee.
 Si `UPDATE_CHECK_ENABLED=true` et que `UPDATE_CHECK_USER` / `UPDATE_CHECK_TOKEN` sont renseignes dans `.env`, l'API verifie les tags GHCR et l'application affiche une notification quand une nouvelle version stable est disponible.
 
 Le token reste cote serveur dans `C:\ai-deep-monitor\.env`.
@@ -113,7 +113,7 @@ Creer un ZIP portable dans `C:\ai-deep-monitor-backups` :
 Restaurer MySQL, les donnees API, les MIB et les sauvegardes applicatives :
 
 ```powershell
-.\restore-client.ps1 -BackupFile "C:\ai-deep-monitor-backups\ai-deep-monitor-v0.1.3-AAAAMMJJ-HHMMSS.zip"
+.\restore-client.ps1 -BackupFile "C:\ai-deep-monitor-backups\ai-deep-monitor-v0.1.4-AAAAMMJJ-HHMMSS.zip"
 ```
 
 Le modele Ollama n'est pas archive : il est retelcharge automatiquement si necessaire.
