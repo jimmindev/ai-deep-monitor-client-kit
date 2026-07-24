@@ -271,6 +271,57 @@ write_env_value() {
   chmod 600 "$file"
 }
 
+AUTH_CONFIG_CHANGED=false
+GENERATED_BOOTSTRAP_PASSWORD=""
+
+ensure_auth_config() {
+  local env_file="$1"
+  local secret
+  local key
+  local value
+
+  secret="$(read_env_value "$env_file" AUTH_SECRET_KEY)"
+  if (( ${#secret} < 32 )); then
+    write_env_value "$env_file" AUTH_SECRET_KEY "$(new_secret)"
+    AUTH_CONFIG_CHANGED=true
+  fi
+
+  if [[ -z "$(read_env_value "$env_file" AUTH_BOOTSTRAP_USERNAME)" ]]; then
+    write_env_value "$env_file" AUTH_BOOTSTRAP_USERNAME admin
+    AUTH_CONFIG_CHANGED=true
+  fi
+
+  if [[ -z "$(read_env_value "$env_file" AUTH_BOOTSTRAP_PASSWORD)" ]]; then
+    GENERATED_BOOTSTRAP_PASSWORD="Adm1-$(new_secret)"
+    write_env_value "$env_file" AUTH_BOOTSTRAP_PASSWORD "$GENERATED_BOOTSTRAP_PASSWORD"
+    AUTH_CONFIG_CHANGED=true
+  fi
+
+  while IFS='=' read -r key value; do
+    if [[ -z "$(read_env_value "$env_file" "$key")" ]]; then
+      write_env_value "$env_file" "$key" "$value"
+      AUTH_CONFIG_CHANGED=true
+    fi
+  done <<'EOF'
+AUTH_ACCESS_TOKEN_MINUTES=15
+AUTH_REFRESH_TOKEN_DAYS=7
+AUTH_MAX_FAILED_ATTEMPTS=5
+AUTH_LOCK_MINUTES=15
+AUTH_COOKIE_SECURE=false
+AUTH_COOKIE_SAMESITE=lax
+TELEMETRY_RAW_RETENTION_DAYS=7
+TELEMETRY_ROLLUP_RETENTION_DAYS=365
+EOF
+}
+
+print_bootstrap_credentials() {
+  [[ -n "$GENERATED_BOOTSTRAP_PASSWORD" ]] || return 0
+  printf '\nCompte initial, utilise uniquement si aucun administrateur n existe deja:\n'
+  printf '  Utilisateur : admin\n'
+  printf '  Mot de passe: %s\n' "$GENERATED_BOOTSTRAP_PASSWORD"
+  printf 'Un compte existant conserve son mot de passe actuel.\n\n'
+}
+
 port_is_available() {
   local port="$1"
   local endpoint
@@ -346,7 +397,7 @@ project_name_from_dir() {
 existing_data_volumes() {
   local project="$1"
   local expected
-  expected="${project}_client_(mysql_data|api_data|uploaded_mibs|generated_backups|ollama_data)"
+  expected="${project}_client_(mysql_data|api_data|uploaded_mibs|generated_backups|ollama_data|sandbox_jobs)"
   docker_exec volume ls --format '{{.Name}}' 2>/dev/null |
     grep -E "^${expected}$" || true
 }

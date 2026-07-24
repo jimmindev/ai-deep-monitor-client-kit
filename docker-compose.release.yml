@@ -21,6 +21,35 @@ services:
       retries: 30
       start_period: 20s
 
+  sandbox:
+    image: "ghcr.io/${GITHUB_OWNER:-jimmindev}/ai-deep-monitor-api:${APP_VERSION:-latest}"
+    platform: "${DOCKER_PLATFORM:-linux/amd64}"
+    container_name: ai-monitor-client-sandbox
+    restart: unless-stopped
+    user: "0:0"
+    command: ["python", "/app/sandbox/worker.py"]
+    environment:
+      SANDBOX_JOBS_DIR: /sandbox/jobs
+      SANDBOX_QUEUE_GID: "10001"
+    network_mode: none
+    read_only: true
+    cap_drop: ["ALL"]
+    cap_add: ["CHOWN", "SETUID", "SETGID", "KILL"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: 0.50
+    tmpfs:
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+    volumes:
+      - client_sandbox_jobs:/sandbox/jobs
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/sandbox-ready"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+      start_period: 3s
+
   api:
     image: "ghcr.io/${GITHUB_OWNER:-jimmindev}/ai-deep-monitor-api:${APP_VERSION:-latest}"
     platform: "${DOCKER_PLATFORM:-linux/amd64}"
@@ -32,6 +61,15 @@ services:
       MYSQL_DATABASE: "${MYSQL_DATABASE}"
       MYSQL_USER: "${MYSQL_USER}"
       MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
+      AUTH_SECRET_KEY: "${AUTH_SECRET_KEY}"
+      AUTH_BOOTSTRAP_USERNAME: "${AUTH_BOOTSTRAP_USERNAME:-admin}"
+      AUTH_BOOTSTRAP_PASSWORD: "${AUTH_BOOTSTRAP_PASSWORD:-}"
+      AUTH_ACCESS_TOKEN_MINUTES: "${AUTH_ACCESS_TOKEN_MINUTES:-15}"
+      AUTH_REFRESH_TOKEN_DAYS: "${AUTH_REFRESH_TOKEN_DAYS:-7}"
+      AUTH_MAX_FAILED_ATTEMPTS: "${AUTH_MAX_FAILED_ATTEMPTS:-5}"
+      AUTH_LOCK_MINUTES: "${AUTH_LOCK_MINUTES:-15}"
+      AUTH_COOKIE_SECURE: "${AUTH_COOKIE_SECURE:-false}"
+      AUTH_COOKIE_SAMESITE: "${AUTH_COOKIE_SAMESITE:-lax}"
       DB_INIT_RETRIES: "30"
       DB_INIT_RETRY_DELAY: "2"
       CORS_ORIGINS: "${CORS_ORIGINS}"
@@ -49,13 +87,19 @@ services:
       OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.1}"
       OLLAMA_TEMPERATURE: "${OLLAMA_TEMPERATURE:-0.2}"
       OLLAMA_NUM_PREDICT: "${OLLAMA_NUM_PREDICT:-512}"
+      TELEMETRY_RAW_RETENTION_DAYS: "${TELEMETRY_RAW_RETENTION_DAYS:-7}"
+      TELEMETRY_ROLLUP_RETENTION_DAYS: "${TELEMETRY_ROLLUP_RETENTION_DAYS:-365}"
       CHATBOT_DATA_DIR: /app/data
+      SANDBOX_JOBS_DIR: /sandbox/jobs
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
       - client_api_data:/app/data
       - client_uploaded_mibs:/app/uploaded_mibs
       - client_generated_backups:/app/generated_backups
+      - client_sandbox_jobs:/sandbox/jobs
+    group_add:
+      - "10001"
     depends_on:
       mysql:
         condition: service_healthy
@@ -63,6 +107,8 @@ services:
         condition: service_healthy
       ollama-models:
         condition: service_completed_successfully
+      sandbox:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
       interval: 10s
@@ -115,3 +161,4 @@ volumes:
   client_uploaded_mibs:
   client_generated_backups:
   client_ollama_data:
+  client_sandbox_jobs:

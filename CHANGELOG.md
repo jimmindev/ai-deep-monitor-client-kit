@@ -22,6 +22,16 @@
 
 - Une mise a jour du Client Kit recharge les images multiarchitectures meme si
   la version applicative reste identique.
+- La configuration d'authentification de l'API est maintenant generee et
+  conservee dans `.env`; l'absence de `AUTH_SECRET_KEY` ne provoque plus une
+  erreur HTTP 500 lors de la connexion.
+- Le script de mise a jour repare automatiquement une ancienne installation
+  dont les variables `AUTH_*` sont absentes, meme lorsque les versions du kit
+  et de l'application n'ont pas change.
+- La reparation de l'authentification conserve les volumes MySQL, les comptes,
+  les mots de passe existants et les ports deja selectionnes.
+- Le service sandbox et les parametres de retention de telemetrie de
+  l'application `v0.1.5` sont maintenant presents dans le Compose client.
 - Une nouvelle installation utilise le port web `80` lorsqu'il est libre,
   sinon le port `8080`; elle s'arrete clairement si les deux sont occupes.
 - Les archives de distribution portent maintenant un nom stable et
@@ -29,6 +39,14 @@
   nouveau dossier pour chaque version.
 - Ajout d'un nettoyeur Linux/Jetson et Windows qui retire uniquement les
   anciens dossiers et archives du Client Kit apres confirmation.
+
+### Validation
+
+- Installation neuve Linux et Windows sans demarrage.
+- Reparation d'un `.env` existant avec conservation du mot de passe MySQL et
+  du port web.
+- Validation Docker Compose apres generation des secrets.
+- Validation syntaxique des scripts Shell et PowerShell.
 
 ### Versions
 

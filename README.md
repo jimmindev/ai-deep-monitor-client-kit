@@ -184,6 +184,34 @@ C:\ai-deep-monitor\update-client.ps1
 La verification est automatique, mais l'installation de la mise a jour reste
 manuelle. Le script de mise a jour cree une sauvegarde avant tout changement.
 
+### Reparer l'authentification d'une installation existante
+
+Le kit `v0.1.7` verifie et repare les variables d'authentification dans
+`.env`, meme lorsque l'application reste en `v0.1.5`. Il ne remplace ni le
+mot de passe MySQL, ni les comptes applicatifs, ni les volumes existants.
+
+Linux:
+
+```bash
+~/ai-deep-monitor/update-client.sh \
+  --install-dir "$HOME/ai-deep-monitor" \
+  --app-version v0.1.5 \
+  --yes
+```
+
+Windows:
+
+```powershell
+C:\ai-deep-monitor\update-client.ps1 `
+  -InstallDir C:\ai-deep-monitor `
+  -AppVersion v0.1.5 `
+  -Yes
+```
+
+Un `401` sur `/api/auth/refresh` avant connexion indique simplement
+l'absence de session. Une erreur `500` sur `/api/auth/login` doit disparaitre
+apres la reparation et la recreation automatique du conteneur API.
+
 ## Sauvegarde
 
 Linux:

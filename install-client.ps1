@@ -121,14 +121,15 @@ function Get-ExistingDataVolumes {
       "${ProjectName}_client_api_data",
       "${ProjectName}_client_uploaded_mibs",
       "${ProjectName}_client_generated_backups",
-      "${ProjectName}_client_ollama_data"
+      "${ProjectName}_client_ollama_data",
+      "${ProjectName}_client_sandbox_jobs"
     )
     $volumes = @(& docker volume ls --format "{{.Name}}" 2>$null | Where-Object { $_ -in $expectedNames })
     foreach ($containerName in @("ai-monitor-client-mysql", "ai-monitor-client-api", "ai-monitor-client-ollama")) {
       $containerRows = @(& docker ps -a --filter "name=^/${containerName}$" --format "{{.ID}}" 2>$null)
       if ($containerRows.Count -eq 0) { continue }
       $mounted = @(& docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{println}}{{end}}{{end}}' $containerRows[0] 2>$null)
-      $volumes += $mounted | Where-Object { $_ -and $_ -match "client_(mysql_data|api_data|uploaded_mibs|generated_backups|ollama_data)$" }
+      $volumes += $mounted | Where-Object { $_ -and $_ -match "client_(mysql_data|api_data|uploaded_mibs|generated_backups|ollama_data|sandbox_jobs)$" }
     }
     return @($volumes | Sort-Object -Unique)
   } catch {
@@ -149,6 +150,50 @@ function Write-DotEnvValue {
     $content = "$content`r`n$Key=$Value"
   }
   Set-Content -LiteralPath $Path -Value $content -Encoding UTF8
+}
+
+function Repair-AuthConfig {
+  param([string]$Path)
+  $values = Read-DotEnv -Path $Path
+  $changed = $false
+  $bootstrapPassword = $null
+
+  if (-not $values["AUTH_SECRET_KEY"] -or $values["AUTH_SECRET_KEY"].Length -lt 32) {
+    Write-DotEnvValue -Path $Path -Key "AUTH_SECRET_KEY" -Value (New-Secret -Bytes 48)
+    $changed = $true
+  }
+  if (-not $values["AUTH_BOOTSTRAP_USERNAME"]) {
+    Write-DotEnvValue -Path $Path -Key "AUTH_BOOTSTRAP_USERNAME" -Value "admin"
+    $changed = $true
+  }
+  if (-not $values["AUTH_BOOTSTRAP_PASSWORD"]) {
+    $bootstrapPassword = "Adm1-$(New-Secret -Bytes 18)"
+    Write-DotEnvValue -Path $Path -Key "AUTH_BOOTSTRAP_PASSWORD" -Value $bootstrapPassword
+    $changed = $true
+  }
+
+  $defaults = [ordered]@{
+    AUTH_ACCESS_TOKEN_MINUTES = "15"
+    AUTH_REFRESH_TOKEN_DAYS = "7"
+    AUTH_MAX_FAILED_ATTEMPTS = "5"
+    AUTH_LOCK_MINUTES = "15"
+    AUTH_COOKIE_SECURE = "false"
+    AUTH_COOKIE_SAMESITE = "lax"
+    TELEMETRY_RAW_RETENTION_DAYS = "7"
+    TELEMETRY_ROLLUP_RETENTION_DAYS = "365"
+  }
+  $values = Read-DotEnv -Path $Path
+  foreach ($entry in $defaults.GetEnumerator()) {
+    if (-not $values[$entry.Key]) {
+      Write-DotEnvValue -Path $Path -Key $entry.Key -Value $entry.Value
+      $changed = $true
+    }
+  }
+
+  return @{
+    Changed = $changed
+    BootstrapPassword = $bootstrapPassword
+  }
 }
 
 $installPath = New-Item -ItemType Directory -Force -Path $InstallDir
@@ -192,6 +237,7 @@ foreach ($fileName in $kitFiles) {
 }
 
 $existingEnv = Test-Path -LiteralPath $envTarget
+$bootstrapAdminPassword = $null
 $dockerPlatform = if ($NoStart) {
   Get-AiMonitorHostPlatform
 } else {
@@ -241,6 +287,8 @@ if (-not $CorsOrigins) {
 if (-not $existingEnv) {
   $mysqlRootPassword = New-Secret
   $mysqlPassword = New-Secret
+  $authSecret = New-Secret -Bytes 48
+  $bootstrapAdminPassword = "Adm1-$(New-Secret -Bytes 18)"
   $envContent = @"
 GITHUB_OWNER=$GithubOwner
 GITHUB_REPOSITORY_NAME=ai-deep-monitor
@@ -264,6 +312,19 @@ MYSQL_DATABASE=ai_monitor_prod
 MYSQL_USER=ai_user
 MYSQL_PASSWORD=$mysqlPassword
 
+AUTH_SECRET_KEY=$authSecret
+AUTH_BOOTSTRAP_USERNAME=admin
+AUTH_BOOTSTRAP_PASSWORD=$bootstrapAdminPassword
+AUTH_ACCESS_TOKEN_MINUTES=15
+AUTH_REFRESH_TOKEN_DAYS=7
+AUTH_MAX_FAILED_ATTEMPTS=5
+AUTH_LOCK_MINUTES=15
+AUTH_COOKIE_SECURE=false
+AUTH_COOKIE_SAMESITE=lax
+
+TELEMETRY_RAW_RETENTION_DAYS=7
+TELEMETRY_ROLLUP_RETENTION_DAYS=365
+
 CORS_ORIGINS=$CorsOrigins
 
 FRONTEND_PORT=$FrontendPort
@@ -275,8 +336,19 @@ API_PORT=$ApiPort
   Write-Host "Fichier .env deja present, il est conserve: $envTarget"
 }
 
+$authRepair = Repair-AuthConfig -Path $envTarget
+if ($authRepair.BootstrapPassword) {
+  $bootstrapAdminPassword = $authRepair.BootstrapPassword
+}
+if ($authRepair.Changed -and $existingEnv) {
+  Write-Host "Configuration d'authentification reparee; les donnees et comptes existants sont conserves."
+}
+
 if ($NoStart) {
   Write-Host "NoStart actif: installation preparee sans lancement Docker pour $dockerPlatform."
+  if ($bootstrapAdminPassword) {
+    Write-Host "Compte initial (seulement si aucun administrateur n'existe): admin / $bootstrapAdminPassword"
+  }
   exit 0
 }
 
@@ -310,3 +382,10 @@ Write-Host "Installation terminee."
 Write-Host "Plateforme: $dockerPlatform"
 Write-Host "Frontend: http://localhost:$FrontendPort"
 Write-Host "API health: http://localhost:$ApiPort/health"
+if ($bootstrapAdminPassword) {
+  Write-Host ""
+  Write-Host "Compte initial, utilise uniquement si aucun administrateur n'existe deja:"
+  Write-Host "Utilisateur: admin"
+  Write-Host "Mot de passe: $bootstrapAdminPassword"
+  Write-Host "Un compte existant conserve son mot de passe actuel."
+}

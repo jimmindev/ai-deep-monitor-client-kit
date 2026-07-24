@@ -50,12 +50,17 @@ for file in docker-compose.release.yml client-common.sh client-platform.ps1 inst
 done
 chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true
 write_env_value "$ENV_FILE" KIT_VERSION "$KIT_VERSION"
+ensure_auth_config "$ENV_FILE"
+if [[ "$AUTH_CONFIG_CHANGED" == "true" ]]; then
+  log "Configuration d'authentification reparee; les volumes SQL et les comptes existants restent inchanges."
+fi
 
 if [[ "$NO_START" == "true" ]]; then
   detect_host_platform
   write_env_value "$ENV_FILE" DOCKER_PLATFORM "$DOCKER_PLATFORM"
   [[ -z "$APP_VERSION" ]] || write_env_value "$ENV_FILE" APP_VERSION "$APP_VERSION"
   log "Fichiers du kit actualises sans lancement Docker pour ${DOCKER_PLATFORM}."
+  print_bootstrap_credentials
   exit 0
 fi
 
@@ -83,12 +88,12 @@ fi
 current_version="$(read_env_value "$ENV_FILE" APP_VERSION)"
 refresh_images=false
 if [[ "$current_version" == "$APP_VERSION" ]]; then
-  if [[ "$previous_kit_version" == "$KIT_VERSION" ]]; then
+  if [[ "$previous_kit_version" == "$KIT_VERSION" && "$AUTH_CONFIG_CHANGED" == "false" ]]; then
     log "L'application est deja en ${APP_VERSION} et le kit en ${KIT_VERSION}."
     exit 0
   fi
   refresh_images=true
-  log "L'application reste en ${APP_VERSION}; les images sont rechargees pour ${DOCKER_PLATFORM} avec le nouveau kit ${KIT_VERSION}."
+  log "L'application reste en ${APP_VERSION}; le deploiement est resynchronise pour ${DOCKER_PLATFORM} avec le kit ${KIT_VERSION}."
 fi
 
 if [[ "$refresh_images" == "false" ]]; then
@@ -120,3 +125,4 @@ wait_for_container ai-monitor-client-api 300 ||
   die "L'API n'est pas operationnelle apres la mise a jour. Le fichier ${ENV_FILE}.before-${APP_VERSION}.bak permet un retour arriere."
 
 log "Mise a jour terminee: ${APP_VERSION} sur ${DOCKER_PLATFORM}."
+print_bootstrap_credentials

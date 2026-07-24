@@ -22,6 +22,18 @@ function Require-Command {
   }
 }
 
+function New-Secret {
+  param([int]$Bytes = 24)
+  $buffer = New-Object byte[] $Bytes
+  $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+  try {
+    $rng.GetBytes($buffer)
+  } finally {
+    $rng.Dispose()
+  }
+  return ([Convert]::ToBase64String($buffer)).TrimEnd("=").Replace("+", "A").Replace("/", "B")
+}
+
 function Read-DotEnv {
   param([string]$Path)
   $values = @{}
@@ -54,6 +66,50 @@ function Write-DotEnvValue {
     $content = "$Key=$Value`r`n" + $content
   }
   Set-Content -LiteralPath $Path -Value $content -Encoding UTF8
+}
+
+function Repair-AuthConfig {
+  param([string]$Path)
+  $values = Read-DotEnv -Path $Path
+  $changed = $false
+  $bootstrapPassword = $null
+
+  if (-not $values["AUTH_SECRET_KEY"] -or $values["AUTH_SECRET_KEY"].Length -lt 32) {
+    Write-DotEnvValue -Path $Path -Key "AUTH_SECRET_KEY" -Value (New-Secret -Bytes 48)
+    $changed = $true
+  }
+  if (-not $values["AUTH_BOOTSTRAP_USERNAME"]) {
+    Write-DotEnvValue -Path $Path -Key "AUTH_BOOTSTRAP_USERNAME" -Value "admin"
+    $changed = $true
+  }
+  if (-not $values["AUTH_BOOTSTRAP_PASSWORD"]) {
+    $bootstrapPassword = "Adm1-$(New-Secret -Bytes 18)"
+    Write-DotEnvValue -Path $Path -Key "AUTH_BOOTSTRAP_PASSWORD" -Value $bootstrapPassword
+    $changed = $true
+  }
+
+  $defaults = [ordered]@{
+    AUTH_ACCESS_TOKEN_MINUTES = "15"
+    AUTH_REFRESH_TOKEN_DAYS = "7"
+    AUTH_MAX_FAILED_ATTEMPTS = "5"
+    AUTH_LOCK_MINUTES = "15"
+    AUTH_COOKIE_SECURE = "false"
+    AUTH_COOKIE_SAMESITE = "lax"
+    TELEMETRY_RAW_RETENTION_DAYS = "7"
+    TELEMETRY_ROLLUP_RETENTION_DAYS = "365"
+  }
+  $values = Read-DotEnv -Path $Path
+  foreach ($entry in $defaults.GetEnumerator()) {
+    if (-not $values[$entry.Key]) {
+      Write-DotEnvValue -Path $Path -Key $entry.Key -Value $entry.Value
+      $changed = $true
+    }
+  }
+
+  return @{
+    Changed = $changed
+    BootstrapPassword = $bootstrapPassword
+  }
 }
 
 function Read-PlainToken {
@@ -147,6 +203,10 @@ if (-not (Test-Path -LiteralPath $envPath)) {
 $envValues = Read-DotEnv -Path $envPath
 $previousKitVersion = $envValues["KIT_VERSION"]
 Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.7"
+$authRepair = Repair-AuthConfig -Path $envPath
+if ($authRepair.Changed) {
+  Write-Host "Configuration d'authentification reparee; les volumes SQL et les comptes existants restent inchanges."
+}
 $dockerPlatform = if ($NoStart) {
   Get-AiMonitorHostPlatform
 } else {
@@ -202,11 +262,11 @@ if (-not $AppVersion) {
 
 $refreshImages = $currentVersion -eq $AppVersion
 if ($refreshImages) {
-  if ($previousKitVersion -eq "v0.1.7") {
+  if ($previousKitVersion -eq "v0.1.7" -and -not $authRepair.Changed) {
     Write-Host "Application deja en $AppVersion et kit deja en v0.1.7."
     exit 0
   }
-  Write-Host "L'application reste en $AppVersion; les images sont rechargees pour $dockerPlatform avec le nouveau kit v0.1.7."
+  Write-Host "L'application reste en $AppVersion; le deploiement est resynchronise pour $dockerPlatform avec le kit v0.1.7."
 } elseif (-not $Yes -and -not $versionWasSpecified) {
   $answer = Read-Host "Mettre a jour de $currentVersion vers $AppVersion ? (o/N)"
   if ($answer -notin @("o", "O", "oui", "OUI", "y", "Y", "yes", "YES")) {
@@ -233,6 +293,9 @@ Write-Host "Backup .env: $backupPath"
 
 if ($NoStart) {
   Write-Host "NoStart actif: version mise a jour sans lancement Docker."
+  if ($authRepair.BootstrapPassword) {
+    Write-Host "Compte initial (seulement si aucun administrateur n'existe): admin / $($authRepair.BootstrapPassword)"
+  }
   exit 0
 }
 
@@ -254,3 +317,9 @@ docker compose -f $composePath --env-file $envPath ps
 
 Write-Host ""
 Write-Host "Mise a jour terminee vers $AppVersion sur $dockerPlatform."
+if ($authRepair.BootstrapPassword) {
+  Write-Host "Compte initial, utilise uniquement si aucun administrateur n'existe deja:"
+  Write-Host "Utilisateur: admin"
+  Write-Host "Mot de passe: $($authRepair.BootstrapPassword)"
+  Write-Host "Un compte existant conserve son mot de passe actuel."
+}

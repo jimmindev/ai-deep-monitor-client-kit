@@ -104,4 +104,31 @@ C:\ai-deep-monitor\uninstall-client.ps1 -Mode Full
 La desinstallation partielle conserve les donnees. La desinstallation complete
 cree d'abord une sauvegarde, puis supprime les volumes et l'installation.
 
+## Corriger une connexion apres mise a jour
+
+Si la console du navigateur affiche une erreur `500` sur
+`/api/auth/login`, telechargez de nouveau le kit `v0.1.7` puis relancez sa
+mise a jour. Cette operation repare la configuration d'authentification sans
+supprimer les comptes ni les donnees SQL:
+
+```bash
+cd ~/aidp
+curl -fL \
+  -o ai-deep-monitor-client-kit.tar.gz \
+  "https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit.tar.gz?$(date +%s)"
+tar -xzf ai-deep-monitor-client-kit.tar.gz
+cd ai-deep-monitor-client-kit
+chmod +x ./*.sh
+./update-client.sh \
+  --install-dir "$HOME/ai-deep-monitor" \
+  --app-version v0.1.5 \
+  --yes
+```
+
+Adaptez `--install-dir` si l'application a ete installee ailleurs. Le message
+`401` de `/api/auth/refresh` avant connexion est normal lorsqu'aucune session
+n'existe encore. Sur une installation sans compte administrateur, le script
+affiche les identifiants initiaux generes; un compte existant conserve son mot
+de passe.
+
 Consultez `README.md` pour les options, la restauration et le diagnostic.

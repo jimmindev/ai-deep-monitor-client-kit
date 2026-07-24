@@ -133,6 +133,8 @@ else
     [[ "$FRONTEND_PORT" == "80" ]] || CORS_ORIGINS="http://localhost:${FRONTEND_PORT}"
   fi
 
+  auth_secret="$(new_secret)"
+  GENERATED_BOOTSTRAP_PASSWORD="Adm1-$(new_secret)"
   cat >"$ENV_FILE" <<EOF
 GITHUB_OWNER=${GITHUB_OWNER}
 GITHUB_REPOSITORY_NAME=ai-deep-monitor
@@ -156,6 +158,19 @@ MYSQL_DATABASE=ai_monitor_prod
 MYSQL_USER=ai_user
 MYSQL_PASSWORD=$(new_secret)
 
+AUTH_SECRET_KEY=${auth_secret}
+AUTH_BOOTSTRAP_USERNAME=admin
+AUTH_BOOTSTRAP_PASSWORD=${GENERATED_BOOTSTRAP_PASSWORD}
+AUTH_ACCESS_TOKEN_MINUTES=15
+AUTH_REFRESH_TOKEN_DAYS=7
+AUTH_MAX_FAILED_ATTEMPTS=5
+AUTH_LOCK_MINUTES=15
+AUTH_COOKIE_SECURE=false
+AUTH_COOKIE_SAMESITE=lax
+
+TELEMETRY_RAW_RETENTION_DAYS=7
+TELEMETRY_ROLLUP_RETENTION_DAYS=365
+
 CORS_ORIGINS=${CORS_ORIGINS}
 
 FRONTEND_PORT=${FRONTEND_PORT}
@@ -165,8 +180,14 @@ EOF
   log "Configuration creee dans ${ENV_FILE}."
 fi
 
+ensure_auth_config "$ENV_FILE"
+if [[ "$AUTH_CONFIG_CHANGED" == "true" && "$existing_env" == "true" ]]; then
+  log "Configuration d'authentification reparee; les donnees et comptes existants sont conserves."
+fi
+
 if [[ "$NO_START" == "true" ]]; then
   log "Installation preparee sans lancement Docker pour ${DOCKER_PLATFORM}."
+  print_bootstrap_credentials
   exit 0
 fi
 
@@ -197,6 +218,7 @@ if ! wait_for_container ai-monitor-client-api 300; then
 fi
 
 log "Installation terminee."
+print_bootstrap_credentials
 printf 'Frontend  : http://localhost'
 [[ "$FRONTEND_PORT" == "80" ]] || printf ':%s' "$FRONTEND_PORT"
 printf '\nAPI health: http://localhost:%s/health\n' "$API_PORT"
