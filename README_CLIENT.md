@@ -3,7 +3,30 @@
 Ce kit installe AI Deep Monitor sans exposer son code source. Il utilise Docker
 et le registre prive GitHub Container Registry.
 
+## Telecharger le kit
+
+La derniere version est disponible publiquement ici:
+
+[Telecharger AI Deep Monitor Client Kit](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest)
+
+Liens directs pour la version `v0.1.5`:
+
+- [Linux `.tar.gz`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.5/ai-deep-monitor-client-kit-v0.1.5.tar.gz)
+- [Windows `.zip`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.5/ai-deep-monitor-client-kit-v0.1.5.zip)
+
+Le depot peut egalement etre clone sans compte GitHub:
+
+```bash
+git clone https://github.com/jimmindev/ai-deep-monitor-client-kit.git
+cd ai-deep-monitor-client-kit
+```
+
+Le kit est public, mais les images Docker applicatives restent privees. Un
+token GitHub autorise a lire les packages sera demande pendant l'installation.
+
 ## Installation rapide Linux
+
+Apres extraction de l'archive Linux:
 
 ```bash
 chmod +x ./*.sh
@@ -14,6 +37,8 @@ Docker est installe automatiquement s'il est absent sur Ubuntu, Debian, Linux
 Mint, Fedora, RHEL, Rocky Linux, AlmaLinux et CentOS.
 
 ## Installation rapide Windows
+
+Apres extraction de l'archive Windows, ouvrir PowerShell dans le dossier:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass

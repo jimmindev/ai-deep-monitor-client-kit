@@ -1,11 +1,33 @@
 # AI Deep Monitor - Client Kit v0.1.5
 
-Kit prive d'installation, de mise a jour et de maintenance d'AI Deep Monitor.
+Kit public d'installation, de mise a jour et de maintenance d'AI Deep Monitor.
 Il ne contient aucun code source React ou Python. L'application est livree sous
 forme d'images Docker privees publiees sur GHCR.
 
 La version du kit est `v0.1.5`. La version applicative stable installee par
 defaut reste `v0.1.4`.
+
+## Telechargement
+
+- Depot public:
+  [github.com/jimmindev/ai-deep-monitor-client-kit](https://github.com/jimmindev/ai-deep-monitor-client-kit)
+- Derniere version:
+  [github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest)
+- Linux:
+  [ai-deep-monitor-client-kit-v0.1.5.tar.gz](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.5/ai-deep-monitor-client-kit-v0.1.5.tar.gz)
+- Windows:
+  [ai-deep-monitor-client-kit-v0.1.5.zip](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.5/ai-deep-monitor-client-kit-v0.1.5.zip)
+
+Le depot peut aussi etre clone sans authentification:
+
+```bash
+git clone https://github.com/jimmindev/ai-deep-monitor-client-kit.git
+cd ai-deep-monitor-client-kit
+```
+
+Le depot du kit est public, mais les images Docker de l'application restent
+privees. L'installateur demandera donc un utilisateur GitHub et un token
+autorise a lire les packages GHCR.
 
 ## Systemes pris en charge
 
@@ -30,7 +52,17 @@ Docker est verifie automatiquement. S'il est absent:
 
 ## Installation Linux
 
-Extraire l'archive, ouvrir un terminal dans le dossier, puis:
+Telecharger puis extraire l'archive:
+
+```bash
+curl -fL \
+  -o ai-deep-monitor-client-kit-v0.1.5.tar.gz \
+  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.5/ai-deep-monitor-client-kit-v0.1.5.tar.gz
+tar -xzf ai-deep-monitor-client-kit-v0.1.5.tar.gz
+cd ai-deep-monitor-client-kit-v0.1.5
+```
+
+Lancer ensuite l'installation:
 
 ```bash
 chmod +x ./*.sh
@@ -55,7 +87,9 @@ Le dossier utilisateur par defaut reste le choix le plus simple.
 
 ## Installation Windows
 
-Ouvrir PowerShell dans le dossier du kit:
+Telecharger et extraire l'archive ZIP depuis la
+[derniere release](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest),
+puis ouvrir PowerShell dans le dossier extrait:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
