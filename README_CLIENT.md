@@ -9,10 +9,14 @@ La derniere version est disponible publiquement ici:
 
 [Telecharger AI Deep Monitor Client Kit](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest)
 
-Liens directs pour la version `v0.1.7`:
+Liens directs stables, toujours diriges vers la derniere version:
 
-- [Linux `.tar.gz`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit-v0.1.7.tar.gz)
-- [Windows `.zip`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit-v0.1.7.zip)
+- [Linux `.tar.gz`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.tar.gz)
+- [Windows `.zip`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.zip)
+
+L'archive s'extrait toujours dans `ai-deep-monitor-client-kit`, quelle que
+soit la version du kit. Vous pouvez conserver ce meme chemin pour les
+installations et les prochaines mises a jour.
 
 Le depot peut egalement etre clone sans compte GitHub:
 
@@ -26,9 +30,16 @@ token GitHub autorise a lire les packages sera demande pendant l'installation.
 
 ## Installation rapide Linux
 
-Apres extraction de l'archive Linux:
+Telecharger et extraire l'archive Linux:
 
 ```bash
+mkdir -p ~/aidp
+cd ~/aidp
+curl -fL \
+  -o ai-deep-monitor-client-kit.tar.gz \
+  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.tar.gz
+tar -xzf ai-deep-monitor-client-kit.tar.gz
+cd ai-deep-monitor-client-kit
 chmod +x ./*.sh
 ./install-client.sh
 ```
@@ -41,7 +52,8 @@ Le kit detecte automatiquement `linux/amd64` sur un PC Linux x64 et
 
 ## Installation rapide Windows
 
-Apres extraction de l'archive Windows, ouvrir PowerShell dans le dossier:
+Apres extraction de l'archive Windows, ouvrir PowerShell dans le dossier
+`ai-deep-monitor-client-kit`:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass

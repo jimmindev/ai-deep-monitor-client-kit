@@ -22,6 +22,9 @@
 
 - Une mise a jour du Client Kit recharge les images multiarchitectures meme si
   la version applicative reste identique.
+- Les archives de distribution portent maintenant un nom stable et
+  s'extraient toujours dans `ai-deep-monitor-client-kit`, sans creer un
+  nouveau dossier pour chaque version.
 
 ### Versions
 

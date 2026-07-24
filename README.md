@@ -14,9 +14,13 @@ defaut reste `v0.1.4`.
 - Derniere version:
   [github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest)
 - Linux:
-  [ai-deep-monitor-client-kit-v0.1.7.tar.gz](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit-v0.1.7.tar.gz)
+  [ai-deep-monitor-client-kit.tar.gz](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.tar.gz)
 - Windows:
-  [ai-deep-monitor-client-kit-v0.1.7.zip](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit-v0.1.7.zip)
+  [ai-deep-monitor-client-kit.zip](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.zip)
+
+Les archives de toutes les versions utilisent le meme dossier racine:
+`ai-deep-monitor-client-kit`. Une mise a jour ne cree donc plus un nouveau
+dossier portant le numero de version.
 
 Le depot peut aussi etre clone sans authentification:
 
@@ -68,11 +72,13 @@ Docker est verifie automatiquement. S'il est absent:
 Telecharger puis extraire l'archive:
 
 ```bash
+mkdir -p ~/aidp
+cd ~/aidp
 curl -fL \
-  -o ai-deep-monitor-client-kit-v0.1.7.tar.gz \
-  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit-v0.1.7.tar.gz
-tar -xzf ai-deep-monitor-client-kit-v0.1.7.tar.gz
-cd ai-deep-monitor-client-kit-v0.1.7
+  -o ai-deep-monitor-client-kit.tar.gz \
+  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.tar.gz
+tar -xzf ai-deep-monitor-client-kit.tar.gz
+cd ai-deep-monitor-client-kit
 ```
 
 Lancer ensuite l'installation:
@@ -102,7 +108,7 @@ Le dossier utilisateur par defaut reste le choix le plus simple.
 
 Telecharger et extraire l'archive ZIP depuis la
 [derniere release](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest),
-puis ouvrir PowerShell dans le dossier extrait:
+puis ouvrir PowerShell dans le dossier `ai-deep-monitor-client-kit`:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass

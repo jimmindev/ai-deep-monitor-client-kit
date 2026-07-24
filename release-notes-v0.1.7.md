@@ -24,15 +24,20 @@ multiarchitectures `amd64` et `arm64`.
 - Une architecture non prise en charge est refusee avant le telechargement.
 - Lors d'un changement de version du kit, les images sont rechargees meme si
   l'application reste en `v0.1.4`.
+- Les archives Linux et Windows ont des noms stables et s'extraient toujours
+  dans `ai-deep-monitor-client-kit`. Une nouvelle version ne cree plus un
+  nouveau dossier local.
 
 ## Installation Linux et Jetson
 
 ```bash
+mkdir -p ~/aidp
+cd ~/aidp
 curl -fL \
-  -o ai-deep-monitor-client-kit-v0.1.7.tar.gz \
-  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit-v0.1.7.tar.gz
-tar -xzf ai-deep-monitor-client-kit-v0.1.7.tar.gz
-cd ai-deep-monitor-client-kit-v0.1.7
+  -o ai-deep-monitor-client-kit.tar.gz \
+  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.tar.gz
+tar -xzf ai-deep-monitor-client-kit.tar.gz
+cd ai-deep-monitor-client-kit
 chmod +x ./*.sh
 ./install-client.sh
 ```
