@@ -9,10 +9,10 @@ La derniere version est disponible publiquement ici:
 
 [Telecharger AI Deep Monitor Client Kit](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest)
 
-Liens directs pour la version `v0.1.6`:
+Liens directs pour la version `v0.1.7`:
 
-- [Linux `.tar.gz`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.6/ai-deep-monitor-client-kit-v0.1.6.tar.gz)
-- [Windows `.zip`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.6/ai-deep-monitor-client-kit-v0.1.6.zip)
+- [Linux `.tar.gz`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit-v0.1.7.tar.gz)
+- [Windows `.zip`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit-v0.1.7.zip)
 
 Le depot peut egalement etre clone sans compte GitHub:
 
@@ -36,6 +36,9 @@ chmod +x ./*.sh
 Docker est installe automatiquement s'il est absent sur Ubuntu, Debian, Linux
 Mint, Fedora, RHEL, Rocky Linux, AlmaLinux et CentOS.
 
+Le kit detecte automatiquement `linux/amd64` sur un PC Linux x64 et
+`linux/arm64` sur un NVIDIA Jetson ou un serveur ARM64.
+
 ## Installation rapide Windows
 
 Apres extraction de l'archive Windows, ouvrir PowerShell dans le dossier:
@@ -46,6 +49,8 @@ Set-ExecutionPolicy -Scope Process Bypass
 ```
 
 Docker Desktop est installe automatiquement avec `winget` s'il est absent.
+Il doit fonctionner en mode **Linux containers**. Le script s'arrete avec une
+instruction explicite si Docker Desktop utilise les conteneurs Windows.
 
 Pendant l'installation, renseignez votre utilisateur GitHub et un token
 autorise a lire les packages prives. Les ports sont choisis automatiquement.

@@ -62,6 +62,7 @@ PROJECT_NAME="$(project_name_from_dir "$INSTALL_DIR")"
 kit_files=(
   docker-compose.release.yml
   client-common.sh
+  client-platform.ps1
   install-client.sh
   check-update.sh
   update-client.sh
@@ -90,7 +91,9 @@ existing_env=false
 [[ -f "$ENV_FILE" ]] && existing_env=true
 existing_volumes=""
 
-if [[ "$NO_START" != "true" ]]; then
+if [[ "$NO_START" == "true" ]]; then
+  detect_host_platform
+else
   ensure_docker
   existing_volumes="$(existing_data_volumes "$PROJECT_NAME")"
 fi
@@ -104,6 +107,7 @@ if [[ "$existing_env" == "true" ]]; then
   API_PORT="$(read_env_value "$ENV_FILE" API_PORT)"
   [[ -n "$CORS_ORIGINS" ]] || CORS_ORIGINS="$(read_env_value "$ENV_FILE" CORS_ORIGINS)"
   write_env_value "$ENV_FILE" KIT_VERSION "$KIT_VERSION"
+  write_env_value "$ENV_FILE" DOCKER_PLATFORM "$DOCKER_PLATFORM"
   log "Installation existante detectee: configuration et volumes conserves."
 else
   if ! port_is_available "$FRONTEND_PORT"; then
@@ -130,6 +134,7 @@ GITHUB_REPOSITORY_NAME=ai-deep-monitor
 KIT_VERSION=${KIT_VERSION}
 APP_VERSION=${APP_VERSION}
 APP_CHANNEL=stable
+DOCKER_PLATFORM=${DOCKER_PLATFORM}
 UPDATE_CHECK_ENABLED=true
 UPDATE_CHECK_CHANNEL=stable
 UPDATE_CHECK_BRANCH=preprod
@@ -156,7 +161,7 @@ EOF
 fi
 
 if [[ "$NO_START" == "true" ]]; then
-  log "Installation preparee sans lancement Docker."
+  log "Installation preparee sans lancement Docker pour ${DOCKER_PLATFORM}."
   exit 0
 fi
 

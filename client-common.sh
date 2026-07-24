@@ -2,8 +2,9 @@
 
 set -Eeuo pipefail
 
-export KIT_VERSION="v0.1.6"
+export KIT_VERSION="v0.1.7"
 export DEFAULT_APP_VERSION="v0.1.4"
+export DOCKER_PLATFORM=""
 DOCKER_CMD=(docker)
 SUDO_CMD=()
 
@@ -134,6 +135,8 @@ ensure_docker() {
 
   "${DOCKER_CMD[@]}" compose version >/dev/null 2>&1 ||
     die "Le plugin Docker Compose v2 est absent."
+
+  detect_docker_platform
 }
 
 docker_exec() {
@@ -142,6 +145,73 @@ docker_exec() {
 
 compose_exec() {
   docker_exec compose "$@"
+}
+
+normalize_docker_arch() {
+  case "${1,,}" in
+    amd64|x86_64|x64)
+      printf 'amd64\n'
+      ;;
+    arm64|arm64/v8|aarch64)
+      printf 'arm64\n'
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+resolve_docker_platform() {
+  local os_type="${1,,}"
+  local architecture="$2"
+  local normalized_arch
+
+  [[ "$os_type" == "linux" ]] || return 2
+  normalized_arch="$(normalize_docker_arch "$architecture")" || return 3
+  printf 'linux/%s\n' "$normalized_arch"
+}
+
+detect_host_platform() {
+  local host_os
+  local host_arch
+
+  host_os="$(uname -s 2>/dev/null || true)"
+  host_arch="$(uname -m 2>/dev/null || true)"
+  [[ "${host_os,,}" == "linux" ]] ||
+    die "Le script Linux exige un hote Linux. Sous Windows, utilisez install-client.ps1."
+
+  DOCKER_PLATFORM="$(resolve_docker_platform linux "$host_arch")" ||
+    die "Architecture hote non prise en charge: ${host_arch:-inconnue}. Architectures supportees: amd64 et arm64."
+  export DOCKER_PLATFORM
+}
+
+detect_docker_platform() {
+  local docker_info
+  local os_type
+  local architecture
+  local status
+
+  docker_info="$(docker_exec info --format '{{.OSType}}|{{.Architecture}}' 2>/dev/null)" ||
+    die "Impossible d'identifier la plateforme du moteur Docker."
+  IFS='|' read -r os_type architecture <<<"$docker_info"
+
+  set +e
+  DOCKER_PLATFORM="$(resolve_docker_platform "$os_type" "$architecture")"
+  status=$?
+  set -e
+  case "$status" in
+    0)
+      ;;
+    2)
+      die "Docker utilise les conteneurs ${os_type:-inconnus}. AI Deep Monitor exige les conteneurs Linux. Sous Docker Desktop, activez 'Switch to Linux containers' puis relancez."
+      ;;
+    *)
+      die "Architecture Docker non prise en charge: ${architecture:-inconnue}. Architectures supportees: amd64 et arm64 (Jetson)."
+      ;;
+  esac
+
+  export DOCKER_PLATFORM
+  log "Plateforme Docker detectee: ${DOCKER_PLATFORM}."
 }
 
 new_secret() {

@@ -8,6 +8,12 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$platformHelpers = Join-Path $PSScriptRoot "client-platform.ps1"
+if (-not (Test-Path -LiteralPath $platformHelpers)) {
+  throw "client-platform.ps1 introuvable dans $PSScriptRoot"
+}
+. $platformHelpers
+$versionWasSpecified = [bool]$AppVersion
 
 function Require-Command {
   param([string]$Name)
@@ -103,6 +109,7 @@ $envPath = Join-Path $InstallDir ".env"
 $kitFiles = @(
   "docker-compose.release.yml",
   "client-common.sh",
+  "client-platform.ps1",
   "install-client.sh",
   "update-client.sh",
   "check-update.sh",
@@ -138,7 +145,17 @@ if (-not (Test-Path -LiteralPath $envPath)) {
 }
 
 $envValues = Read-DotEnv -Path $envPath
-Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.6"
+$previousKitVersion = $envValues["KIT_VERSION"]
+Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.7"
+$dockerPlatform = if ($NoStart) {
+  Get-AiMonitorHostPlatform
+} else {
+  Require-Command "docker"
+  docker version | Out-Null
+  docker compose version | Out-Null
+  Get-AiMonitorDockerPlatform
+}
+Write-DotEnvValue -Path $envPath -Key "DOCKER_PLATFORM" -Value $dockerPlatform
 $currentVersion = $envValues["APP_VERSION"]
 $githubOwner = $envValues["GITHUB_OWNER"]
 if (-not $githubOwner) {
@@ -181,21 +198,24 @@ if (-not $AppVersion) {
   $AppVersion = $latestFrontend
   Write-Host "Derniere version stable disponible: $AppVersion"
 
-  if ($currentVersion -eq $AppVersion) {
-    Write-Host "Application deja a jour."
+}
+
+$refreshImages = $currentVersion -eq $AppVersion
+if ($refreshImages) {
+  if ($previousKitVersion -eq "v0.1.7") {
+    Write-Host "Application deja en $AppVersion et kit deja en v0.1.7."
     exit 0
   }
-
-  if (-not $Yes) {
-    $answer = Read-Host "Mettre a jour de $currentVersion vers $AppVersion ? (o/N)"
-    if ($answer -notin @("o", "O", "oui", "OUI", "y", "Y", "yes", "YES")) {
-      Write-Host "Mise a jour annulee."
-      exit 0
-    }
+  Write-Host "L'application reste en $AppVersion; les images sont rechargees pour $dockerPlatform avec le nouveau kit v0.1.7."
+} elseif (-not $Yes -and -not $versionWasSpecified) {
+  $answer = Read-Host "Mettre a jour de $currentVersion vers $AppVersion ? (o/N)"
+  if ($answer -notin @("o", "O", "oui", "OUI", "y", "Y", "yes", "YES")) {
+    Write-Host "Mise a jour annulee."
+    exit 0
   }
 }
 
-if (-not $SkipBackup -and -not $NoStart) {
+if (-not $SkipBackup -and -not $NoStart -and -not $refreshImages) {
   $backupScript = Join-Path $InstallDir "backup-client.ps1"
   if (-not (Test-Path -LiteralPath $backupScript)) {
     throw "backup-client.ps1 introuvable. Utilise -SkipBackup uniquement si une sauvegarde externe existe deja."
@@ -216,10 +236,6 @@ if ($NoStart) {
   exit 0
 }
 
-Require-Command "docker"
-docker version | Out-Null
-docker compose version | Out-Null
-
 if (-not $SkipDockerLogin) {
   if (-not $plainToken) {
     Write-Host "Connexion au registry prive GHCR."
@@ -237,4 +253,4 @@ docker compose -f $composePath --env-file $envPath up -d
 docker compose -f $composePath --env-file $envPath ps
 
 Write-Host ""
-Write-Host "Mise a jour terminee vers $AppVersion."
+Write-Host "Mise a jour terminee vers $AppVersion sur $dockerPlatform."

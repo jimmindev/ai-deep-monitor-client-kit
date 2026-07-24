@@ -11,6 +11,11 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$platformHelpers = Join-Path $PSScriptRoot "client-platform.ps1"
+if (-not (Test-Path -LiteralPath $platformHelpers)) {
+  throw "client-platform.ps1 introuvable dans $PSScriptRoot"
+}
+. $platformHelpers
 
 function New-Secret {
   param([int]$Bytes = 24)
@@ -160,6 +165,7 @@ if (-not $projectName) { $projectName = "ai-deep-monitor" }
 $kitFiles = @(
   "docker-compose.release.yml",
   "client-common.sh",
+  "client-platform.ps1",
   "install-client.sh",
   "update-client.sh",
   "check-update.sh",
@@ -186,7 +192,13 @@ foreach ($fileName in $kitFiles) {
 }
 
 $existingEnv = Test-Path -LiteralPath $envTarget
-$existingVolumes = Get-ExistingDataVolumes -ProjectName $projectName
+$dockerPlatform = if ($NoStart) {
+  Get-AiMonitorHostPlatform
+} else {
+  Ensure-Docker
+  Get-AiMonitorDockerPlatform
+}
+$existingVolumes = if ($NoStart) { @() } else { Get-ExistingDataVolumes -ProjectName $projectName }
 if (-not $existingEnv -and $existingVolumes.Count -gt 0) {
   throw "Des volumes AI Deep Monitor existent deja mais .env est absent. Restaure l'ancien .env ou lance une desinstallation Full explicite; de nouveaux mots de passe rendraient MySQL inaccessible. Volumes: $($existingVolumes -join ', ')"
 }
@@ -196,11 +208,10 @@ if ($existingEnv) {
   if ($existingValues["FRONTEND_PORT"]) { $FrontendPort = [int]$existingValues["FRONTEND_PORT"] }
   if ($existingValues["API_PORT"]) { $ApiPort = [int]$existingValues["API_PORT"] }
   if (-not $CorsOrigins -and $existingValues["CORS_ORIGINS"]) { $CorsOrigins = $existingValues["CORS_ORIGINS"] }
+  Write-DotEnvValue -Path $envTarget -Key "KIT_VERSION" -Value "v0.1.7"
+  Write-DotEnvValue -Path $envTarget -Key "DOCKER_PLATFORM" -Value $dockerPlatform
   Write-Host "Installation existante detectee: configuration et volumes conserves."
 } else {
-  if (-not $NoStart) {
-    Ensure-Docker
-  }
   if (-not (Test-PortAvailable -Port $FrontendPort)) {
     if ($StrictPorts) { throw "Le port frontend $FrontendPort est deja utilise." }
     $newPort = Get-AvailablePort -PreferredPort $FrontendPort
@@ -226,9 +237,10 @@ if (-not $existingEnv) {
   $envContent = @"
 GITHUB_OWNER=$GithubOwner
 GITHUB_REPOSITORY_NAME=ai-deep-monitor
-KIT_VERSION=v0.1.6
+KIT_VERSION=v0.1.7
 APP_VERSION=$AppVersion
 APP_CHANNEL=stable
+DOCKER_PLATFORM=$dockerPlatform
 UPDATE_CHECK_ENABLED=true
 UPDATE_CHECK_CHANNEL=stable
 UPDATE_CHECK_BRANCH=preprod
@@ -257,11 +269,10 @@ API_PORT=$ApiPort
 }
 
 if ($NoStart) {
-  Write-Host "NoStart actif: installation preparee sans lancement Docker."
+  Write-Host "NoStart actif: installation preparee sans lancement Docker pour $dockerPlatform."
   exit 0
 }
 
-Ensure-Docker
 docker compose -f $composeTarget --env-file $envTarget config --quiet
 
 if ($existingVolumes.Count -gt 0) {
@@ -289,5 +300,6 @@ docker compose -f $composeTarget --env-file $envTarget up -d
 
 Write-Host ""
 Write-Host "Installation terminee."
+Write-Host "Plateforme: $dockerPlatform"
 Write-Host "Frontend: http://localhost:$FrontendPort"
 Write-Host "API health: http://localhost:$ApiPort/health"

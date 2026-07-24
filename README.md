@@ -1,10 +1,10 @@
-# AI Deep Monitor - Client Kit v0.1.6
+# AI Deep Monitor - Client Kit v0.1.7
 
 Kit public d'installation, de mise a jour et de maintenance d'AI Deep Monitor.
 Il ne contient aucun code source React ou Python. L'application est livree sous
 forme d'images Docker privees publiees sur GHCR.
 
-La version du kit est `v0.1.6`. La version applicative stable installee par
+La version du kit est `v0.1.7`. La version applicative stable installee par
 defaut reste `v0.1.4`.
 
 ## Telechargement
@@ -14,9 +14,9 @@ defaut reste `v0.1.4`.
 - Derniere version:
   [github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest)
 - Linux:
-  [ai-deep-monitor-client-kit-v0.1.6.tar.gz](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.6/ai-deep-monitor-client-kit-v0.1.6.tar.gz)
+  [ai-deep-monitor-client-kit-v0.1.7.tar.gz](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit-v0.1.7.tar.gz)
 - Windows:
-  [ai-deep-monitor-client-kit-v0.1.6.zip](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.6/ai-deep-monitor-client-kit-v0.1.6.zip)
+  [ai-deep-monitor-client-kit-v0.1.7.zip](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit-v0.1.7.zip)
 
 Le depot peut aussi etre clone sans authentification:
 
@@ -31,11 +31,24 @@ autorise a lire les packages GHCR.
 
 ## Systemes pris en charge
 
-- Windows 10/11 et Windows Server avec PowerShell 5.1 ou plus recent
+- Windows 10/11 et Windows Server x64 avec PowerShell 5.1 ou plus recent
 - Ubuntu, Debian et Linux Mint
 - Fedora, RHEL, Rocky Linux, AlmaLinux et CentOS
-- Architecture `amd64` ou toute architecture pour laquelle les images
-  applicatives sont publiees
+- Linux `amd64` (`x86_64`)
+- Linux `arm64` (`aarch64`), notamment NVIDIA Jetson Nano
+
+Toutes les images du stack sont des images Linux multiarchitectures. Sous
+Windows, Docker Desktop doit donc fonctionner en mode **Linux containers**.
+Le kit lit la plateforme du moteur Docker et selectionne automatiquement:
+
+| Environnement | Plateforme Docker |
+| --- | --- |
+| Windows x64 avec Docker Desktop Linux containers | `linux/amd64` |
+| Linux x86_64 | `linux/amd64` |
+| Linux ARM64 / NVIDIA Jetson | `linux/arm64` |
+
+Un moteur Docker en mode Windows containers ou une architecture non prise en
+charge est bloque avant le telechargement des images, avec un diagnostic clair.
 
 ## Prerequis
 
@@ -56,10 +69,10 @@ Telecharger puis extraire l'archive:
 
 ```bash
 curl -fL \
-  -o ai-deep-monitor-client-kit-v0.1.6.tar.gz \
-  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.6/ai-deep-monitor-client-kit-v0.1.6.tar.gz
-tar -xzf ai-deep-monitor-client-kit-v0.1.6.tar.gz
-cd ai-deep-monitor-client-kit-v0.1.6
+  -o ai-deep-monitor-client-kit-v0.1.7.tar.gz \
+  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit-v0.1.7.tar.gz
+tar -xzf ai-deep-monitor-client-kit-v0.1.7.tar.gz
+cd ai-deep-monitor-client-kit-v0.1.7
 ```
 
 Lancer ensuite l'installation:
@@ -108,6 +121,7 @@ API health : http://localhost:8000/health
 ```
 
 Les ports retenus sont enregistres dans le fichier `.env` de l'installation.
+La plateforme detectee y est egalement conservee dans `DOCKER_PLATFORM`.
 
 ## Reprise d'une installation
 

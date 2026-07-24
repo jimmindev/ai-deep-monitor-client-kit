@@ -1,5 +1,33 @@
 # Historique des versions du Client Kit
 
+## v0.1.7 - 2026-07-24
+
+### Ajoute
+
+- Detection de la plateforme du moteur Docker avant tout lancement.
+- Selection automatique de `linux/amd64` sur Windows Docker Desktop et Linux
+  x86_64.
+- Selection automatique de `linux/arm64` sur NVIDIA Jetson et Linux ARM64.
+- Persistance de la plateforme retenue dans `DOCKER_PLATFORM`.
+- Test de non-regression des architectures et du mode de conteneurs Docker.
+
+### Securise
+
+- Blocage explicite de Docker Desktop en mode Windows containers.
+- Blocage des architectures non publiees au lieu de laisser Docker executer
+  une image emulee ou incompatible.
+- Plateforme verrouillee pour MySQL, API, Ollama et frontend dans Compose.
+
+### Corrige
+
+- Une mise a jour du Client Kit recharge les images multiarchitectures meme si
+  la version applicative reste identique.
+
+### Versions
+
+- Client Kit: `v0.1.7`.
+- Application installee par defaut: `v0.1.4`.
+
 ## v0.1.6 - 2026-07-24
 
 ### Corrige

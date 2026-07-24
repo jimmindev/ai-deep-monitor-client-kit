@@ -40,8 +40,9 @@ done
 ENV_FILE="${INSTALL_DIR}/.env"
 COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 [[ -f "$ENV_FILE" ]] || die "Installation introuvable: ${ENV_FILE}"
+previous_kit_version="$(read_env_value "$ENV_FILE" KIT_VERSION)"
 
-for file in docker-compose.release.yml client-common.sh install-client.sh check-update.sh update-client.sh backup-client.sh restore-client.sh uninstall-client.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 restore-client.ps1 uninstall-client.ps1 README_CLIENT.md VERSION; do
+for file in docker-compose.release.yml client-common.sh client-platform.ps1 install-client.sh check-update.sh update-client.sh backup-client.sh restore-client.sh uninstall-client.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 restore-client.ps1 uninstall-client.ps1 README_CLIENT.md VERSION; do
   [[ -f "${SCRIPT_DIR}/${file}" ]] || continue
   if [[ "${SCRIPT_DIR}/${file}" != "${INSTALL_DIR}/${file}" ]]; then
     cp -f "${SCRIPT_DIR}/${file}" "${INSTALL_DIR}/${file}"
@@ -51,12 +52,15 @@ chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true
 write_env_value "$ENV_FILE" KIT_VERSION "$KIT_VERSION"
 
 if [[ "$NO_START" == "true" ]]; then
+  detect_host_platform
+  write_env_value "$ENV_FILE" DOCKER_PLATFORM "$DOCKER_PLATFORM"
   [[ -z "$APP_VERSION" ]] || write_env_value "$ENV_FILE" APP_VERSION "$APP_VERSION"
-  log "Fichiers du kit actualises sans lancement Docker."
+  log "Fichiers du kit actualises sans lancement Docker pour ${DOCKER_PLATFORM}."
   exit 0
 fi
 
 ensure_docker
+write_env_value "$ENV_FILE" DOCKER_PLATFORM "$DOCKER_PLATFORM"
 require_command curl
 owner="$(read_env_value "$ENV_FILE" GITHUB_OWNER)"
 owner="${owner:-jimmindev}"
@@ -77,15 +81,22 @@ fi
 [[ "$APP_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Version applicative invalide: ${APP_VERSION}"
 
 current_version="$(read_env_value "$ENV_FILE" APP_VERSION)"
+refresh_images=false
 if [[ "$current_version" == "$APP_VERSION" ]]; then
-  log "L'application est deja en ${APP_VERSION}. Le kit reste actualise en ${KIT_VERSION}."
-  exit 0
+  if [[ "$previous_kit_version" == "$KIT_VERSION" ]]; then
+    log "L'application est deja en ${APP_VERSION} et le kit en ${KIT_VERSION}."
+    exit 0
+  fi
+  refresh_images=true
+  log "L'application reste en ${APP_VERSION}; les images sont rechargees pour ${DOCKER_PLATFORM} avec le nouveau kit ${KIT_VERSION}."
 fi
 
-confirm "Mettre a jour l'application de ${current_version} vers ${APP_VERSION} ?" "$ASSUME_YES" ||
-  die "Mise a jour annulee."
+if [[ "$refresh_images" == "false" ]]; then
+  confirm "Mettre a jour l'application de ${current_version} vers ${APP_VERSION} ?" "$ASSUME_YES" ||
+    die "Mise a jour annulee."
+fi
 
-if [[ "$SKIP_BACKUP" == "false" ]]; then
+if [[ "$SKIP_BACKUP" == "false" && "$refresh_images" == "false" ]]; then
   "${INSTALL_DIR}/backup-client.sh" --install-dir "$INSTALL_DIR"
 fi
 
@@ -108,4 +119,4 @@ compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
 wait_for_container ai-monitor-client-api 300 ||
   die "L'API n'est pas operationnelle apres la mise a jour. Le fichier ${ENV_FILE}.before-${APP_VERSION}.bak permet un retour arriere."
 
-log "Mise a jour terminee: ${APP_VERSION}."
+log "Mise a jour terminee: ${APP_VERSION} sur ${DOCKER_PLATFORM}."

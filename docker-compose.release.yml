@@ -1,6 +1,7 @@
 services:
   mysql:
     image: mysql:8.0
+    platform: "${DOCKER_PLATFORM:-linux/amd64}"
     container_name: ai-monitor-client-mysql
     restart: unless-stopped
     environment:
@@ -22,6 +23,7 @@ services:
 
   api:
     image: "ghcr.io/${GITHUB_OWNER:-jimmindev}/ai-deep-monitor-api:${APP_VERSION:-latest}"
+    platform: "${DOCKER_PLATFORM:-linux/amd64}"
     container_name: ai-monitor-client-api
     restart: unless-stopped
     environment:
@@ -70,6 +72,7 @@ services:
 
   ollama:
     image: "${OLLAMA_IMAGE:-ollama/ollama:latest}"
+    platform: "${DOCKER_PLATFORM:-linux/amd64}"
     container_name: ai-monitor-client-ollama
     restart: unless-stopped
     volumes:
@@ -83,6 +86,7 @@ services:
 
   ollama-models:
     image: "${OLLAMA_IMAGE:-ollama/ollama:latest}"
+    platform: "${DOCKER_PLATFORM:-linux/amd64}"
     container_name: ai-monitor-client-ollama-models
     restart: "no"
     environment:
@@ -96,6 +100,7 @@ services:
 
   frontend:
     image: "ghcr.io/${GITHUB_OWNER:-jimmindev}/ai-deep-monitor-frontend:${APP_VERSION:-latest}"
+    platform: "${DOCKER_PLATFORM:-linux/amd64}"
     container_name: ai-monitor-client-frontend
     restart: unless-stopped
     ports:
