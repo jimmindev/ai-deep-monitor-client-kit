@@ -63,6 +63,7 @@ kit_files=(
   docker-compose.release.yml
   client-common.sh
   client-platform.ps1
+  ai-deep-monitor.sh
   install-client.sh
   check-update.sh
   update-client.sh
@@ -90,6 +91,8 @@ chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true
 existing_env=false
 [[ -f "$ENV_FILE" ]] && existing_env=true
 existing_volumes=""
+requested_frontend_port="$FRONTEND_PORT"
+requested_api_port="$API_PORT"
 
 if [[ "$NO_START" == "true" ]]; then
   detect_host_platform
@@ -105,28 +108,44 @@ fi
 if [[ "$existing_env" == "true" ]]; then
   FRONTEND_PORT="$(read_env_value "$ENV_FILE" FRONTEND_PORT)"
   API_PORT="$(read_env_value "$ENV_FILE" API_PORT)"
+  FRONTEND_PORT="${FRONTEND_PORT:-80}"
+  API_PORT="${API_PORT:-8000}"
+  requested_frontend_port="$FRONTEND_PORT"
+  requested_api_port="$API_PORT"
   [[ -n "$CORS_ORIGINS" ]] || CORS_ORIGINS="$(read_env_value "$ENV_FILE" CORS_ORIGINS)"
   write_env_value "$ENV_FILE" KIT_VERSION "$KIT_VERSION"
   write_env_value "$ENV_FILE" DOCKER_PLATFORM "$DOCKER_PLATFORM"
   log "Installation existante detectee: configuration et volumes conserves."
-else
-  if ! port_is_available "$FRONTEND_PORT"; then
-    [[ "$STRICT_PORTS" == "false" ]] || die "Le port frontend ${FRONTEND_PORT} est occupe."
-    if [[ "$FRONTEND_PORT" == "80" ]]; then
-      port_is_available 8080 || die "Les ports web 80 et 8080 sont deja occupes. Liberez l'un des deux ou utilisez --frontend-port."
-      selected_port=8080
-    else
-      selected_port="$(available_port "$FRONTEND_PORT")"
+fi
+
+selected_port="$(select_runtime_port "$FRONTEND_PORT" 8080 "$PROJECT_NAME")"
+if [[ "$selected_port" != "$FRONTEND_PORT" ]]; then
+  [[ "$STRICT_PORTS" == "false" ]] ||
+    die "Le port frontend ${FRONTEND_PORT} est occupe par $(describe_port_owner "$FRONTEND_PORT")."
+  log "Port frontend ${FRONTEND_PORT} occupe par $(describe_port_owner "$FRONTEND_PORT"); ${selected_port} selectionne."
+  FRONTEND_PORT="$selected_port"
+fi
+
+selected_port="$(select_runtime_port "$API_PORT" 8001 "$PROJECT_NAME" "$FRONTEND_PORT")"
+if [[ "$selected_port" != "$API_PORT" ]]; then
+  [[ "$STRICT_PORTS" == "false" ]] ||
+    die "Le port API ${API_PORT} est occupe par $(describe_port_owner "$API_PORT")."
+  log "Port API ${API_PORT} occupe par $(describe_port_owner "$API_PORT"); ${selected_port} selectionne."
+  API_PORT="$selected_port"
+fi
+
+if [[ "$existing_env" == "true" ]]; then
+  if [[ "$FRONTEND_PORT" != "$requested_frontend_port" || "$API_PORT" != "$requested_api_port" ]]; then
+    write_env_value "$ENV_FILE" FRONTEND_PORT "$FRONTEND_PORT"
+    write_env_value "$ENV_FILE" API_PORT "$API_PORT"
+    if [[ "$CORS_ORIGINS" =~ ^http://localhost(:[0-9]+)?$ ]]; then
+      CORS_ORIGINS="http://localhost"
+      [[ "$FRONTEND_PORT" == "80" ]] || CORS_ORIGINS="http://localhost:${FRONTEND_PORT}"
+      write_env_value "$ENV_FILE" CORS_ORIGINS "$CORS_ORIGINS"
     fi
-    log "Port frontend ${FRONTEND_PORT} occupe; ${selected_port} selectionne."
-    FRONTEND_PORT="$selected_port"
+    log "Configuration des ports actualisee sans modifier les volumes."
   fi
-  if [[ "$API_PORT" == "$FRONTEND_PORT" ]] || ! port_is_available "$API_PORT"; then
-    [[ "$STRICT_PORTS" == "false" ]] || die "Le port API ${API_PORT} est indisponible."
-    selected_port="$(available_port "$API_PORT" "$FRONTEND_PORT")"
-    log "Port API ${API_PORT} indisponible; ${selected_port} selectionne."
-    API_PORT="$selected_port"
-  fi
+else
 
   if [[ -z "$CORS_ORIGINS" ]]; then
     CORS_ORIGINS="http://localhost"
@@ -213,8 +232,8 @@ compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
 compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
 
 if ! wait_for_container ai-monitor-client-api 300; then
-  compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
-  die "L'API n'est pas devenue operationnelle. Consultez les logs Docker."
+  show_startup_diagnostics "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE"
+  die "L'API n'est pas devenue operationnelle. Le diagnostic ci-dessus indique le service bloque."
 fi
 
 log "Installation terminee."

@@ -78,9 +78,11 @@ Le kit lit la plateforme du moteur Docker et selectionne automatiquement:
 Un moteur Docker en mode Windows containers ou une architecture non prise en
 charge est bloque avant le telechargement des images, avec un diagnostic clair.
 
-Pour une nouvelle installation, le site utilise le port `80` lorsqu'il est
-libre, sinon le port `8080`. Une installation existante conserve le port deja
-enregistre dans son fichier `.env`.
+Pour une nouvelle installation comme pour une reparation, les ports sont
+valides avant le lancement. Le site utilise `80`, puis `8080`, puis le prochain
+port libre. L'API utilise `8000`, puis `8001`, puis le prochain port libre. Un
+port deja publie par la meme installation est conserve; un port appartenant a
+un autre service est remplace et le fichier `.env` est actualise.
 
 ## Prerequis
 
@@ -109,24 +111,21 @@ tar -xzf ai-deep-monitor-client-kit.tar.gz
 cd ai-deep-monitor-client-kit
 ```
 
-Lancer ensuite l'installation:
+Lancer ensuite l'outil unique:
 
 ```bash
 chmod +x ./*.sh
-./install-client.sh
+./ai-deep-monitor.sh
 ```
 
-Le dossier par defaut est `~/ai-deep-monitor`. Les ports `80` et `8000` sont
-utilises lorsqu'ils sont libres; sinon le script choisit automatiquement les
-prochains ports disponibles.
+Le menu permet d'installer, reparer, mettre a jour, sauvegarder, restaurer,
+diagnostiquer et desinstaller. Le dossier par defaut est
+`~/ai-deep-monitor`.
 
 Installation personnalisee:
 
 ```bash
-./install-client.sh \
-  --install-dir /opt/ai-deep-monitor \
-  --frontend-port 8080 \
-  --api-port 8001
+./ai-deep-monitor.sh --install-dir /opt/ai-deep-monitor
 ```
 
 L'utilisation de `/opt` demande que le dossier soit accessible en ecriture.
@@ -165,14 +164,27 @@ eviter de rendre la base MySQL inaccessible avec de nouveaux secrets.
 
 Ne supprimez jamais `.env` sans sauvegarde.
 
-## Verification et mise a jour
+## Outil unique Linux
 
-Linux:
+Le meme point d'entree pilote toute l'installation:
 
 ```bash
-~/ai-deep-monitor/check-update.sh
-~/ai-deep-monitor/update-client.sh
+~/ai-deep-monitor/ai-deep-monitor.sh
 ```
+
+Il est aussi utilisable sans menu:
+
+```bash
+~/ai-deep-monitor/ai-deep-monitor.sh status
+~/ai-deep-monitor/ai-deep-monitor.sh logs
+~/ai-deep-monitor/ai-deep-monitor.sh backup
+~/ai-deep-monitor/ai-deep-monitor.sh update
+```
+
+La verification est automatique, mais l'installation de la mise a jour reste
+manuelle. Le script de mise a jour cree une sauvegarde avant tout changement.
+
+## Verification et mise a jour
 
 Windows:
 
@@ -180,9 +192,6 @@ Windows:
 C:\ai-deep-monitor\check-update.ps1
 C:\ai-deep-monitor\update-client.ps1
 ```
-
-La verification est automatique, mais l'installation de la mise a jour reste
-manuelle. Le script de mise a jour cree une sauvegarde avant tout changement.
 
 ### Reparer l'authentification d'une installation existante
 
@@ -263,12 +272,16 @@ C:\ai-deep-monitor\uninstall-client.ps1 -Mode Partial
 Complete, avec sauvegarde automatique avant suppression:
 
 ```bash
-~/ai-deep-monitor/uninstall-client.sh --mode full
+~/ai-deep-monitor/ai-deep-monitor.sh purge
 ```
 
 ```powershell
 C:\ai-deep-monitor\uninstall-client.ps1 -Mode Full
 ```
+
+La commande Linux `purge` exige la saisie de `SUPPRIMER`, cree une sauvegarde
+hors du dossier d'installation, puis retire les conteneurs, les volumes MySQL
+et applicatifs, les images Docker du stack et les fichiers d'installation.
 
 ## Diagnostic
 

@@ -42,7 +42,7 @@ COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 [[ -f "$ENV_FILE" ]] || die "Installation introuvable: ${ENV_FILE}"
 previous_kit_version="$(read_env_value "$ENV_FILE" KIT_VERSION)"
 
-for file in docker-compose.release.yml client-common.sh client-platform.ps1 install-client.sh check-update.sh update-client.sh backup-client.sh restore-client.sh uninstall-client.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 restore-client.ps1 uninstall-client.ps1 README_CLIENT.md VERSION; do
+for file in docker-compose.release.yml client-common.sh client-platform.ps1 ai-deep-monitor.sh install-client.sh check-update.sh update-client.sh backup-client.sh restore-client.sh uninstall-client.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 restore-client.ps1 uninstall-client.ps1 README_CLIENT.md VERSION; do
   [[ -f "${SCRIPT_DIR}/${file}" ]] || continue
   if [[ "${SCRIPT_DIR}/${file}" != "${INSTALL_DIR}/${file}" ]]; then
     cp -f "${SCRIPT_DIR}/${file}" "${INSTALL_DIR}/${file}"

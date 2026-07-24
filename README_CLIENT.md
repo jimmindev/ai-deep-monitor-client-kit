@@ -39,7 +39,7 @@ cd ai-deep-monitor-client-kit
 Le kit est public, mais les images Docker applicatives restent privees. Un
 token GitHub autorise a lire les packages sera demande pendant l'installation.
 
-## Installation rapide Linux
+## Installation et maintenance Linux
 
 Telecharger et extraire l'archive Linux:
 
@@ -52,14 +52,27 @@ curl -fL \
 tar -xzf ai-deep-monitor-client-kit.tar.gz
 cd ai-deep-monitor-client-kit
 chmod +x ./*.sh
-./install-client.sh
+./ai-deep-monitor.sh
 ```
 
-Docker est installe automatiquement s'il est absent sur Ubuntu, Debian, Linux
-Mint, Fedora, RHEL, Rocky Linux, AlmaLinux et CentOS.
+Un menu unique permet ensuite d'installer, mettre a jour, sauvegarder,
+restaurer, consulter les journaux ou desinstaller l'application.
+
+Docker est verifie et installe automatiquement s'il est absent sur Ubuntu,
+Debian, Linux Mint, Fedora, RHEL, Rocky Linux, AlmaLinux et CentOS.
 
 Le kit detecte automatiquement `linux/amd64` sur un PC Linux x64 et
 `linux/arm64` sur un NVIDIA Jetson ou un serveur ARM64.
+
+Avant chaque installation ou reparation, les ports sont controles:
+
+- site web: `80`, puis `8080`, puis le prochain port libre;
+- API: `8000`, puis `8001`, puis le prochain port libre;
+- un port appartenant deja a cette installation est conserve;
+- un port utilise par un autre service est remplace automatiquement.
+
+Le choix est enregistre dans `.env`. Si l'API ne demarre pas, le script affiche
+automatiquement l'etat des conteneurs et les journaux utiles.
 
 ## Installation rapide Windows
 
@@ -79,18 +92,34 @@ Pendant l'installation, renseignez votre utilisateur GitHub et un token
 autorise a lire les packages prives. Le site utilise automatiquement le port
 `80`, ou le port `8080` lorsque `80` est deja occupe.
 
-## Commandes Linux
+## Utilisation quotidienne Linux
 
 ```bash
-~/ai-deep-monitor/check-update.sh
-~/ai-deep-monitor/update-client.sh
-~/ai-deep-monitor/backup-client.sh
-~/ai-deep-monitor/restore-client.sh --backup-file CHEMIN.tar.gz
-~/ai-deep-monitor/uninstall-client.sh --mode partial
-~/ai-deep-monitor/uninstall-client.sh --mode full
+~/ai-deep-monitor/ai-deep-monitor.sh
 ```
 
-## Commandes Windows
+Le choix **TOUT SUPPRIMER** cree une sauvegarde externe, puis supprime les
+conteneurs, les volumes SQL et applicatifs, les images Docker et les fichiers
+d'installation. Il exige de saisir `SUPPRIMER`. La sauvegarde est conservee
+hors du dossier d'installation.
+
+Les commandes directes restent disponibles pour l'automatisation:
+
+```bash
+./ai-deep-monitor.sh status
+./ai-deep-monitor.sh logs
+./ai-deep-monitor.sh backup
+./ai-deep-monitor.sh update
+./ai-deep-monitor.sh purge
+```
+
+Pour un chemin personnalise:
+
+```bash
+./ai-deep-monitor.sh --install-dir /opt/ai-deep-monitor
+```
+
+## Utilisation Windows
 
 ```powershell
 C:\ai-deep-monitor\check-update.ps1

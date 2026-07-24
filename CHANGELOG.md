@@ -1,5 +1,33 @@
 # Historique des versions du Client Kit
 
+## Prochaine mise a jour
+
+### Ajoute
+
+- Lanceur Linux unique `ai-deep-monitor.sh` avec menu pour l'installation, la
+  mise a jour, le diagnostic, la sauvegarde, la restauration et la
+  desinstallation.
+- Mode `TOUT SUPPRIMER` protege par confirmation, avec sauvegarde externe avant
+  suppression des conteneurs, volumes SQL et applicatifs, images et fichiers.
+
+### Corrige
+
+- Les ports d'une installation existante sont maintenant revalides avant le
+  demarrage, au meme titre qu'une installation neuve.
+- Le site essaie `80`, puis `8080`, puis les ports suivants; l'API essaie
+  `8000`, puis `8001`, puis les ports suivants.
+- Un port deja utilise par le meme projet Docker est conserve, tandis qu'un
+  port appartenant a un autre service est remplace automatiquement.
+- En cas d'API non saine, l'installateur affiche directement l'etat et les
+  journaux des services utiles.
+
+### Validation
+
+- Tests Shell de syntaxe, de plateforme, de port occupe et de selection des
+  ports de repli.
+- Installation et mise a jour sans demarrage Docker avec conservation de
+  l'application `v0.1.5`.
+
 ## v0.1.7 - 2026-07-24
 
 ### Ajoute

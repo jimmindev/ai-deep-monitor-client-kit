@@ -11,7 +11,7 @@ Linux ARM64, notamment les NVIDIA Jetson.
 | Linux x86_64 | `linux/amd64` |
 | Linux ARM64 / NVIDIA Jetson | `linux/arm64` |
 
-Les images applicatives `v0.1.4` ont ete republiees sous forme de manifestes
+Les images applicatives `v0.1.5` ont ete republiees sous forme de manifestes
 multiarchitectures `amd64` et `arm64`.
 
 ## Nouveau comportement
@@ -23,7 +23,7 @@ multiarchitectures `amd64` et `arm64`.
   repasser en mode Linux containers.
 - Une architecture non prise en charge est refusee avant le telechargement.
 - Lors d'un changement de version du kit, les images sont rechargees meme si
-  l'application reste en `v0.1.4`.
+  l'application reste en `v0.1.5`.
 - Les archives Linux et Windows ont des noms stables et s'extraient toujours
   dans `ai-deep-monitor-client-kit`. Une nouvelle version ne cree plus un
   nouveau dossier local.
@@ -41,7 +41,7 @@ curl -fL \
 tar -xzf ai-deep-monitor-client-kit.tar.gz
 cd ai-deep-monitor-client-kit
 chmod +x ./*.sh
-./install-client.sh
+./ai-deep-monitor.sh
 ```
 
 ## Installation Windows
@@ -51,10 +51,10 @@ puis executer:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\install-client.ps1 -AppVersion v0.1.4
+.\install-client.ps1 -AppVersion v0.1.5
 ```
 
 ## Versions
 
 - Client Kit: `v0.1.7`
-- Application stable: `v0.1.4`
+- Application stable: `v0.1.5`

@@ -376,6 +376,71 @@ PY
   fi
 }
 
+container_project_name() {
+  local container="$1"
+  docker_exec inspect \
+    --format '{{ index .Config.Labels "com.docker.compose.project" }}' \
+    "$container" 2>/dev/null || true
+}
+
+container_publishing_port() {
+  local port="$1"
+  docker_exec ps \
+    --filter "publish=${port}" \
+    --format '{{.Names}}' 2>/dev/null |
+    awk 'NF { print; exit }'
+}
+
+port_is_available_for_project() {
+  local port="$1"
+  local project="$2"
+  local owner
+
+  if port_is_available "$port"; then
+    return 0
+  fi
+
+  owner="$(container_publishing_port "$port")"
+  [[ -n "$owner" && "$(container_project_name "$owner")" == "$project" ]]
+}
+
+select_runtime_port() {
+  local preferred="$1"
+  local fallback="$2"
+  local project="$3"
+  local excluded="${4:-}"
+  local port
+
+  for port in "$preferred" "$fallback"; do
+    [[ -n "$port" && "$port" != "$excluded" ]] || continue
+    if port_is_available_for_project "$port" "$project"; then
+      printf '%s\n' "$port"
+      return 0
+    fi
+  done
+
+  for ((port = fallback + 1; port <= fallback + 200 && port <= 65535; port++)); do
+    [[ "$port" != "$excluded" ]] || continue
+    if port_is_available_for_project "$port" "$project"; then
+      printf '%s\n' "$port"
+      return 0
+    fi
+  done
+
+  die "Aucun port disponible entre ${fallback} et $((fallback + 200))."
+}
+
+describe_port_owner() {
+  local port="$1"
+  local owner
+  owner="$(container_publishing_port "$port")"
+  if [[ -n "$owner" ]]; then
+    printf 'conteneur Docker %s' "$owner"
+  else
+    printf 'un service du systeme'
+  fi
+}
+
 available_port() {
   local preferred="$1"
   local excluded="${2:-}"
@@ -388,6 +453,18 @@ available_port() {
     fi
   done
   die "Aucun port disponible a partir de ${preferred}."
+}
+
+show_startup_diagnostics() {
+  local project="$1"
+  local compose_file="$2"
+  local env_file="$3"
+
+  warn "Etat des services:"
+  compose_exec -p "$project" -f "$compose_file" --env-file "$env_file" ps || true
+  warn "Derniers journaux utiles:"
+  compose_exec -p "$project" -f "$compose_file" --env-file "$env_file" \
+    logs --tail=120 mysql sandbox ollama ollama-models api || true
 }
 
 project_name_from_dir() {
