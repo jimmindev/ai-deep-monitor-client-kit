@@ -14,7 +14,7 @@ try {
   $frontendListener.Start()
   $apiListener.Start()
 
-  & (Join-Path $repositoryRoot "install-client.ps1") `
+  & (Join-Path $repositoryRoot "scripts\windows\install-client.ps1") `
     -InstallDir $testDir `
     -NoStart `
     -SkipDockerLogin `
@@ -25,6 +25,19 @@ try {
   $launcherPath = Join-Path $testDir "ai-deep-monitor.ps1"
   if (-not (Test-Path -LiteralPath $launcherPath)) {
     throw "Le lanceur Windows unifie n'a pas ete copie."
+  }
+  foreach ($requiredFile in @(
+    "docker-compose.release.yml",
+    "ai-deep-monitor.sh",
+    "install-client.ps1",
+    "install-client.sh",
+    "client-platform.ps1",
+    "client-common.sh",
+    "README_CLIENT.md"
+  )) {
+    if (-not (Test-Path -LiteralPath (Join-Path $testDir $requiredFile))) {
+      throw "Fichier client non copie: $requiredFile"
+    }
   }
   $envContent = Get-Content -LiteralPath $envPath -Raw
   if ($envContent -match "(?m)^FRONTEND_PORT=18080\r?$") {

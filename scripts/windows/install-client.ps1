@@ -11,6 +11,31 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$kitRoot = $PSScriptRoot
+$repositoryRoot = Join-Path $PSScriptRoot "..\.."
+if (Test-Path -LiteralPath (Join-Path $repositoryRoot "VERSION")) {
+  $kitRoot = (Resolve-Path -LiteralPath $repositoryRoot).Path
+}
+
+function Resolve-KitSource {
+  param([string]$Name)
+  $candidates = @(
+    (Join-Path $PSScriptRoot $Name),
+    (Join-Path $PSScriptRoot "..\linux\$Name"),
+    (Join-Path $kitRoot $Name),
+    (Join-Path $kitRoot "deploy\$Name")
+  )
+  if ($Name -eq "README_CLIENT.md") {
+    $candidates += Join-Path $kitRoot "docs\installation.md"
+  }
+  foreach ($candidate in $candidates) {
+    if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+      return (Resolve-Path -LiteralPath $candidate).Path
+    }
+  }
+  return $null
+}
+
 $platformHelpers = Join-Path $PSScriptRoot "client-platform.ps1"
 if (-not (Test-Path -LiteralPath $platformHelpers)) {
   throw "client-platform.ps1 introuvable dans $PSScriptRoot"
@@ -287,9 +312,9 @@ function Repair-AuthConfig {
 }
 
 $installPath = New-Item -ItemType Directory -Force -Path $InstallDir
-$composeSource = Join-Path $PSScriptRoot "docker-compose.release.yml"
-if (-not (Test-Path -LiteralPath $composeSource)) {
-  throw "docker-compose.release.yml introuvable dans $PSScriptRoot"
+$composeSource = Resolve-KitSource "docker-compose.release.yml"
+if (-not $composeSource) {
+  throw "docker-compose.release.yml introuvable dans le kit"
 }
 
 $composeTarget = Join-Path $installPath.FullName "docker-compose.release.yml"
@@ -313,13 +338,14 @@ $kitFiles = @(
   "backup-client.ps1",
   "restore-client.ps1",
   "uninstall-client.ps1",
+  "ai-deep-monitor.sh",
   "ai-deep-monitor.ps1",
   "README_CLIENT.md",
   "VERSION"
 )
 foreach ($fileName in $kitFiles) {
-  $source = Join-Path $PSScriptRoot $fileName
-  if (Test-Path -LiteralPath $source) {
+  $source = Resolve-KitSource $fileName
+  if ($source) {
     $target = Join-Path $installPath.FullName $fileName
     if ((Resolve-Path -LiteralPath $source).Path -ne $target) {
       Copy-Item -LiteralPath $source -Destination $target -Force

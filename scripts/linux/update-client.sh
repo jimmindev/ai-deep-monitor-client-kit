@@ -5,6 +5,26 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=client-common.sh
 source "${SCRIPT_DIR}/client-common.sh"
 
+KIT_ROOT="$SCRIPT_DIR"
+[[ -f "${SCRIPT_DIR}/../../VERSION" ]] && KIT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+kit_source() {
+  local name="$1"
+  local candidate
+  for candidate in \
+    "${SCRIPT_DIR}/${name}" \
+    "${SCRIPT_DIR}/../windows/${name}" \
+    "${KIT_ROOT}/${name}" \
+    "${KIT_ROOT}/deploy/${name}"; do
+    [[ -f "$candidate" ]] && { printf '%s\n' "$candidate"; return 0; }
+  done
+  if [[ "$name" == "README_CLIENT.md" && -f "${KIT_ROOT}/docs/installation.md" ]]; then
+    printf '%s\n' "${KIT_ROOT}/docs/installation.md"
+    return 0
+  fi
+  return 1
+}
+
 INSTALL_DIR="${HOME}/ai-deep-monitor"
 APP_VERSION=""
 SKIP_DOCKER_LOGIN=false
@@ -42,10 +62,11 @@ COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 [[ -f "$ENV_FILE" ]] || die "Installation introuvable: ${ENV_FILE}"
 previous_kit_version="$(read_env_value "$ENV_FILE" KIT_VERSION)"
 
-for file in docker-compose.release.yml client-common.sh client-platform.ps1 ai-deep-monitor.sh install-client.sh check-update.sh update-client.sh backup-client.sh restore-client.sh uninstall-client.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 restore-client.ps1 uninstall-client.ps1 README_CLIENT.md VERSION; do
-  [[ -f "${SCRIPT_DIR}/${file}" ]] || continue
-  if [[ "${SCRIPT_DIR}/${file}" != "${INSTALL_DIR}/${file}" ]]; then
-    cp -f "${SCRIPT_DIR}/${file}" "${INSTALL_DIR}/${file}"
+for file in docker-compose.release.yml client-common.sh client-platform.ps1 ai-deep-monitor.sh ai-deep-monitor.ps1 install-client.sh check-update.sh update-client.sh backup-client.sh restore-client.sh uninstall-client.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 restore-client.ps1 uninstall-client.ps1 README_CLIENT.md VERSION; do
+  source_file="$(kit_source "$file" || true)"
+  [[ -n "$source_file" ]] || continue
+  if [[ "$source_file" != "${INSTALL_DIR}/${file}" ]]; then
+    cp -f "$source_file" "${INSTALL_DIR}/${file}"
   fi
 done
 chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true

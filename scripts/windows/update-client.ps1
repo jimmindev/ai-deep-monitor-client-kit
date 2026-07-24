@@ -8,6 +8,31 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$kitRoot = $PSScriptRoot
+$repositoryRoot = Join-Path $PSScriptRoot "..\.."
+if (Test-Path -LiteralPath (Join-Path $repositoryRoot "VERSION")) {
+  $kitRoot = (Resolve-Path -LiteralPath $repositoryRoot).Path
+}
+
+function Resolve-KitSource {
+  param([string]$Name)
+  $candidates = @(
+    (Join-Path $PSScriptRoot $Name),
+    (Join-Path $PSScriptRoot "..\linux\$Name"),
+    (Join-Path $kitRoot $Name),
+    (Join-Path $kitRoot "deploy\$Name")
+  )
+  if ($Name -eq "README_CLIENT.md") {
+    $candidates += Join-Path $kitRoot "docs\installation.md"
+  }
+  foreach ($candidate in $candidates) {
+    if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+      return (Resolve-Path -LiteralPath $candidate).Path
+    }
+  }
+  return $null
+}
+
 $platformHelpers = Join-Path $PSScriptRoot "client-platform.ps1"
 if (-not (Test-Path -LiteralPath $platformHelpers)) {
   throw "client-platform.ps1 introuvable dans $PSScriptRoot"
@@ -178,13 +203,14 @@ $kitFiles = @(
   "backup-client.ps1",
   "restore-client.ps1",
   "uninstall-client.ps1",
+  "ai-deep-monitor.sh",
   "ai-deep-monitor.ps1",
   "README_CLIENT.md",
   "VERSION"
 )
 foreach ($fileName in $kitFiles) {
-  $source = Join-Path $PSScriptRoot $fileName
-  if (-not (Test-Path -LiteralPath $source)) { continue }
+  $source = Resolve-KitSource $fileName
+  if (-not $source) { continue }
   $target = Join-Path $InstallDir $fileName
   $sourcePath = (Resolve-Path -LiteralPath $source).Path
   $targetPath = $target

@@ -5,7 +5,7 @@ set -Eeuo pipefail
 KIT_DIR="${1:-/kit}"
 
 # shellcheck disable=SC1091
-source "${KIT_DIR}/client-common.sh"
+source "${KIT_DIR}/scripts/linux/client-common.sh"
 
 port_is_available 80
 selected_port="$(available_port 80)"

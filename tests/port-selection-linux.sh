@@ -3,9 +3,9 @@
 set -Eeuo pipefail
 
 KIT_DIR="${1:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
-# shellcheck source=../client-common.sh
+# shellcheck source=../scripts/linux/client-common.sh
 # shellcheck disable=SC1091
-source "${KIT_DIR}/client-common.sh"
+source "${KIT_DIR}/scripts/linux/client-common.sh"
 
 available_ports="80 8001 8082"
 

@@ -6,7 +6,7 @@ KIT_DIR="${1:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
 INSTALL_DIR="$(mktemp -d -t ai-monitor-kit-test-XXXXXX)"
 trap 'rm -rf -- "$INSTALL_DIR"' EXIT
 
-"${KIT_DIR}/install-client.sh" \
+"${KIT_DIR}/scripts/linux/install-client.sh" \
   --install-dir "$INSTALL_DIR" \
   --no-start \
   --skip-docker-login

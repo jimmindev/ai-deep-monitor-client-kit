@@ -4,6 +4,9 @@
 
 ### Ajoute
 
+- Racine du depot simplifiee autour des deux lanceurs client.
+- Scripts internes ranges par plateforme dans `scripts/`, avec Docker Compose,
+  documentation et notes de version dans des dossiers dedies.
 - Lanceur Windows unique `ai-deep-monitor.ps1` avec le meme menu de
   maintenance que Linux.
 - Lanceur Linux unique `ai-deep-monitor.sh` avec menu pour l'installation, la

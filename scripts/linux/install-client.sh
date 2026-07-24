@@ -5,6 +5,26 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=client-common.sh
 source "${SCRIPT_DIR}/client-common.sh"
 
+KIT_ROOT="$SCRIPT_DIR"
+[[ -f "${SCRIPT_DIR}/../../VERSION" ]] && KIT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+kit_source() {
+  local name="$1"
+  local candidate
+  for candidate in \
+    "${SCRIPT_DIR}/${name}" \
+    "${SCRIPT_DIR}/../windows/${name}" \
+    "${KIT_ROOT}/${name}" \
+    "${KIT_ROOT}/deploy/${name}"; do
+    [[ -f "$candidate" ]] && { printf '%s\n' "$candidate"; return 0; }
+  done
+  if [[ "$name" == "README_CLIENT.md" && -f "${KIT_ROOT}/docs/installation.md" ]]; then
+    printf '%s\n' "${KIT_ROOT}/docs/installation.md"
+    return 0
+  fi
+  return 1
+}
+
 INSTALL_DIR="${HOME}/ai-deep-monitor"
 APP_VERSION="$DEFAULT_APP_VERSION"
 GITHUB_OWNER="jimmindev"
@@ -51,7 +71,8 @@ done
 
 [[ "$FRONTEND_PORT" =~ ^[0-9]+$ ]] || die "Port frontend invalide."
 [[ "$API_PORT" =~ ^[0-9]+$ ]] || die "Port API invalide."
-[[ -f "${SCRIPT_DIR}/docker-compose.release.yml" ]] || die "docker-compose.release.yml introuvable."
+compose_source="$(kit_source docker-compose.release.yml)" ||
+  die "docker-compose.release.yml introuvable."
 
 mkdir -p "$INSTALL_DIR"
 INSTALL_DIR="$(cd "$INSTALL_DIR" && pwd)"
@@ -64,6 +85,7 @@ kit_files=(
   client-common.sh
   client-platform.ps1
   ai-deep-monitor.sh
+  ai-deep-monitor.ps1
   install-client.sh
   check-update.sh
   update-client.sh
@@ -81,9 +103,10 @@ kit_files=(
 )
 
 for file in "${kit_files[@]}"; do
-  [[ -f "${SCRIPT_DIR}/${file}" ]] || continue
-  if [[ "$(cd "$(dirname "${SCRIPT_DIR}/${file}")" && pwd)/$(basename "$file")" != "${INSTALL_DIR}/${file}" ]]; then
-    cp -f "${SCRIPT_DIR}/${file}" "${INSTALL_DIR}/${file}"
+  source_file="$(kit_source "$file" || true)"
+  [[ -n "$source_file" ]] || continue
+  if [[ "$(cd "$(dirname "$source_file")" && pwd)/$(basename "$source_file")" != "${INSTALL_DIR}/${file}" ]]; then
+    cp -f "$source_file" "${INSTALL_DIR}/${file}"
   fi
 done
 chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true

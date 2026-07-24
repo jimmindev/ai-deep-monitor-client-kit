@@ -3,8 +3,8 @@
 set -Eeuo pipefail
 
 KIT_DIR="${1:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
-# shellcheck source=../client-common.sh
-source "${KIT_DIR}/client-common.sh"
+# shellcheck source=../scripts/linux/client-common.sh
+source "${KIT_DIR}/scripts/linux/client-common.sh"
 
 [[ "$(resolve_docker_platform linux amd64)" == "linux/amd64" ]]
 [[ "$(resolve_docker_platform linux x86_64)" == "linux/amd64" ]]

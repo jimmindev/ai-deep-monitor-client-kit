@@ -6,15 +6,19 @@ param(
 
 $ErrorActionPreference = "Stop"
 $scriptDir = $PSScriptRoot
+$internalDir = Join-Path $scriptDir "scripts\windows"
+if (-not (Test-Path -LiteralPath $internalDir -PathType Container)) {
+  $internalDir = $scriptDir
+}
 
 function Invoke-KitScript {
   param(
     [string]$Name,
     [hashtable]$Arguments = @{}
   )
-  $path = Join-Path $scriptDir $Name
+  $path = Join-Path $internalDir $Name
   if (-not (Test-Path -LiteralPath $path)) {
-    throw "$Name introuvable dans $scriptDir"
+    throw "$Name introuvable dans $internalDir"
   }
   & $path @Arguments
 }

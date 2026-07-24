@@ -2,8 +2,10 @@
 
 set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+INTERNAL_DIR="${SCRIPT_DIR}/scripts/linux"
+[[ -d "$INTERNAL_DIR" ]] || INTERNAL_DIR="$SCRIPT_DIR"
 # shellcheck source=client-common.sh
-source "${SCRIPT_DIR}/client-common.sh"
+source "${INTERNAL_DIR}/client-common.sh"
 
 INSTALL_DIR="${AI_DEEP_MONITOR_DIR:-${HOME}/ai-deep-monitor}"
 
@@ -33,8 +35,8 @@ EOF
 
 kit_script() {
   local name="$1"
-  [[ -x "${SCRIPT_DIR}/${name}" ]] || die "Script introuvable: ${SCRIPT_DIR}/${name}"
-  printf '%s\n' "${SCRIPT_DIR}/${name}"
+  [[ -x "${INTERNAL_DIR}/${name}" ]] || die "Script introuvable: ${INTERNAL_DIR}/${name}"
+  printf '%s\n' "${INTERNAL_DIR}/${name}"
 }
 
 require_installation() {

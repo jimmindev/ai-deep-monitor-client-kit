@@ -7,6 +7,27 @@ forme d'images Docker privees publiees sur GHCR.
 La version du kit est `v0.1.7`. La version applicative stable installee par
 defaut est `v0.1.5`.
 
+Le guide pas a pas est disponible dans
+[docs/installation.md](docs/installation.md).
+
+## Organisation du depot
+
+```text
+ai-deep-monitor-client-kit/
+|-- ai-deep-monitor.sh       # point d'entree Linux et Jetson
+|-- ai-deep-monitor.ps1      # point d'entree Windows
+|-- deploy/                  # definition Docker Compose
+|-- docs/                    # installation et notes de version
+|-- scripts/                 # implementation interne Linux et Windows
+|-- tests/                   # tests de non-regression du kit
+|-- CHANGELOG.md
+|-- README.md
+`-- VERSION
+```
+
+Pour une utilisation normale, ne lancez que `ai-deep-monitor.sh` ou
+`ai-deep-monitor.ps1`. Les fichiers de `scripts/` sont internes au kit.
+
 ## Telechargement
 
 - Depot public:
@@ -33,14 +54,14 @@ Linux et Jetson:
 
 ```bash
 cd ~/aidp/ai-deep-monitor-client-kit
-chmod +x cleanup-old-kits.sh
-./cleanup-old-kits.sh
+chmod +x scripts/linux/cleanup-old-kits.sh
+./scripts/linux/cleanup-old-kits.sh
 ```
 
 Windows, depuis le dossier stable extrait:
 
 ```powershell
-.\cleanup-old-kits.ps1
+.\scripts\windows\cleanup-old-kits.ps1
 ```
 
 Le script affiche les elements trouves et demande une confirmation. Pour une
@@ -219,19 +240,13 @@ mot de passe MySQL, ni les comptes applicatifs, ni les volumes existants.
 Linux:
 
 ```bash
-~/ai-deep-monitor/update-client.sh \
-  --install-dir "$HOME/ai-deep-monitor" \
-  --app-version v0.1.5 \
-  --yes
+~/ai-deep-monitor/ai-deep-monitor.sh update
 ```
 
 Windows:
 
 ```powershell
-C:\ai-deep-monitor\update-client.ps1 `
-  -InstallDir C:\ai-deep-monitor `
-  -AppVersion v0.1.5 `
-  -Yes
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command update
 ```
 
 Un `401` sur `/api/auth/refresh` avant connexion indique simplement
@@ -243,13 +258,13 @@ apres la reparation et la recreation automatique du conteneur API.
 Linux:
 
 ```bash
-~/ai-deep-monitor/backup-client.sh
+~/ai-deep-monitor/ai-deep-monitor.sh backup
 ```
 
 Windows:
 
 ```powershell
-C:\ai-deep-monitor\backup-client.ps1
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backup
 ```
 
 La sauvegarde contient MySQL, les donnees API, les MIB importees et les
@@ -261,14 +276,14 @@ retelcharge si necessaire.
 Linux:
 
 ```bash
-~/ai-deep-monitor/restore-client.sh \
-  --backup-file ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.5-DATE.tar.gz
+~/ai-deep-monitor/ai-deep-monitor.sh restore \
+  ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.5-DATE.tar.gz
 ```
 
 Windows:
 
 ```powershell
-C:\ai-deep-monitor\restore-client.ps1 -BackupFile "D:\Backups\ai-deep-monitor-v0.1.5-DATE.zip"
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command restore
 ```
 
 Linux accepte les sauvegardes `.tar.gz` du kit Linux et les archives `.zip`
@@ -279,11 +294,11 @@ produites sous Windows.
 Partielle, en conservant les volumes et les fichiers:
 
 ```bash
-~/ai-deep-monitor/uninstall-client.sh --mode partial
+~/ai-deep-monitor/ai-deep-monitor.sh uninstall
 ```
 
 ```powershell
-C:\ai-deep-monitor\uninstall-client.ps1 -Mode Partial
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command uninstall
 ```
 
 Complete, avec sauvegarde automatique avant suppression:
