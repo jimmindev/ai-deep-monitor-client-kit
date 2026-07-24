@@ -178,6 +178,7 @@ $kitFiles = @(
   "backup-client.ps1",
   "restore-client.ps1",
   "uninstall-client.ps1",
+  "ai-deep-monitor.ps1",
   "README_CLIENT.md",
   "VERSION"
 )

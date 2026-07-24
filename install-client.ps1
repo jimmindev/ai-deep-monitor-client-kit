@@ -112,6 +112,96 @@ function Get-AvailablePort {
   throw "Aucun port disponible trouve a partir de $PreferredPort."
 }
 
+function Get-PortComposeProjects {
+  param([int]$Port)
+  if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { return @() }
+  try {
+    return @(
+      & docker ps `
+        --filter "publish=$Port" `
+        --format '{{.Label "com.docker.compose.project"}}' 2>$null |
+        Where-Object { $_ } |
+        Sort-Object -Unique
+    )
+  } catch {
+    return @()
+  }
+}
+
+function Test-PortAvailableForProject {
+  param(
+    [int]$Port,
+    [string]$ProjectName
+  )
+  if (Test-PortAvailable -Port $Port) { return $true }
+  return $ProjectName -in (Get-PortComposeProjects -Port $Port)
+}
+
+function Get-RuntimePort {
+  param(
+    [int]$PreferredPort,
+    [string]$ProjectName,
+    [int[]]$FallbackPorts = @(),
+    [int[]]$ExcludedPorts = @(),
+    [switch]$Strict
+  )
+  if (
+    $PreferredPort -notin $ExcludedPorts -and
+    (Test-PortAvailableForProject -Port $PreferredPort -ProjectName $ProjectName)
+  ) {
+    return $PreferredPort
+  }
+  if ($Strict) {
+    throw "Le port $PreferredPort est deja utilise par un autre service."
+  }
+  foreach ($candidate in $FallbackPorts) {
+    if (
+      $candidate -notin $ExcludedPorts -and
+      (Test-PortAvailableForProject -Port $candidate -ProjectName $ProjectName)
+    ) {
+      return $candidate
+    }
+  }
+  $searchStart = if ($FallbackPorts.Count -gt 0) {
+    [Math]::Max(($FallbackPorts | Measure-Object -Maximum).Maximum + 1, $PreferredPort + 1)
+  } else {
+    $PreferredPort + 1
+  }
+  return Get-AvailablePort -PreferredPort $searchStart -ExcludedPorts $ExcludedPorts
+}
+
+function Show-StartupDiagnostics {
+  param(
+    [string]$ComposePath,
+    [string]$EnvPath
+  )
+  Write-Warning "Le demarrage Docker a echoue. Etat des services:"
+  & docker compose -f $ComposePath --env-file $EnvPath ps -a 2>$null
+  foreach ($service in @("mysql", "sandbox", "ollama", "ollama-models", "api")) {
+    Write-Host ""
+    Write-Host "===== $service ====="
+    & docker compose -f $ComposePath --env-file $EnvPath logs --tail=100 $service 2>$null
+  }
+}
+
+function Wait-ForHealthyContainer {
+  param(
+    [string]$ContainerName,
+    [int]$TimeoutSeconds = 300
+  )
+  $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  while ((Get-Date) -lt $deadline) {
+    $rawState = & docker inspect `
+      --format "{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{end}}" `
+      $ContainerName 2>$null
+    $state = if ($rawState) { ([string]$rawState).Trim() } else { "" }
+    if ($state -eq "running|healthy" -or $state -eq "running|") { return $true }
+    if ($state -match "^(exited|dead)\|") { return $false }
+    Start-Sleep -Seconds 3
+  }
+  return $false
+}
+
 function Get-ExistingDataVolumes {
   param([string]$ProjectName)
   if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { return @() }
@@ -223,6 +313,7 @@ $kitFiles = @(
   "backup-client.ps1",
   "restore-client.ps1",
   "uninstall-client.ps1",
+  "ai-deep-monitor.ps1",
   "README_CLIENT.md",
   "VERSION"
 )
@@ -257,26 +348,27 @@ if ($existingEnv) {
   Write-DotEnvValue -Path $envTarget -Key "KIT_VERSION" -Value "v0.1.7"
   Write-DotEnvValue -Path $envTarget -Key "DOCKER_PLATFORM" -Value $dockerPlatform
   Write-Host "Installation existante detectee: configuration et volumes conserves."
-} else {
-  if (-not (Test-PortAvailable -Port $FrontendPort)) {
-    if ($StrictPorts) { throw "Le port frontend $FrontendPort est deja utilise." }
-    if ($FrontendPort -eq 80) {
-      if (-not (Test-PortAvailable -Port 8080)) {
-        throw "Les ports web 80 et 8080 sont deja occupes. Libere l'un des deux ou utilise -FrontendPort."
-      }
-      $newPort = 8080
-    } else {
-      $newPort = Get-AvailablePort -PreferredPort $FrontendPort
-    }
-    Write-Host "Port frontend $FrontendPort occupe; port $newPort selectionne automatiquement."
-    $FrontendPort = $newPort
-  }
-  if (-not (Test-PortAvailable -Port $ApiPort) -or $ApiPort -eq $FrontendPort) {
-    if ($StrictPorts) { throw "Le port API $ApiPort est deja utilise." }
-    $newPort = Get-AvailablePort -PreferredPort $ApiPort -ExcludedPorts @($FrontendPort)
-    Write-Host "Port API $ApiPort indisponible; port $newPort selectionne automatiquement."
-    $ApiPort = $newPort
-  }
+}
+
+$requestedFrontendPort = $FrontendPort
+$requestedApiPort = $ApiPort
+$FrontendPort = Get-RuntimePort `
+  -PreferredPort $FrontendPort `
+  -ProjectName $projectName `
+  -FallbackPorts @(8080) `
+  -Strict:$StrictPorts
+$ApiPort = Get-RuntimePort `
+  -PreferredPort $ApiPort `
+  -ProjectName $projectName `
+  -FallbackPorts @(8001) `
+  -ExcludedPorts @($FrontendPort) `
+  -Strict:$StrictPorts
+
+if ($FrontendPort -ne $requestedFrontendPort) {
+  Write-Host "Port web $requestedFrontendPort occupe par un autre service; port $FrontendPort selectionne."
+}
+if ($ApiPort -ne $requestedApiPort) {
+  Write-Host "Port API $requestedApiPort occupe par un autre service; port $ApiPort selectionne."
 }
 
 if (-not $CorsOrigins) {
@@ -333,6 +425,21 @@ API_PORT=$ApiPort
   Set-Content -LiteralPath $envTarget -Value $envContent -Encoding UTF8
   Write-Host "Fichier .env cree avec mots de passe generes: $envTarget"
 } else {
+  Write-DotEnvValue -Path $envTarget -Key "FRONTEND_PORT" -Value "$FrontendPort"
+  Write-DotEnvValue -Path $envTarget -Key "API_PORT" -Value "$ApiPort"
+  $oldDefaultCors = if ($requestedFrontendPort -eq 80) {
+    "http://localhost"
+  } else {
+    "http://localhost:$requestedFrontendPort"
+  }
+  if (-not $CorsOrigins -or $CorsOrigins -eq $oldDefaultCors) {
+    $CorsOrigins = if ($FrontendPort -eq 80) {
+      "http://localhost"
+    } else {
+      "http://localhost:$FrontendPort"
+    }
+    Write-DotEnvValue -Path $envTarget -Key "CORS_ORIGINS" -Value $CorsOrigins
+  }
   Write-Host "Fichier .env deja present, il est conserve: $envTarget"
 }
 
@@ -375,12 +482,24 @@ if (-not $SkipDockerLogin) {
 }
 
 docker compose -f $composeTarget --env-file $envTarget pull
+if ($LASTEXITCODE -ne 0) {
+  throw "Impossible de telecharger les images Docker."
+}
 docker compose -f $composeTarget --env-file $envTarget up -d
+if ($LASTEXITCODE -ne 0) {
+  Show-StartupDiagnostics -ComposePath $composeTarget -EnvPath $envTarget
+  throw "Le stack Docker n'a pas demarre correctement. Consulte les journaux ci-dessus."
+}
+if (-not (Wait-ForHealthyContainer -ContainerName "ai-monitor-client-api")) {
+  Show-StartupDiagnostics -ComposePath $composeTarget -EnvPath $envTarget
+  throw "L'API n'est pas devenue operationnelle. Consulte les journaux ci-dessus."
+}
 
 Write-Host ""
 Write-Host "Installation terminee."
 Write-Host "Plateforme: $dockerPlatform"
-Write-Host "Frontend: http://localhost:$FrontendPort"
+$frontendUrl = if ($FrontendPort -eq 80) { "http://localhost" } else { "http://localhost:$FrontendPort" }
+Write-Host "Frontend: $frontendUrl"
 Write-Host "API health: http://localhost:$ApiPort/health"
 if ($bootstrapAdminPassword) {
   Write-Host ""

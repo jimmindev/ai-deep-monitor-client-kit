@@ -139,10 +139,17 @@ puis ouvrir PowerShell dans le dossier `ai-deep-monitor-client-kit`:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\install-client.ps1 -AppVersion v0.1.5
+.\ai-deep-monitor.ps1
 ```
 
-Le dossier par defaut est `C:\ai-deep-monitor`.
+Choisir **1. Installer ou reparer**. Le dossier par defaut est
+`C:\ai-deep-monitor`.
+
+Pour un chemin personnalise:
+
+```powershell
+.\ai-deep-monitor.ps1 -InstallDir "D:\AI-Deep-Monitor"
+```
 
 ## Acces
 
@@ -164,12 +171,16 @@ eviter de rendre la base MySQL inaccessible avec de nouveaux secrets.
 
 Ne supprimez jamais `.env` sans sauvegarde.
 
-## Outil unique Linux
+## Outil unique Linux et Windows
 
 Le meme point d'entree pilote toute l'installation:
 
 ```bash
 ~/ai-deep-monitor/ai-deep-monitor.sh
+```
+
+```powershell
+C:\ai-deep-monitor\ai-deep-monitor.ps1
 ```
 
 Il est aussi utilisable sans menu:
@@ -181,6 +192,13 @@ Il est aussi utilisable sans menu:
 ~/ai-deep-monitor/ai-deep-monitor.sh update
 ```
 
+```powershell
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command status
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command logs
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backup
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command update
+```
+
 La verification est automatique, mais l'installation de la mise a jour reste
 manuelle. Le script de mise a jour cree une sauvegarde avant tout changement.
 
@@ -189,8 +207,7 @@ manuelle. Le script de mise a jour cree une sauvegarde avant tout changement.
 Windows:
 
 ```powershell
-C:\ai-deep-monitor\check-update.ps1
-C:\ai-deep-monitor\update-client.ps1
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command update
 ```
 
 ### Reparer l'authentification d'une installation existante
@@ -276,12 +293,12 @@ Complete, avec sauvegarde automatique avant suppression:
 ```
 
 ```powershell
-C:\ai-deep-monitor\uninstall-client.ps1 -Mode Full
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command purge
 ```
 
-La commande Linux `purge` exige la saisie de `SUPPRIMER`, cree une sauvegarde
-hors du dossier d'installation, puis retire les conteneurs, les volumes MySQL
-et applicatifs, les images Docker du stack et les fichiers d'installation.
+La commande `purge` exige la saisie de `SUPPRIMER`, cree une sauvegarde hors
+du dossier d'installation, puis retire les conteneurs, les volumes MySQL et
+applicatifs, les images Docker du stack et les fichiers d'installation.
 
 ## Diagnostic
 

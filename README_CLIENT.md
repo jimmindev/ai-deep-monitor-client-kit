@@ -1,47 +1,63 @@
-# AI Deep Monitor - Guide client
+# AI Deep Monitor - Guide d'installation client
 
-Ce kit installe AI Deep Monitor sans exposer son code source. Il utilise Docker
-et le registre prive GitHub Container Registry.
+Ce kit installe et maintient AI Deep Monitor avec Docker, sans livrer les
+sources React ou Python. Le meme menu permet ensuite de mettre a jour,
+sauvegarder, restaurer, diagnostiquer ou desinstaller l'application.
 
-## Telecharger le kit
+## 1. Telecharger le kit
 
-La derniere version est disponible publiquement ici:
+Telechargez l'archive correspondant a votre systeme depuis:
 
-[Telecharger AI Deep Monitor Client Kit](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest)
+[Derniere version du Client Kit](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest)
 
-Liens directs stables, toujours diriges vers la derniere version:
+- Windows: `ai-deep-monitor-client-kit.zip`
+- Linux ou NVIDIA Jetson: `ai-deep-monitor-client-kit.tar.gz`
 
-- [Linux `.tar.gz`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.tar.gz)
-- [Windows `.zip`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.zip)
+Les archives s'extraient toujours dans le dossier
+`ai-deep-monitor-client-kit`.
 
-L'archive s'extrait toujours dans `ai-deep-monitor-client-kit`, quelle que
-soit la version du kit. Vous pouvez conserver ce meme chemin pour les
-installations et les prochaines mises a jour.
+## 2. Informations necessaires
 
-Pour retirer les anciens dossiers et archives versionnes sans toucher a
-l'application ni a ses donnees:
+L'installation demande:
 
-```bash
-cd ~/aidp/ai-deep-monitor-client-kit
-chmod +x cleanup-old-kits.sh
-./cleanup-old-kits.sh
+- un acces Internet;
+- un utilisateur GitHub;
+- un token GitHub autorise a lire les packages prives `ghcr.io`;
+- des droits administrateur sous Windows, ou `sudo` sous Linux.
+
+Docker est verifie automatiquement. S'il est absent, le kit propose ou lance
+son installation:
+
+- Docker Desktop avec `winget` sous Windows;
+- Docker Engine et Compose v2 sous Linux.
+
+## 3. Installation Windows
+
+1. Extrayez `ai-deep-monitor-client-kit.zip`.
+2. Ouvrez PowerShell dans le dossier extrait.
+3. Executez uniquement:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\ai-deep-monitor.ps1
 ```
 
-Sous Windows, utiliser `.\cleanup-old-kits.ps1` depuis le dossier extrait.
+Choisissez ensuite **1. Installer ou reparer**.
 
-Le depot peut egalement etre clone sans compte GitHub:
+Le dossier d'installation par defaut est `C:\ai-deep-monitor`. Pour utiliser
+un autre disque:
 
-```bash
-git clone https://github.com/jimmindev/ai-deep-monitor-client-kit.git
-cd ai-deep-monitor-client-kit
+```powershell
+.\ai-deep-monitor.ps1 -InstallDir "D:\AI-Deep-Monitor"
 ```
 
-Le kit est public, mais les images Docker applicatives restent privees. Un
-token GitHub autorise a lire les packages sera demande pendant l'installation.
+Docker Desktop doit fonctionner en mode **Linux containers**. Le kit detecte
+et bloque le mode Windows containers, incompatible avec les images de
+l'application.
 
-## Installation et maintenance Linux
+## 4. Installation Linux ou NVIDIA Jetson
 
-Telecharger et extraire l'archive Linux:
+Dans un terminal:
 
 ```bash
 mkdir -p ~/aidp
@@ -55,109 +71,112 @@ chmod +x ./*.sh
 ./ai-deep-monitor.sh
 ```
 
-Un menu unique permet ensuite d'installer, mettre a jour, sauvegarder,
-restaurer, consulter les journaux ou desinstaller l'application.
+Choisissez ensuite **1. Installer ou reparer**.
 
-Docker est verifie et installe automatiquement s'il est absent sur Ubuntu,
-Debian, Linux Mint, Fedora, RHEL, Rocky Linux, AlmaLinux et CentOS.
+Le dossier d'installation par defaut est `~/ai-deep-monitor`. Pour utiliser
+`/opt`:
 
-Le kit detecte automatiquement `linux/amd64` sur un PC Linux x64 et
-`linux/arm64` sur un NVIDIA Jetson ou un serveur ARM64.
-
-Avant chaque installation ou reparation, les ports sont controles:
-
-- site web: `80`, puis `8080`, puis le prochain port libre;
-- API: `8000`, puis `8001`, puis le prochain port libre;
-- un port appartenant deja a cette installation est conserve;
-- un port utilise par un autre service est remplace automatiquement.
-
-Le choix est enregistre dans `.env`. Si l'API ne demarre pas, le script affiche
-automatiquement l'etat des conteneurs et les journaux utiles.
-
-## Installation rapide Windows
-
-Apres extraction de l'archive Windows, ouvrir PowerShell dans le dossier
-`ai-deep-monitor-client-kit`:
-
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\install-client.ps1 -AppVersion v0.1.5
+```bash
+sudo mkdir -p /opt/ai-deep-monitor
+sudo chown "$USER":"$USER" /opt/ai-deep-monitor
+./ai-deep-monitor.sh --install-dir /opt/ai-deep-monitor
 ```
 
-Docker Desktop est installe automatiquement avec `winget` s'il est absent.
-Il doit fonctionner en mode **Linux containers**. Le script s'arrete avec une
-instruction explicite si Docker Desktop utilise les conteneurs Windows.
+Le kit selectionne automatiquement `linux/amd64` sur PC x64 et
+`linux/arm64` sur NVIDIA Jetson.
 
-Pendant l'installation, renseignez votre utilisateur GitHub et un token
-autorise a lire les packages prives. Le site utilise automatiquement le port
-`80`, ou le port `8080` lorsque `80` est deja occupe.
+## 5. Ports automatiques
 
-## Utilisation quotidienne Linux
+Avant chaque installation ou reparation, le kit controle les ports:
+
+- interface web: `80`, puis `8080`, puis le prochain port libre;
+- API: `8000`, puis `8001`, puis le prochain port libre.
+
+Un port deja utilise par cette installation est conserve. Un port appartenant
+a un autre service est remplace automatiquement. Les ports retenus sont
+enregistres dans `C:\ai-deep-monitor\.env` sous Windows ou dans
+`~/ai-deep-monitor/.env` sous Linux.
+
+L'adresse finale est affichee a la fin de l'installation.
+
+## 6. Menu de maintenance
+
+Relancez le meme outil a tout moment.
+
+Windows:
+
+```powershell
+C:\ai-deep-monitor\ai-deep-monitor.ps1
+```
+
+Linux:
 
 ```bash
 ~/ai-deep-monitor/ai-deep-monitor.sh
 ```
 
-Le choix **TOUT SUPPRIMER** cree une sauvegarde externe, puis supprime les
-conteneurs, les volumes SQL et applicatifs, les images Docker et les fichiers
-d'installation. Il exige de saisir `SUPPRIMER`. La sauvegarde est conservee
-hors du dossier d'installation.
+Le menu permet de:
 
-Les commandes directes restent disponibles pour l'automatisation:
+1. installer ou reparer;
+2. verifier et installer une mise a jour;
+3. afficher l'etat des services;
+4. consulter les journaux;
+5. creer une sauvegarde;
+6. restaurer une sauvegarde;
+7. arreter l'application;
+8. demarrer l'application;
+9. desinstaller les conteneurs en conservant les donnees;
+10. tout supprimer.
 
-```bash
-./ai-deep-monitor.sh status
-./ai-deep-monitor.sh logs
-./ai-deep-monitor.sh backup
-./ai-deep-monitor.sh update
-./ai-deep-monitor.sh purge
-```
+## 7. Sauvegarde et restauration
 
-Pour un chemin personnalise:
+Les sauvegardes contiennent la base MySQL, les donnees API, les MIB importees
+et les donnees applicatives. Elles sont creees hors du dossier d'installation.
 
-```bash
-./ai-deep-monitor.sh --install-dir /opt/ai-deep-monitor
-```
+Utilisez les choix **5** et **6** du menu. Ne supprimez jamais le fichier
+`.env` ou les volumes Docker sans sauvegarde.
 
-## Utilisation Windows
+## 8. Desinstallation
 
-```powershell
-C:\ai-deep-monitor\check-update.ps1
-C:\ai-deep-monitor\update-client.ps1
-C:\ai-deep-monitor\backup-client.ps1
-C:\ai-deep-monitor\restore-client.ps1 -BackupFile "CHEMIN.zip"
-C:\ai-deep-monitor\uninstall-client.ps1 -Mode Partial
-C:\ai-deep-monitor\uninstall-client.ps1 -Mode Full
-```
+### Desinstallation partielle
 
-La desinstallation partielle conserve les donnees. La desinstallation complete
-cree d'abord une sauvegarde, puis supprime les volumes et l'installation.
+Le choix **9** retire les conteneurs et le reseau, mais conserve:
 
-## Corriger une connexion apres mise a jour
+- les volumes MySQL et applicatifs;
+- les images Docker;
+- la configuration `.env`;
+- les sauvegardes.
 
-Si la console du navigateur affiche une erreur `500` sur
-`/api/auth/login`, telechargez de nouveau le kit `v0.1.7` puis relancez sa
-mise a jour. Cette operation repare la configuration d'authentification sans
-supprimer les comptes ni les donnees SQL:
+### Desinstallation complete
 
-```bash
-cd ~/aidp
-curl -fL \
-  -o ai-deep-monitor-client-kit.tar.gz \
-  "https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.7/ai-deep-monitor-client-kit.tar.gz?$(date +%s)"
-tar -xzf ai-deep-monitor-client-kit.tar.gz
-cd ai-deep-monitor-client-kit
-chmod +x ./*.sh
-./update-client.sh \
-  --install-dir "$HOME/ai-deep-monitor" \
-  --app-version v0.1.5 \
-  --yes
-```
+Le choix **10. TOUT SUPPRIMER**:
 
-Adaptez `--install-dir` si l'application a ete installee ailleurs. Le message
-`401` de `/api/auth/refresh` avant connexion est normal lorsqu'aucune session
-n'existe encore. Sur une installation sans compte administrateur, le script
-affiche les identifiants initiaux generes; un compte existant conserve son mot
-de passe.
+1. demande une confirmation explicite;
+2. cree une sauvegarde externe;
+3. supprime les conteneurs;
+4. supprime MySQL et tous les volumes applicatifs;
+5. supprime les images Docker du stack;
+6. supprime le dossier d'installation.
 
-Consultez `README.md` pour les options, la restauration et le diagnostic.
+Cette operation est irreversible en dehors de la sauvegarde creee juste avant.
+
+## 9. Diagnostic
+
+Si l'API ne demarre pas, l'installateur affiche automatiquement l'etat et les
+derniers journaux de MySQL, Ollama, de la sandbox et de l'API.
+
+Vous pouvez aussi choisir **3. Afficher l'etat** ou **4. Afficher les
+journaux** dans le menu.
+
+Une erreur `401` sur `/api/auth/refresh` avant connexion est normale lorsqu'il
+n'existe pas encore de session. Une erreur `500` sur `/api/auth/login` ne
+l'est pas et doit etre diagnostiquee avec les journaux de l'API.
+
+## 10. Securite
+
+- Les sources de l'application ne sont pas presentes dans le kit.
+- Les images applicatives restent dans un registre prive.
+- Les secrets et mots de passe sont generes sur la machine du client.
+- Une installation existante conserve ses comptes et ses volumes.
+- Si des volumes SQL existent mais que `.env` a disparu, l'installation
+  s'arrete pour eviter de rendre la base inaccessible.

@@ -4,6 +4,8 @@
 
 ### Ajoute
 
+- Lanceur Windows unique `ai-deep-monitor.ps1` avec le meme menu de
+  maintenance que Linux.
 - Lanceur Linux unique `ai-deep-monitor.sh` avec menu pour l'installation, la
   mise a jour, le diagnostic, la sauvegarde, la restauration et la
   desinstallation.
@@ -12,6 +14,10 @@
 
 ### Corrige
 
+- La detection des ports Windows distingue maintenant un port publie par
+  l'installation active d'un port occupe par un autre service.
+- En cas d'echec du stack sous Windows, les journaux MySQL, sandbox, Ollama et
+  API sont affiches directement.
 - Les ports d'une installation existante sont maintenant revalides avant le
   demarrage, au meme titre qu'une installation neuve.
 - Le site essaie `80`, puis `8080`, puis les ports suivants; l'API essaie
