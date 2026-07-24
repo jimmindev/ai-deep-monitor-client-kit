@@ -1,159 +1,188 @@
-# AI Deep Monitor - Kit d'installation
+# AI Deep Monitor - Client Kit v0.1.5
 
-Ce depot contient uniquement le kit d'installation client/testeur.
-Elle ne contient pas le code source React, Python, ni les fichiers internes de developpement.
+Kit prive d'installation, de mise a jour et de maintenance d'AI Deep Monitor.
+Il ne contient aucun code source React ou Python. L'application est livree sous
+forme d'images Docker privees publiees sur GHCR.
 
-## Contenu
+La version du kit est `v0.1.5`. La version applicative stable installee par
+defaut reste `v0.1.4`.
 
-```text
-install-client.ps1          # Installation initiale Windows
-check-update.ps1            # Verification automatique des versions
-update-client.ps1           # Mise a jour Windows
-backup-client.ps1           # Sauvegarde MySQL et donnees applicatives
-restore-client.ps1          # Restauration controlee d'une sauvegarde
-uninstall-client.ps1        # Desinstallation partielle ou complete
-docker-compose.release.yml  # Compose sans build source
-```
+## Systemes pris en charge
+
+- Windows 10/11 et Windows Server avec PowerShell 5.1 ou plus recent
+- Ubuntu, Debian et Linux Mint
+- Fedora, RHEL, Rocky Linux, AlmaLinux et CentOS
+- Architecture `amd64` ou toute architecture pour laquelle les images
+  applicatives sont publiees
 
 ## Prerequis
 
-- Docker Desktop installe et demarre
-- Acces au registry prive `ghcr.io`
-- Token GitHub avec permission `read:packages`
-- Espace disque suffisant pour le modele Ollama telecharge au premier lancement
+- Acces Internet pendant l'installation
+- Token GitHub autorise a lire les packages prives `ghcr.io`
+- Droits administrateur Windows, ou `root`/`sudo` sous Linux
+- Espace disque suffisant pour MySQL, les images et le modele Ollama
 
-## Installation
+Docker est verifie automatiquement. S'il est absent:
 
-Ouvrir PowerShell dans ce dossier :
+- Windows: Docker Desktop est installe avec `winget`
+- Linux: Docker Engine et Compose v2 sont installes depuis le depot officiel
+  Docker de la distribution
+
+## Installation Linux
+
+Extraire l'archive, ouvrir un terminal dans le dossier, puis:
+
+```bash
+chmod +x ./*.sh
+./install-client.sh
+```
+
+Le dossier par defaut est `~/ai-deep-monitor`. Les ports `80` et `8000` sont
+utilises lorsqu'ils sont libres; sinon le script choisit automatiquement les
+prochains ports disponibles.
+
+Installation personnalisee:
+
+```bash
+./install-client.sh \
+  --install-dir /opt/ai-deep-monitor \
+  --frontend-port 8080 \
+  --api-port 8001
+```
+
+L'utilisation de `/opt` demande que le dossier soit accessible en ecriture.
+Le dossier utilisateur par defaut reste le choix le plus simple.
+
+## Installation Windows
+
+Ouvrir PowerShell dans le dossier du kit:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
 .\install-client.ps1 -AppVersion v0.1.4
 ```
 
-Le script choisit automatiquement d'autres ports si `80` ou `8000` sont deja occupes. Il conserve un `.env` et des volumes existants. S'il trouve des volumes sans leur ancien `.env`, il s'arrete pour eviter de rendre MySQL inaccessible avec de nouveaux mots de passe.
+Le dossier par defaut est `C:\ai-deep-monitor`.
 
-Par defaut, l'application est installee dans :
+## Acces
 
-```text
-C:\ai-deep-monitor
-```
-
-URLs par defaut :
+Avec les ports par defaut:
 
 ```text
-Frontend  : http://localhost
-API health: http://localhost:8000/health
+Application: http://localhost
+API health : http://localhost:8000/health
 ```
 
-## Installation personnalisee
+Les ports retenus sont enregistres dans le fichier `.env` de l'installation.
+
+## Reprise d'une installation
+
+L'installateur conserve un `.env` existant et reutilise les volumes Docker.
+S'il detecte des volumes de donnees sans leur ancien `.env`, il s'arrete pour
+eviter de rendre la base MySQL inaccessible avec de nouveaux secrets.
+
+Ne supprimez jamais `.env` sans sauvegarde.
+
+## Verification et mise a jour
+
+Linux:
+
+```bash
+~/ai-deep-monitor/check-update.sh
+~/ai-deep-monitor/update-client.sh
+```
+
+Windows:
 
 ```powershell
-.\install-client.ps1 -InstallDir "D:\Apps\ai-deep-monitor" -AppVersion v0.1.4 -FrontendPort 8081 -ApiPort 8001
+C:\ai-deep-monitor\check-update.ps1
+C:\ai-deep-monitor\update-client.ps1
 ```
 
-## Verification de mise a jour
-
-La version client actuelle est `v0.1.4`. Les versions restent en `v0.x` tant que l'application n'est pas fonctionnellement complete; `v1.0.0` marquera la premiere version finale validee.
-
-```powershell
-.\check-update.ps1
-```
-
-Le script lit la version installee dans `C:\ai-deep-monitor\.env`, interroge GHCR, puis indique si une version stable plus recente existe.
-
-## Mise a jour
-
-```powershell
-.\update-client.ps1
-```
-
-Le script verifie la derniere version stable disponible, demande confirmation, effectue une sauvegarde automatique, met a jour `APP_VERSION`, remplace les scripts et le compose installes, telecharge les images Docker et relance les services.
-
-Pour forcer une version precise :
-
-```powershell
-.\update-client.ps1 -AppVersion v0.2.0
-```
-
-## Rollback
-
-```powershell
-.\update-client.ps1 -AppVersion v0.1.0
-```
+La verification est automatique, mais l'installation de la mise a jour reste
+manuelle. Le script de mise a jour cree une sauvegarde avant tout changement.
 
 ## Sauvegarde
 
-```powershell
-.\backup-client.ps1
+Linux:
+
+```bash
+~/ai-deep-monitor/backup-client.sh
 ```
 
-La sauvegarde ZIP est creee par defaut dans `C:\ai-deep-monitor-backups`. Elle contient :
+Windows:
 
-- un dump logique MySQL portable ;
-- les dashboards, conversations, profils et regles stockes par l'API ;
-- les MIB importees ;
-- les sauvegardes applicatives generees.
+```powershell
+C:\ai-deep-monitor\backup-client.ps1
+```
 
-Le modele Ollama n'est pas inclus car il peut etre retelcharge et occupe plusieurs gigaoctets.
+La sauvegarde contient MySQL, les donnees API, les MIB importees et les
+sauvegardes applicatives. Le modele Ollama n'est pas inclus et sera
+retelcharge si necessaire.
 
 ## Restauration
 
-```powershell
-.\restore-client.ps1 -BackupFile "C:\ai-deep-monitor-backups\ai-deep-monitor-v0.1.4-20260720-120000.zip"
+Linux:
+
+```bash
+~/ai-deep-monitor/restore-client.sh \
+  --backup-file ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.4-DATE.tar.gz
 ```
 
-Le checksum du dump est controle avant remplacement des donnees. L'application est arretee pendant l'operation puis relancee automatiquement.
+Windows:
+
+```powershell
+C:\ai-deep-monitor\restore-client.ps1 -BackupFile "D:\Backups\ai-deep-monitor-v0.1.4-DATE.zip"
+```
+
+Linux accepte les sauvegardes `.tar.gz` du kit Linux et les archives `.zip`
+produites sous Windows.
 
 ## Desinstallation
 
-Partielle, en conservant volumes, images et configuration :
+Partielle, en conservant les volumes et les fichiers:
 
-```powershell
-.\uninstall-client.ps1 -Mode Partial
+```bash
+~/ai-deep-monitor/uninstall-client.sh --mode partial
 ```
 
-Complete, avec sauvegarde automatique avant suppression des volumes et du dossier d'installation :
-
 ```powershell
-.\uninstall-client.ps1 -Mode Full
+C:\ai-deep-monitor\uninstall-client.ps1 -Mode Partial
 ```
 
-Pour supprimer egalement les images Docker :
+Complete, avec sauvegarde automatique avant suppression:
 
-```powershell
-.\uninstall-client.ps1 -Mode Full -RemoveImages
+```bash
+~/ai-deep-monitor/uninstall-client.sh --mode full
 ```
 
-## Commandes utiles
+```powershell
+C:\ai-deep-monitor\uninstall-client.ps1 -Mode Full
+```
+
+## Diagnostic
+
+Linux:
+
+```bash
+cd ~/ai-deep-monitor
+docker compose --env-file .env -f docker-compose.release.yml ps
+docker compose --env-file .env -f docker-compose.release.yml logs --tail=200
+```
+
+Windows:
 
 ```powershell
 cd C:\ai-deep-monitor
-docker compose -f docker-compose.release.yml --env-file .env ps
-docker compose -f docker-compose.release.yml --env-file .env logs -f
-docker compose -f docker-compose.release.yml --env-file .env down
-docker exec ai-monitor-client-ollama ollama list
+docker compose --env-file .env -f docker-compose.release.yml ps
+docker compose --env-file .env -f docker-compose.release.yml logs --tail=200
 ```
-
-## Chatbot Ollama
-
-Le kit lance un conteneur `ollama` et telecharge automatiquement le modele defini dans `.env` :
-
-```env
-OLLAMA_MODEL=llama3.1
-```
-
-Le premier demarrage peut etre long, le temps de telecharger le modele.
-Pour changer de modele, modifie `OLLAMA_MODEL`, puis relance `.\update-client.ps1`.
 
 ## Securite
 
-Le kit ne livre pas :
-
-- le depot Git source ;
-- `react/src` ;
-- `api/app` ;
-- `.env` interne ;
-- les donnees de developpement.
-
-Le client ou testeur execute uniquement les images Docker privees versionnees.
+- Les sources applicatives ne sont pas livrees au client.
+- Les images API et frontend restent dans un registre prive.
+- Les secrets sont generes localement et enregistres dans `.env`.
+- Sous Linux, `.env` et les sauvegardes sont proteges avec le mode `600`.
+- Le token GitHub sert uniquement a lire les images et les versions privees.
+- La restauration refuse les archives contenant des chemins dangereux.

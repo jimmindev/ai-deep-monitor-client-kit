@@ -31,6 +31,43 @@ function Require-Command {
   }
 }
 
+function Ensure-Docker {
+  if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+      throw "Docker Desktop est absent et winget est indisponible. Installe Docker Desktop puis relance le script."
+    }
+    Write-Host "Docker Desktop est absent. Installation automatique via winget..."
+    & winget install --id Docker.DockerDesktop -e --accept-package-agreements --accept-source-agreements
+    if ($LASTEXITCODE -ne 0) { throw "Echec de l'installation de Docker Desktop." }
+    $dockerBin = Join-Path $env:ProgramFiles "Docker\Docker\resources\bin"
+    if (Test-Path -LiteralPath $dockerBin) { $env:Path = "$dockerBin;$env:Path" }
+  }
+
+  Require-Command "docker"
+  try {
+    docker info | Out-Null
+    docker compose version | Out-Null
+    return
+  } catch {
+    $desktopPath = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
+    if (Test-Path -LiteralPath $desktopPath) {
+      Write-Host "Demarrage de Docker Desktop..."
+      Start-Process -FilePath $desktopPath -WindowStyle Hidden
+    }
+  }
+
+  $deadline = (Get-Date).AddMinutes(5)
+  while ((Get-Date) -lt $deadline) {
+    Start-Sleep -Seconds 3
+    try {
+      docker info | Out-Null
+      docker compose version | Out-Null
+      return
+    } catch {}
+  }
+  throw "Docker Desktop est installe mais son moteur ne repond pas. Un redemarrage Windows peut etre necessaire."
+}
+
 function Read-DotEnv {
   param([string]$Path)
   $values = @{}
@@ -122,13 +159,21 @@ if (-not $projectName) { $projectName = "ai-deep-monitor" }
 
 $kitFiles = @(
   "docker-compose.release.yml",
+  "client-common.sh",
+  "install-client.sh",
+  "update-client.sh",
+  "check-update.sh",
+  "backup-client.sh",
+  "restore-client.sh",
+  "uninstall-client.sh",
   "install-client.ps1",
   "update-client.ps1",
   "check-update.ps1",
   "backup-client.ps1",
   "restore-client.ps1",
   "uninstall-client.ps1",
-  "README_CLIENT.md"
+  "README_CLIENT.md",
+  "VERSION"
 )
 foreach ($fileName in $kitFiles) {
   $source = Join-Path $PSScriptRoot $fileName
@@ -154,8 +199,7 @@ if ($existingEnv) {
   Write-Host "Installation existante detectee: configuration et volumes conserves."
 } else {
   if (-not $NoStart) {
-    Require-Command "docker"
-    docker version | Out-Null
+    Ensure-Docker
   }
   if (-not (Test-PortAvailable -Port $FrontendPort)) {
     if ($StrictPorts) { throw "Le port frontend $FrontendPort est deja utilise." }
@@ -182,6 +226,7 @@ if (-not $existingEnv) {
   $envContent = @"
 GITHUB_OWNER=$GithubOwner
 GITHUB_REPOSITORY_NAME=ai-deep-monitor
+KIT_VERSION=v0.1.5
 APP_VERSION=$AppVersion
 APP_CHANNEL=stable
 UPDATE_CHECK_ENABLED=true
@@ -216,9 +261,7 @@ if ($NoStart) {
   exit 0
 }
 
-Require-Command "docker"
-docker version | Out-Null
-docker compose version | Out-Null
+Ensure-Docker
 docker compose -f $composeTarget --env-file $envTarget config --quiet
 
 if ($existingVolumes.Count -gt 0) {

@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=client-common.sh
+source "${SCRIPT_DIR}/client-common.sh"
+
+INSTALL_DIR="${HOME}/ai-deep-monitor"
+APP_VERSION=""
+SKIP_DOCKER_LOGIN=false
+SKIP_BACKUP=false
+NO_START=false
+ASSUME_YES=false
+
+usage() {
+  cat <<'EOF'
+Usage: ./update-client.sh [options]
+  --install-dir CHEMIN
+  --app-version VERSION
+  --skip-docker-login
+  --skip-backup
+  --no-start
+  --yes
+EOF
+}
+
+while (($#)); do
+  case "$1" in
+    --install-dir) INSTALL_DIR="$2"; shift 2 ;;
+    --app-version) APP_VERSION="$2"; shift 2 ;;
+    --skip-docker-login) SKIP_DOCKER_LOGIN=true; shift ;;
+    --skip-backup) SKIP_BACKUP=true; shift ;;
+    --no-start) NO_START=true; shift ;;
+    --yes) ASSUME_YES=true; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) die "Option inconnue: $1" ;;
+  esac
+done
+
+ENV_FILE="${INSTALL_DIR}/.env"
+COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
+[[ -f "$ENV_FILE" ]] || die "Installation introuvable: ${ENV_FILE}"
+
+for file in docker-compose.release.yml client-common.sh install-client.sh check-update.sh update-client.sh backup-client.sh restore-client.sh uninstall-client.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 restore-client.ps1 uninstall-client.ps1 README_CLIENT.md VERSION; do
+  [[ -f "${SCRIPT_DIR}/${file}" ]] || continue
+  if [[ "${SCRIPT_DIR}/${file}" != "${INSTALL_DIR}/${file}" ]]; then
+    cp -f "${SCRIPT_DIR}/${file}" "${INSTALL_DIR}/${file}"
+  fi
+done
+chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true
+write_env_value "$ENV_FILE" KIT_VERSION "$KIT_VERSION"
+
+if [[ "$NO_START" == "true" ]]; then
+  [[ -z "$APP_VERSION" ]] || write_env_value "$ENV_FILE" APP_VERSION "$APP_VERSION"
+  log "Fichiers du kit actualises sans lancement Docker."
+  exit 0
+fi
+
+ensure_docker
+require_command curl
+owner="$(read_env_value "$ENV_FILE" GITHUB_OWNER)"
+owner="${owner:-jimmindev}"
+github_user="${UPDATE_CHECK_USER:-$(read_env_value "$ENV_FILE" UPDATE_CHECK_USER)}"
+github_token="${UPDATE_CHECK_TOKEN:-$(read_env_value "$ENV_FILE" UPDATE_CHECK_TOKEN)}"
+
+if [[ "$SKIP_DOCKER_LOGIN" == "false" || -z "$APP_VERSION" ]]; then
+  [[ -n "$github_user" ]] || read -r -p 'Utilisateur GitHub: ' github_user
+  if [[ -z "$github_token" ]]; then
+    read -r -s -p 'Token GitHub avec read:packages: ' github_token
+    printf '\n'
+  fi
+fi
+
+if [[ -z "$APP_VERSION" ]]; then
+  APP_VERSION="$(latest_common_app_version "$owner" "$github_user" "$github_token")"
+fi
+[[ "$APP_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Version applicative invalide: ${APP_VERSION}"
+
+current_version="$(read_env_value "$ENV_FILE" APP_VERSION)"
+if [[ "$current_version" == "$APP_VERSION" ]]; then
+  log "L'application est deja en ${APP_VERSION}. Le kit reste actualise en ${KIT_VERSION}."
+  exit 0
+fi
+
+confirm "Mettre a jour l'application de ${current_version} vers ${APP_VERSION} ?" "$ASSUME_YES" ||
+  die "Mise a jour annulee."
+
+if [[ "$SKIP_BACKUP" == "false" ]]; then
+  "${INSTALL_DIR}/backup-client.sh" --install-dir "$INSTALL_DIR"
+fi
+
+cp -f "$ENV_FILE" "${ENV_FILE}.before-${APP_VERSION}.bak"
+write_env_value "$ENV_FILE" APP_VERSION "$APP_VERSION"
+write_env_value "$ENV_FILE" KIT_VERSION "$KIT_VERSION"
+
+if [[ "$SKIP_DOCKER_LOGIN" == "false" ]]; then
+  printf '%s' "$github_token" | docker_exec login ghcr.io -u "$github_user" --password-stdin
+  write_env_value "$ENV_FILE" UPDATE_CHECK_USER "$github_user"
+  write_env_value "$ENV_FILE" UPDATE_CHECK_TOKEN "$github_token"
+fi
+unset github_token
+
+project_name="$(project_name_from_dir "$INSTALL_DIR")"
+compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
+compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
+compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+
+wait_for_container ai-monitor-client-api 300 ||
+  die "L'API n'est pas operationnelle apres la mise a jour. Le fichier ${ENV_FILE}.before-${APP_VERSION}.bak permet un retour arriere."
+
+log "Mise a jour terminee: ${APP_VERSION}."

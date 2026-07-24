@@ -102,13 +102,21 @@ $envPath = Join-Path $InstallDir ".env"
 
 $kitFiles = @(
   "docker-compose.release.yml",
+  "client-common.sh",
+  "install-client.sh",
+  "update-client.sh",
+  "check-update.sh",
+  "backup-client.sh",
+  "restore-client.sh",
+  "uninstall-client.sh",
   "install-client.ps1",
   "update-client.ps1",
   "check-update.ps1",
   "backup-client.ps1",
   "restore-client.ps1",
   "uninstall-client.ps1",
-  "README_CLIENT.md"
+  "README_CLIENT.md",
+  "VERSION"
 )
 foreach ($fileName in $kitFiles) {
   $source = Join-Path $PSScriptRoot $fileName
@@ -130,6 +138,7 @@ if (-not (Test-Path -LiteralPath $envPath)) {
 }
 
 $envValues = Read-DotEnv -Path $envPath
+Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.5"
 $currentVersion = $envValues["APP_VERSION"]
 $githubOwner = $envValues["GITHUB_OWNER"]
 if (-not $githubOwner) {
