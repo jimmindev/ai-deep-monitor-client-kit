@@ -5,7 +5,7 @@ Il ne contient aucun code source React ou Python. L'application est livree sous
 forme d'images Docker privees publiees sur GHCR.
 
 La version du kit est `v0.1.7`. La version applicative stable installee par
-defaut reste `v0.1.4`.
+defaut est `v0.1.5`.
 
 ## Telechargement
 
@@ -78,6 +78,10 @@ Le kit lit la plateforme du moteur Docker et selectionne automatiquement:
 Un moteur Docker en mode Windows containers ou une architecture non prise en
 charge est bloque avant le telechargement des images, avec un diagnostic clair.
 
+Pour une nouvelle installation, le site utilise le port `80` lorsqu'il est
+libre, sinon le port `8080`. Une installation existante conserve le port deja
+enregistre dans son fichier `.env`.
+
 ## Prerequis
 
 - Acces Internet pendant l'installation
@@ -136,7 +140,7 @@ puis ouvrir PowerShell dans le dossier `ai-deep-monitor-client-kit`:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\install-client.ps1 -AppVersion v0.1.4
+.\install-client.ps1 -AppVersion v0.1.5
 ```
 
 Le dossier par defaut est `C:\ai-deep-monitor`.
@@ -204,13 +208,13 @@ Linux:
 
 ```bash
 ~/ai-deep-monitor/restore-client.sh \
-  --backup-file ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.4-DATE.tar.gz
+  --backup-file ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.5-DATE.tar.gz
 ```
 
 Windows:
 
 ```powershell
-C:\ai-deep-monitor\restore-client.ps1 -BackupFile "D:\Backups\ai-deep-monitor-v0.1.4-DATE.zip"
+C:\ai-deep-monitor\restore-client.ps1 -BackupFile "D:\Backups\ai-deep-monitor-v0.1.5-DATE.zip"
 ```
 
 Linux accepte les sauvegardes `.tar.gz` du kit Linux et les archives `.zip`

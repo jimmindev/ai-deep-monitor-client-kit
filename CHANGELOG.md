@@ -22,6 +22,8 @@
 
 - Une mise a jour du Client Kit recharge les images multiarchitectures meme si
   la version applicative reste identique.
+- Une nouvelle installation utilise le port web `80` lorsqu'il est libre,
+  sinon le port `8080`; elle s'arrete clairement si les deux sont occupes.
 - Les archives de distribution portent maintenant un nom stable et
   s'extraient toujours dans `ai-deep-monitor-client-kit`, sans creer un
   nouveau dossier pour chaque version.
@@ -31,7 +33,7 @@
 ### Versions
 
 - Client Kit: `v0.1.7`.
-- Application installee par defaut: `v0.1.4`.
+- Application installee par defaut: `v0.1.5`.
 
 ## v0.1.6 - 2026-07-24
 

@@ -68,7 +68,7 @@ Apres extraction de l'archive Windows, ouvrir PowerShell dans le dossier
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\install-client.ps1 -AppVersion v0.1.4
+.\install-client.ps1 -AppVersion v0.1.5
 ```
 
 Docker Desktop est installe automatiquement avec `winget` s'il est absent.
@@ -76,7 +76,8 @@ Il doit fonctionner en mode **Linux containers**. Le script s'arrete avec une
 instruction explicite si Docker Desktop utilise les conteneurs Windows.
 
 Pendant l'installation, renseignez votre utilisateur GitHub et un token
-autorise a lire les packages prives. Les ports sont choisis automatiquement.
+autorise a lire les packages prives. Le site utilise automatiquement le port
+`80`, ou le port `8080` lorsque `80` est deja occupe.
 
 ## Commandes Linux
 

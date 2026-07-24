@@ -21,9 +21,9 @@ Usage: ./install-client.sh [options]
 
 Options:
   --install-dir CHEMIN       Dossier cible (defaut: ~/ai-deep-monitor)
-  --app-version VERSION      Version applicative (defaut: v0.1.4)
+  --app-version VERSION      Version applicative (defaut: v0.1.5)
   --github-owner NOM         Proprietaire des images GHCR
-  --frontend-port PORT       Port web souhaite
+  --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
   --cors-origins URLS        Origines CORS separees par des virgules
   --skip-docker-login        Ne pas se connecter a GHCR
@@ -112,7 +112,12 @@ if [[ "$existing_env" == "true" ]]; then
 else
   if ! port_is_available "$FRONTEND_PORT"; then
     [[ "$STRICT_PORTS" == "false" ]] || die "Le port frontend ${FRONTEND_PORT} est occupe."
-    selected_port="$(available_port "$FRONTEND_PORT")"
+    if [[ "$FRONTEND_PORT" == "80" ]]; then
+      port_is_available 8080 || die "Les ports web 80 et 8080 sont deja occupes. Liberez l'un des deux ou utilisez --frontend-port."
+      selected_port=8080
+    else
+      selected_port="$(available_port "$FRONTEND_PORT")"
+    fi
     log "Port frontend ${FRONTEND_PORT} occupe; ${selected_port} selectionne."
     FRONTEND_PORT="$selected_port"
   fi

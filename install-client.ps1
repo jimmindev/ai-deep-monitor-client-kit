@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [string]$AppVersion = "v0.1.4",
+  [string]$AppVersion = "v0.1.5",
   [string]$GithubOwner = "jimmindev",
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
@@ -214,7 +214,14 @@ if ($existingEnv) {
 } else {
   if (-not (Test-PortAvailable -Port $FrontendPort)) {
     if ($StrictPorts) { throw "Le port frontend $FrontendPort est deja utilise." }
-    $newPort = Get-AvailablePort -PreferredPort $FrontendPort
+    if ($FrontendPort -eq 80) {
+      if (-not (Test-PortAvailable -Port 8080)) {
+        throw "Les ports web 80 et 8080 sont deja occupes. Libere l'un des deux ou utilise -FrontendPort."
+      }
+      $newPort = 8080
+    } else {
+      $newPort = Get-AvailablePort -PreferredPort $FrontendPort
+    }
     Write-Host "Port frontend $FrontendPort occupe; port $newPort selectionne automatiquement."
     $FrontendPort = $newPort
   }
