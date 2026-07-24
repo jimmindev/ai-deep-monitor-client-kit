@@ -25,6 +25,8 @@
 - Les archives de distribution portent maintenant un nom stable et
   s'extraient toujours dans `ai-deep-monitor-client-kit`, sans creer un
   nouveau dossier pour chaque version.
+- Ajout d'un nettoyeur Linux/Jetson et Windows qui retire uniquement les
+  anciens dossiers et archives du Client Kit apres confirmation.
 
 ### Versions
 

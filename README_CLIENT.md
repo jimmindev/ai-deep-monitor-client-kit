@@ -18,6 +18,17 @@ L'archive s'extrait toujours dans `ai-deep-monitor-client-kit`, quelle que
 soit la version du kit. Vous pouvez conserver ce meme chemin pour les
 installations et les prochaines mises a jour.
 
+Pour retirer les anciens dossiers et archives versionnes sans toucher a
+l'application ni a ses donnees:
+
+```bash
+cd ~/aidp/ai-deep-monitor-client-kit
+chmod +x cleanup-old-kits.sh
+./cleanup-old-kits.sh
+```
+
+Sous Windows, utiliser `.\cleanup-old-kits.ps1` depuis le dossier extrait.
+
 Le depot peut egalement etre clone sans compte GitHub:
 
 ```bash

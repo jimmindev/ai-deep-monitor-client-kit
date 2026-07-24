@@ -27,6 +27,8 @@ multiarchitectures `amd64` et `arm64`.
 - Les archives Linux et Windows ont des noms stables et s'extraient toujours
   dans `ai-deep-monitor-client-kit`. Une nouvelle version ne cree plus un
   nouveau dossier local.
+- `cleanup-old-kits.sh` et `cleanup-old-kits.ps1` suppriment les anciens kits
+  apres confirmation, sans toucher a l'installation ou aux donnees.
 
 ## Installation Linux et Jetson
 

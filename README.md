@@ -22,6 +22,30 @@ Les archives de toutes les versions utilisent le meme dossier racine:
 `ai-deep-monitor-client-kit`. Une mise a jour ne cree donc plus un nouveau
 dossier portant le numero de version.
 
+## Nettoyer les anciens dossiers du kit
+
+Apres avoir extrait le kit stable, le nettoyeur retire les anciens dossiers
+`ai-deep-monitor-client-kit-v*` et les anciennes archives du meme dossier.
+Il ne touche pas a l'application active, a MySQL, aux volumes Docker ni aux
+sauvegardes.
+
+Linux et Jetson:
+
+```bash
+cd ~/aidp/ai-deep-monitor-client-kit
+chmod +x cleanup-old-kits.sh
+./cleanup-old-kits.sh
+```
+
+Windows, depuis le dossier stable extrait:
+
+```powershell
+.\cleanup-old-kits.ps1
+```
+
+Le script affiche les elements trouves et demande une confirmation. Pour une
+execution non interactive, utiliser `--yes` sous Linux ou `-Yes` sous Windows.
+
 Le depot peut aussi etre clone sans authentification:
 
 ```bash
