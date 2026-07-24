@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-export KIT_VERSION="v0.1.5"
+export KIT_VERSION="v0.1.6"
 export DEFAULT_APP_VERSION="v0.1.4"
 DOCKER_CMD=(docker)
 SUDO_CMD=()
@@ -203,26 +203,54 @@ write_env_value() {
 
 port_is_available() {
   local port="$1"
+  local endpoint
+  local port_hex
+  local socket_files=(/proc/net/tcp)
+
+  if command -v ss >/dev/null 2>&1; then
+    while read -r endpoint; do
+      endpoint="${endpoint##*:}"
+      [[ "$endpoint" == "$port" ]] && return 1
+    done < <(ss -H -ltn 2>/dev/null | awk '{print $4}')
+    return 0
+  fi
+
+  if [[ -r /proc/net/tcp ]]; then
+    [[ -r /proc/net/tcp6 ]] && socket_files+=(/proc/net/tcp6)
+    printf -v port_hex '%04X' "$port"
+    if awk -v wanted="$port_hex" '
+      FNR > 1 {
+        split($2, address, ":")
+        if (toupper(address[2]) == wanted && $4 == "0A") {
+          found = 1
+          exit
+        }
+      }
+      END { exit found ? 0 : 1 }
+    ' "${socket_files[@]}"; then
+      return 1
+    fi
+    return 0
+  fi
+
   if command -v python3 >/dev/null 2>&1; then
     python3 - "$port" <<'PY'
+import errno
 import socket
 import sys
 
 sock = socket.socket()
 try:
     sock.bind(("0.0.0.0", int(sys.argv[1])))
-except OSError:
+except OSError as exc:
+    if exc.errno in {errno.EACCES, errno.EPERM}:
+        raise SystemExit(0)
     raise SystemExit(1)
 finally:
     sock.close()
 PY
-  elif command -v ss >/dev/null 2>&1; then
-    if ss -H -ltn | awk '{print $4}' | grep -Eq ":${port}$"; then
-      return 1
-    fi
-    return 0
   else
-    warn "Impossible de verifier le port ${port}: python3 et ss sont absents."
+    warn "Impossible de verifier le port ${port}: aucun outil de diagnostic disponible."
     return 0
   fi
 }

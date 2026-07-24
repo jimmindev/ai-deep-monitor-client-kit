@@ -226,7 +226,7 @@ if (-not $existingEnv) {
   $envContent = @"
 GITHUB_OWNER=$GithubOwner
 GITHUB_REPOSITORY_NAME=ai-deep-monitor
-KIT_VERSION=v0.1.5
+KIT_VERSION=v0.1.6
 APP_VERSION=$AppVersion
 APP_CHANNEL=stable
 UPDATE_CHECK_ENABLED=true

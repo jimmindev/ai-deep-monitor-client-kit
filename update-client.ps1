@@ -138,7 +138,7 @@ if (-not (Test-Path -LiteralPath $envPath)) {
 }
 
 $envValues = Read-DotEnv -Path $envPath
-Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.5"
+Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.6"
 $currentVersion = $envValues["APP_VERSION"]
 $githubOwner = $envValues["GITHUB_OWNER"]
 if (-not $githubOwner) {

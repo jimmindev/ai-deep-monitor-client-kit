@@ -1,10 +1,10 @@
-# AI Deep Monitor - Client Kit v0.1.5
+# AI Deep Monitor - Client Kit v0.1.6
 
 Kit public d'installation, de mise a jour et de maintenance d'AI Deep Monitor.
 Il ne contient aucun code source React ou Python. L'application est livree sous
 forme d'images Docker privees publiees sur GHCR.
 
-La version du kit est `v0.1.5`. La version applicative stable installee par
+La version du kit est `v0.1.6`. La version applicative stable installee par
 defaut reste `v0.1.4`.
 
 ## Telechargement
@@ -14,9 +14,9 @@ defaut reste `v0.1.4`.
 - Derniere version:
   [github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest)
 - Linux:
-  [ai-deep-monitor-client-kit-v0.1.5.tar.gz](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.5/ai-deep-monitor-client-kit-v0.1.5.tar.gz)
+  [ai-deep-monitor-client-kit-v0.1.6.tar.gz](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.6/ai-deep-monitor-client-kit-v0.1.6.tar.gz)
 - Windows:
-  [ai-deep-monitor-client-kit-v0.1.5.zip](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.5/ai-deep-monitor-client-kit-v0.1.5.zip)
+  [ai-deep-monitor-client-kit-v0.1.6.zip](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.6/ai-deep-monitor-client-kit-v0.1.6.zip)
 
 Le depot peut aussi etre clone sans authentification:
 
@@ -56,10 +56,10 @@ Telecharger puis extraire l'archive:
 
 ```bash
 curl -fL \
-  -o ai-deep-monitor-client-kit-v0.1.5.tar.gz \
-  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.5/ai-deep-monitor-client-kit-v0.1.5.tar.gz
-tar -xzf ai-deep-monitor-client-kit-v0.1.5.tar.gz
-cd ai-deep-monitor-client-kit-v0.1.5
+  -o ai-deep-monitor-client-kit-v0.1.6.tar.gz \
+  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.6/ai-deep-monitor-client-kit-v0.1.6.tar.gz
+tar -xzf ai-deep-monitor-client-kit-v0.1.6.tar.gz
+cd ai-deep-monitor-client-kit-v0.1.6
 ```
 
 Lancer ensuite l'installation:

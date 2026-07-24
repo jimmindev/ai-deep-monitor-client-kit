@@ -1,5 +1,30 @@
 # Historique des versions du Client Kit
 
+## v0.1.6 - 2026-07-24
+
+### Corrige
+
+- La detection des ports Linux ne tente plus d'ouvrir elle-meme les ports
+  privilegies inferieurs a `1024`.
+- Une execution avec un utilisateur non privilegie ne confond plus
+  `Permission denied` avec `Port deja utilise`.
+- L'installation peut de nouveau selectionner automatiquement le port `80`
+  lorsqu'il est libre, notamment sur Ubuntu et NVIDIA Jetson.
+- La detection des ports occupes s'appuie en priorite sur les sockets TCP
+  reellement en ecoute via `ss`, puis `/proc/net/tcp` et `/proc/net/tcp6`.
+
+### Validation
+
+- Test de selection du port `80` avec un utilisateur Linux non privilegie.
+- Test de distinction entre un port occupe et le prochain port libre.
+- Tests de non-regression des installations Linux et Windows sans demarrage.
+- Validation syntaxique des scripts Shell et PowerShell.
+
+### Versions
+
+- Client Kit: `v0.1.6`.
+- Application installee par defaut: `v0.1.4`.
+
 ## v0.1.5 - 2026-07-24
 
 ### Ajoute

@@ -9,10 +9,10 @@ La derniere version est disponible publiquement ici:
 
 [Telecharger AI Deep Monitor Client Kit](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest)
 
-Liens directs pour la version `v0.1.5`:
+Liens directs pour la version `v0.1.6`:
 
-- [Linux `.tar.gz`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.5/ai-deep-monitor-client-kit-v0.1.5.tar.gz)
-- [Windows `.zip`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.5/ai-deep-monitor-client-kit-v0.1.5.zip)
+- [Linux `.tar.gz`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.6/ai-deep-monitor-client-kit-v0.1.6.tar.gz)
+- [Windows `.zip`](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.6/ai-deep-monitor-client-kit-v0.1.6.zip)
 
 Le depot peut egalement etre clone sans compte GitHub:
 
