@@ -1,7 +1,12 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [ValidateSet("", "install", "update", "status", "logs", "backup", "restore", "stop", "start", "uninstall", "purge", "help")]
-  [string]$Command = ""
+  [ValidateSet("", "install", "update", "status", "logs", "backup", "backups", "restore", "stop", "start", "uninstall", "purge", "help")]
+  [string]$Command = "",
+  [ValidateSet("Menu", "List", "Prune", "DeleteAll")]
+  [string]$BackupAction = "Menu",
+  [ValidateRange(0, 10000)]
+  [int]$KeepBackups = 5,
+  [switch]$Yes
 )
 
 $ErrorActionPreference = "Stop"
@@ -54,6 +59,7 @@ Commandes directes:
   .\ai-deep-monitor.ps1 -Command status
   .\ai-deep-monitor.ps1 -Command logs
   .\ai-deep-monitor.ps1 -Command backup
+  .\ai-deep-monitor.ps1 -Command backups
   .\ai-deep-monitor.ps1 -Command restore
   .\ai-deep-monitor.ps1 -Command stop
   .\ai-deep-monitor.ps1 -Command start
@@ -63,6 +69,58 @@ Commandes directes:
 Chemin personnalise:
   .\ai-deep-monitor.ps1 -InstallDir D:\AI-Deep-Monitor
 "@
+}
+
+function Invoke-BackupManagement {
+  param(
+    [string]$Action = "Menu",
+    [int]$Keep = 5
+  )
+
+  if ($Action -ne "Menu") {
+    Invoke-KitScript "backup-maintenance.ps1" @{
+      InstallDir = $InstallDir
+      Action = $Action
+      Keep = $Keep
+      Yes = $Yes
+    }
+    return
+  }
+
+  while ($true) {
+    Write-Host ""
+    Write-Host "Gestion des sauvegardes" -ForegroundColor Cyan
+    Write-Host "  1. Lister les sauvegardes"
+    Write-Host "  2. Conserver uniquement les plus recentes"
+    Write-Host "  3. Supprimer toutes les sauvegardes"
+    Write-Host "  0. Retour"
+    $choice = Read-Host "Votre choix"
+    switch ($choice) {
+      "1" {
+        Invoke-KitScript "backup-maintenance.ps1" @{
+          InstallDir = $InstallDir
+          Action = "List"
+        }
+      }
+      "2" {
+        $keepValue = Read-Host "Nombre de sauvegardes recentes a conserver [5]"
+        if (-not $keepValue) { $keepValue = 5 }
+        Invoke-KitScript "backup-maintenance.ps1" @{
+          InstallDir = $InstallDir
+          Action = "Prune"
+          Keep = [int]$keepValue
+        }
+      }
+      "3" {
+        Invoke-KitScript "backup-maintenance.ps1" @{
+          InstallDir = $InstallDir
+          Action = "DeleteAll"
+        }
+      }
+      "0" { return }
+      default { Write-Warning "Choix invalide." }
+    }
+  }
 }
 
 function Invoke-SelectedCommand {
@@ -82,6 +140,9 @@ function Invoke-SelectedCommand {
     }
     "backup" {
       Invoke-KitScript "backup-client.ps1" @{ InstallDir = $InstallDir }
+    }
+    "backups" {
+      Invoke-BackupManagement -Action $BackupAction -Keep $KeepBackups
     }
     "restore" {
       $backupFile = Read-Host "Chemin complet de la sauvegarde .zip"
@@ -140,13 +201,14 @@ while ($true) {
   Write-Host "  1. Installer ou reparer"
   Write-Host "  2. Verifier et installer une mise a jour"
   Write-Host "  3. Afficher l'etat des services"
-  Write-Host "  4. Afficher les journaux"
-  Write-Host "  5. Creer une sauvegarde"
-  Write-Host "  6. Restaurer une sauvegarde"
-  Write-Host "  7. Arreter l'application"
-  Write-Host "  8. Demarrer l'application"
-  Write-Host "  9. Desinstaller en conservant les donnees"
-  Write-Host " 10. TOUT SUPPRIMER"
+  Write-Host "  4. Demarrer l'application"
+  Write-Host "  5. Arreter sans supprimer les donnees"
+  Write-Host "  6. Creer une sauvegarde"
+  Write-Host "  7. Gerer ou supprimer les sauvegardes"
+  Write-Host "  8. Restaurer une sauvegarde"
+  Write-Host "  9. Afficher les journaux techniques"
+  Write-Host " 10. Desinstaller en conservant les donnees"
+  Write-Host " 11. TOUT SUPPRIMER"
   Write-Host "  0. Quitter"
   Write-Host ""
   $choice = Read-Host "Votre choix"
@@ -154,13 +216,14 @@ while ($true) {
     "1" { "install" }
     "2" { "update" }
     "3" { "status" }
-    "4" { "logs" }
-    "5" { "backup" }
-    "6" { "restore" }
-    "7" { "stop" }
-    "8" { "start" }
-    "9" { "uninstall" }
-    "10" { "purge" }
+    "4" { "start" }
+    "5" { "stop" }
+    "6" { "backup" }
+    "7" { "backups" }
+    "8" { "restore" }
+    "9" { "logs" }
+    "10" { "uninstall" }
+    "11" { "purge" }
     "0" { return }
     default { "" }
   }

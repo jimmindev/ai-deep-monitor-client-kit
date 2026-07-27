@@ -33,6 +33,8 @@ try {
     "install-client.sh",
     "client-platform.ps1",
     "client-common.sh",
+    "backup-maintenance.ps1",
+    "backup-maintenance.sh",
     "README_CLIENT.md"
   )) {
     if (-not (Test-Path -LiteralPath (Join-Path $testDir $requiredFile))) {
@@ -51,6 +53,27 @@ try {
   }
 
   & $launcherPath -InstallDir $testDir -Command help | Out-Null
+
+  $backupDir = Join-Path $testDir "test-backups"
+  New-Item -ItemType Directory -Path $backupDir | Out-Null
+  $oldBackup = New-Item -ItemType File -Path (Join-Path $backupDir "ai-deep-monitor-old.zip")
+  $middleBackup = New-Item -ItemType File -Path (Join-Path $backupDir "ai-deep-monitor-middle.zip")
+  $newBackup = New-Item -ItemType File -Path (Join-Path $backupDir "ai-deep-monitor-new.zip")
+  $oldBackup.LastWriteTime = [datetime]"2026-01-01"
+  $middleBackup.LastWriteTime = [datetime]"2026-01-02"
+  $newBackup.LastWriteTime = [datetime]"2026-01-03"
+  & (Join-Path $testDir "backup-maintenance.ps1") `
+    -InstallDir $testDir `
+    -BackupDir $backupDir `
+    -Action Prune `
+    -Keep 2 `
+    -Yes
+  if (@(Get-ChildItem -LiteralPath $backupDir -File).Count -ne 2) {
+    throw "La retention Windows n'a pas conserve exactement deux sauvegardes."
+  }
+  if (Test-Path -LiteralPath $oldBackup.FullName) {
+    throw "La plus ancienne sauvegarde Windows n'a pas ete supprimee."
+  }
   Write-Output "WINDOWS_SMOKE_OK"
 } finally {
   if ($frontendListener) { $frontendListener.Stop() }

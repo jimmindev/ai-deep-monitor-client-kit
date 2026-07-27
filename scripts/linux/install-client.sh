@@ -90,12 +90,14 @@ kit_files=(
   check-update.sh
   update-client.sh
   backup-client.sh
+  backup-maintenance.sh
   restore-client.sh
   uninstall-client.sh
   install-client.ps1
   check-update.ps1
   update-client.ps1
   backup-client.ps1
+  backup-maintenance.ps1
   restore-client.ps1
   uninstall-client.ps1
   README_CLIENT.md

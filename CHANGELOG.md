@@ -5,6 +5,9 @@
 ### Ajoute
 
 - Racine du depot simplifiee autour des deux lanceurs client.
+- Gestionnaire de sauvegardes Linux et Windows permettant de lister les
+  archives, de conserver uniquement les N plus recentes ou de toutes les
+  supprimer avec confirmation renforcee.
 - Scripts internes ranges par plateforme dans `scripts/`, avec Docker Compose,
   documentation et notes de version dans des dossiers dedies.
 - Lanceur Windows unique `ai-deep-monitor.ps1` avec le meme menu de

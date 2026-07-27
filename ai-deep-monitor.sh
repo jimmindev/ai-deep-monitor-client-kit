@@ -21,6 +21,7 @@ Commandes:
   status        Afficher l'etat des services et les ports
   logs          Afficher les journaux de l'API
   backup        Creer une sauvegarde
+  backups       Lister ou nettoyer les sauvegardes
   restore       Restaurer une sauvegarde
   stop          Arreter l'application sans supprimer les donnees
   start         Demarrer l'application
@@ -87,6 +88,43 @@ backup_app() {
   "$(kit_script backup-client.sh)" --install-dir "$INSTALL_DIR"
 }
 
+manage_backups() {
+  local action="${1:-menu}"
+  local keep="${2:-5}"
+  if [[ "$action" != "menu" ]]; then
+    "$(kit_script backup-maintenance.sh)" \
+      --install-dir "$INSTALL_DIR" \
+      --action "$action" \
+      --keep "$keep"
+    return
+  fi
+
+  local choice
+  while true; do
+    cat <<'EOF'
+
+Gestion des sauvegardes
+1. Lister les sauvegardes
+2. Conserver uniquement les plus recentes
+3. Supprimer toutes les sauvegardes
+0. Retour
+EOF
+    read -r -p 'Votre choix: ' choice
+    case "$choice" in
+      1) "$(kit_script backup-maintenance.sh)" --install-dir "$INSTALL_DIR" --action list ;;
+      2)
+        read -r -p 'Nombre de sauvegardes recentes a conserver [5]: ' keep
+        keep="${keep:-5}"
+        "$(kit_script backup-maintenance.sh)" \
+          --install-dir "$INSTALL_DIR" --action prune --keep "$keep"
+        ;;
+      3) "$(kit_script backup-maintenance.sh)" --install-dir "$INSTALL_DIR" --action delete-all ;;
+      0) return ;;
+      *) warn "Choix invalide." ;;
+    esac
+  done
+}
+
 restore_app() {
   local backup_file="${1:-}"
   require_installation
@@ -146,6 +184,7 @@ run_command() {
     status) status_app ;;
     logs) logs_app ;;
     backup) backup_app ;;
+    backups) manage_backups "${1:-menu}" "${2:-5}" ;;
     restore) restore_app "${1:-}" ;;
     stop) stop_app ;;
     start) start_app ;;
@@ -168,10 +207,11 @@ AI Deep Monitor
 4. Demarrer
 5. Arreter sans supprimer les donnees
 6. Creer une sauvegarde
-7. Restaurer une sauvegarde
-8. Afficher les journaux techniques
-9. Desinstaller en conservant les donnees
-10. TOUT SUPPRIMER
+7. Gerer ou supprimer les sauvegardes
+8. Restaurer une sauvegarde
+9. Afficher les journaux techniques
+10. Desinstaller en conservant les donnees
+11. TOUT SUPPRIMER
 0. Quitter
 EOF
     read -r -p 'Votre choix: ' choice
@@ -182,10 +222,11 @@ EOF
       4) start_app ;;
       5) stop_app ;;
       6) backup_app ;;
-      7) restore_app ;;
-      8) logs_app ;;
-      9) uninstall_partial ;;
-      10) purge_all ;;
+      7) manage_backups ;;
+      8) restore_app ;;
+      9) logs_app ;;
+      10) uninstall_partial ;;
+      11) purge_all ;;
       0) exit 0 ;;
       *) warn "Choix invalide." ;;
     esac

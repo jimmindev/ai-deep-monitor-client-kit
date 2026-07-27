@@ -210,6 +210,7 @@ Il est aussi utilisable sans menu:
 ~/ai-deep-monitor/ai-deep-monitor.sh status
 ~/ai-deep-monitor/ai-deep-monitor.sh logs
 ~/ai-deep-monitor/ai-deep-monitor.sh backup
+~/ai-deep-monitor/ai-deep-monitor.sh backups list
 ~/ai-deep-monitor/ai-deep-monitor.sh update
 ```
 
@@ -217,6 +218,7 @@ Il est aussi utilisable sans menu:
 C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command status
 C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command logs
 C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backup
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backups -BackupAction List
 C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command update
 ```
 
@@ -270,6 +272,28 @@ C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backup
 La sauvegarde contient MySQL, les donnees API, les MIB importees et les
 sauvegardes applicatives. Le modele Ollama n'est pas inclus et sera
 retelcharge si necessaire.
+
+Les mises a jour normales et les desinstallations completes creent aussi une
+sauvegarde de securite. Ces archives externes sont conservees jusqu'a une
+action explicite de l'utilisateur.
+
+Pour les lister, conserver uniquement les cinq plus recentes ou toutes les
+supprimer:
+
+```bash
+~/ai-deep-monitor/ai-deep-monitor.sh backups list
+~/ai-deep-monitor/ai-deep-monitor.sh backups prune 5
+~/ai-deep-monitor/ai-deep-monitor.sh backups delete-all
+```
+
+```powershell
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backups -BackupAction List
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backups -BackupAction Prune -KeepBackups 5
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backups -BackupAction DeleteAll
+```
+
+La suppression totale exige une confirmation renforcee. Le guide detaille
+quand une archive est creee et la politique de retention recommandee.
 
 ## Restauration
 

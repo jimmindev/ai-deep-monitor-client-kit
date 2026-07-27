@@ -15,6 +15,7 @@ grep -Fxq 'KIT_VERSION=v0.1.7' "${INSTALL_DIR}/.env"
 grep -Fxq 'APP_VERSION=v0.1.5' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 test -x "${INSTALL_DIR}/update-client.sh"
+test -x "${INSTALL_DIR}/backup-maintenance.sh"
 test -x "${INSTALL_DIR}/ai-deep-monitor.sh"
 test -f "${INSTALL_DIR}/docker-compose.release.yml"
 test -f "${INSTALL_DIR}/client-platform.ps1"
@@ -25,4 +26,18 @@ test -f "${INSTALL_DIR}/client-platform.ps1"
   --app-version v0.1.5
 
 grep -Fxq 'KIT_VERSION=v0.1.7' "${INSTALL_DIR}/.env"
+
+BACKUP_DIR="${INSTALL_DIR}/test-backups"
+mkdir -p "$BACKUP_DIR"
+touch -d '2026-01-01' "${BACKUP_DIR}/ai-deep-monitor-old.tar.gz"
+touch -d '2026-01-02' "${BACKUP_DIR}/ai-deep-monitor-middle.tar.gz"
+touch -d '2026-01-03' "${BACKUP_DIR}/ai-deep-monitor-new.tar.gz"
+"${INSTALL_DIR}/backup-maintenance.sh" \
+  --install-dir "$INSTALL_DIR" \
+  --backup-dir "$BACKUP_DIR" \
+  --action prune \
+  --keep 2 \
+  --yes
+test "$(find "$BACKUP_DIR" -maxdepth 1 -type f | wc -l)" -eq 2
+test ! -e "${BACKUP_DIR}/ai-deep-monitor-old.tar.gz"
 printf 'LINUX_NO_START_OK\n'
