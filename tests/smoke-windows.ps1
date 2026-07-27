@@ -74,6 +74,21 @@ try {
   if (Test-Path -LiteralPath $oldBackup.FullName) {
     throw "La plus ancienne sauvegarde Windows n'a pas ete supprimee."
   }
+  & (Join-Path $testDir "backup-maintenance.ps1") `
+    -InstallDir $testDir `
+    -BackupDir $backupDir `
+    -Action DeleteSelected `
+    -File "ai-deep-monitor-middle.zip" `
+    -Yes
+  if (@(Get-ChildItem -LiteralPath $backupDir -File).Count -ne 1) {
+    throw "La suppression ciblee Windows n'a pas conserve exactement une sauvegarde."
+  }
+  if (Test-Path -LiteralPath $middleBackup.FullName) {
+    throw "La sauvegarde Windows selectionnee n'a pas ete supprimee."
+  }
+  if (-not (Test-Path -LiteralPath $newBackup.FullName)) {
+    throw "La suppression ciblee Windows a supprime une sauvegarde non selectionnee."
+  }
   Write-Output "WINDOWS_SMOKE_OK"
 } finally {
   if ($frontendListener) { $frontendListener.Stop() }

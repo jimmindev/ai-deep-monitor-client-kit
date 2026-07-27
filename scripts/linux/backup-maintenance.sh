@@ -10,6 +10,7 @@ BACKUP_DIR=""
 ACTION="list"
 KEEP=5
 ASSUME_YES=false
+declare -a REQUESTED_FILES=()
 
 usage() {
   cat <<'EOF'
@@ -18,8 +19,9 @@ Usage: ./backup-maintenance.sh [options]
 Options:
   --install-dir CHEMIN   Dossier de l'application
   --backup-dir CHEMIN    Dossier des sauvegardes
-  --action ACTION        list, prune ou delete-all
+  --action ACTION        list, prune, delete-selected ou delete-all
   --keep N               Nombre d'archives recentes a conserver avec prune
+  --file NOM             Archive a supprimer avec delete-selected (repetable)
   --yes                  Confirmer sans interaction
 EOF
 }
@@ -30,13 +32,14 @@ while (($#)); do
     --backup-dir) BACKUP_DIR="$2"; shift 2 ;;
     --action) ACTION="$2"; shift 2 ;;
     --keep) KEEP="$2"; shift 2 ;;
+    --file) REQUESTED_FILES+=("$2"); shift 2 ;;
     --yes) ASSUME_YES=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) die "Option inconnue: $1" ;;
   esac
 done
 
-[[ "$ACTION" =~ ^(list|prune|delete-all)$ ]] || die "Action invalide: $ACTION"
+[[ "$ACTION" =~ ^(list|prune|delete-selected|delete-all)$ ]] || die "Action invalide: $ACTION"
 [[ "$KEEP" =~ ^[0-9]+$ ]] || die "--keep exige un entier positif ou nul."
 [[ -n "$BACKUP_DIR" ]] || BACKUP_DIR="$(dirname "$INSTALL_DIR")/ai-deep-monitor-backups"
 
@@ -67,6 +70,124 @@ show_backups() {
   printf '\n'
 }
 
+show_numbered_backups() {
+  local index file
+  printf '\nSauvegardes disponibles\n'
+  for index in "${!backup_files[@]}"; do
+    file="${backup_files[$index]}"
+    printf '  %2d. %-10s %s\n' \
+      "$((index + 1))" \
+      "$(du -h "$file" | awk '{print $1}')" \
+      "$(basename "$file")"
+  done
+}
+
+resolve_requested_files() {
+  local requested file found
+  selected_files=()
+  for requested in "${REQUESTED_FILES[@]}"; do
+    found=false
+    for file in "${backup_files[@]}"; do
+      if [[ "$(basename "$file")" == "$requested" ]]; then
+        selected_files+=("$file")
+        found=true
+        break
+      fi
+    done
+    [[ "$found" == "true" ]] || die "Sauvegarde introuvable: ${requested}"
+  done
+}
+
+parse_numeric_selection() {
+  local input="$1"
+  local part start end index
+  local -a parts
+  local -a flags=()
+  selected_files=()
+  IFS=',' read -r -a parts <<<"$input"
+  for part in "${parts[@]}"; do
+    part="${part//[[:space:]]/}"
+    if [[ "$part" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+      start="${BASH_REMATCH[1]}"
+      end="${BASH_REMATCH[2]}"
+      ((start <= end)) || die "Plage invalide: ${part}"
+      for ((index = start; index <= end; index++)); do
+        ((index >= 1 && index <= ${#backup_files[@]})) ||
+          die "Numero hors liste: ${index}"
+        flags[$((index - 1))]=1
+      done
+    elif [[ "$part" =~ ^[0-9]+$ ]]; then
+      index="$part"
+      ((index >= 1 && index <= ${#backup_files[@]})) ||
+        die "Numero hors liste: ${index}"
+      flags[$((index - 1))]=1
+    else
+      die "Selection invalide: ${part}"
+    fi
+  done
+  for index in "${!backup_files[@]}"; do
+    [[ "${flags[$index]:-0}" == "1" ]] && selected_files+=("${backup_files[$index]}")
+  done
+}
+
+select_backups_interactive() {
+  local cursor=0 key rest index marker
+  local -a flags=()
+  selected_files=()
+  while true; do
+    printf '\033[2J\033[H'
+    printf '\033[1;36mSelection des sauvegardes a supprimer\033[0m\n'
+    printf 'Fleches: naviguer | Espace: cocher | Entree: continuer | Q: annuler\n\n'
+    for index in "${!backup_files[@]}"; do
+      marker=' '
+      [[ "${flags[$index]:-0}" == "1" ]] && marker='x'
+      if ((index == cursor)); then
+        printf '\033[1;44;37m  > [%s] %-10s %s\033[0m\n' \
+          "$marker" \
+          "$(du -h "${backup_files[$index]}" | awk '{print $1}')" \
+          "$(basename "${backup_files[$index]}")"
+      else
+        printf '    [%s] %-10s %s\n' \
+          "$marker" \
+          "$(du -h "${backup_files[$index]}" | awk '{print $1}')" \
+          "$(basename "${backup_files[$index]}")"
+      fi
+    done
+    IFS= read -rsn1 key || return 1
+    if [[ "$key" == $'\033' ]]; then
+      IFS= read -rsn2 -t 0.2 rest || rest=""
+      key+="$rest"
+    fi
+    case "$key" in
+      $'\033[A') cursor=$(((cursor - 1 + ${#backup_files[@]}) % ${#backup_files[@]})) ;;
+      $'\033[B') cursor=$(((cursor + 1) % ${#backup_files[@]})) ;;
+      ' ') [[ "${flags[$cursor]:-0}" == "1" ]] && flags[$cursor]=0 || flags[$cursor]=1 ;;
+      "")
+        for index in "${!backup_files[@]}"; do
+          [[ "${flags[$index]:-0}" == "1" ]] && selected_files+=("${backup_files[$index]}")
+        done
+        ((${#selected_files[@]} > 0)) && return 0
+        ;;
+      q|Q) return 1 ;;
+    esac
+  done
+}
+
+select_backups() {
+  local input
+  selected_files=()
+  if ((${#REQUESTED_FILES[@]} > 0)); then
+    resolve_requested_files
+  elif [[ -t 0 && -t 1 && "${TERM:-dumb}" != "dumb" ]]; then
+    select_backups_interactive || return 1
+  else
+    show_numbered_backups
+    read -r -p 'Numeros a supprimer (exemple: 1,3,5-7): ' input
+    [[ -n "$input" ]] || return 1
+    parse_numeric_selection "$input"
+  fi
+}
+
 case "$ACTION" in
   list)
     show_backups
@@ -84,6 +205,17 @@ case "$ACTION" in
       rm -f -- "${backup_files[$index]}"
     done
     log "Nettoyage termine. ${KEEP} sauvegarde(s) recente(s) conservee(s)."
+    ;;
+  delete-selected)
+    ((${#backup_files[@]} > 0)) || { log "Aucune sauvegarde a supprimer."; exit 0; }
+    select_backups || { log "Selection annulee."; exit 0; }
+    ((${#selected_files[@]} > 0)) || die "Aucune sauvegarde selectionnee."
+    printf '\nSauvegarde(s) selectionnee(s):\n'
+    printf '  - %s\n' "${selected_files[@]##*/}"
+    confirm "Supprimer definitivement ces ${#selected_files[@]} sauvegarde(s) ?" "$ASSUME_YES" ||
+      die "Suppression annulee."
+    rm -f -- "${selected_files[@]}"
+    log "${#selected_files[@]} sauvegarde(s) supprimee(s)."
     ;;
   delete-all)
     ((${#backup_files[@]} > 0)) || { log "Aucune sauvegarde a supprimer."; exit 0; }

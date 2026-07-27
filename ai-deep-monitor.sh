@@ -106,7 +106,8 @@ manage_backups() {
 Gestion des sauvegardes
 1. Lister les sauvegardes
 2. Conserver uniquement les plus recentes
-3. Supprimer toutes les sauvegardes
+3. Supprimer une selection
+4. Supprimer toutes les sauvegardes
 0. Retour
 EOF
     read -r -p 'Votre choix: ' choice
@@ -118,7 +119,8 @@ EOF
         "$(kit_script backup-maintenance.sh)" \
           --install-dir "$INSTALL_DIR" --action prune --keep "$keep"
         ;;
-      3) "$(kit_script backup-maintenance.sh)" --install-dir "$INSTALL_DIR" --action delete-all ;;
+      3) "$(kit_script backup-maintenance.sh)" --install-dir "$INSTALL_DIR" --action delete-selected ;;
+      4) "$(kit_script backup-maintenance.sh)" --install-dir "$INSTALL_DIR" --action delete-all ;;
       0) return ;;
       *) warn "Choix invalide." ;;
     esac

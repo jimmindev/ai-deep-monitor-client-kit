@@ -117,19 +117,27 @@ Les sauvegardes ne sont jamais supprimees silencieusement. Le choix
 
 - afficher leur date et leur taille;
 - conserver uniquement les N archives les plus recentes;
+- choisir une ou plusieurs archives precises a supprimer;
 - supprimer toutes les archives avec une confirmation explicite.
+
+Pour une suppression ciblee, naviguez avec les fleches, cochez ou decochez
+chaque archive avec `Espace`, puis validez avec `Entree`. La touche `Q` annule
+la selection. Si le terminal ne prend pas en charge ce mode, saisissez les
+numeros ou les plages demandes, par exemple `1,3,5-7`.
 
 Commandes directes:
 
 ```bash
 ~/ai-deep-monitor/ai-deep-monitor.sh backups list
 ~/ai-deep-monitor/ai-deep-monitor.sh backups prune 5
+~/ai-deep-monitor/ai-deep-monitor.sh backups delete-selected
 ~/ai-deep-monitor/ai-deep-monitor.sh backups delete-all
 ```
 
 ```powershell
 C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backups -BackupAction List
 C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backups -BackupAction Prune -KeepBackups 5
+C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backups -BackupAction DeleteSelected
 C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backups -BackupAction DeleteAll
 ```
 

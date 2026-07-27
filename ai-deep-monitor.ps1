@@ -2,10 +2,11 @@ param(
   [string]$InstallDir = "C:\ai-deep-monitor",
   [ValidateSet("", "install", "update", "status", "logs", "backup", "backups", "restore", "stop", "start", "uninstall", "purge", "help")]
   [string]$Command = "",
-  [ValidateSet("Menu", "List", "Prune", "DeleteAll")]
+  [ValidateSet("Menu", "List", "Prune", "DeleteSelected", "DeleteAll")]
   [string]$BackupAction = "Menu",
   [ValidateRange(0, 10000)]
   [int]$KeepBackups = 5,
+  [string[]]$BackupFile = @(),
   [switch]$Yes
 )
 
@@ -82,6 +83,7 @@ function Invoke-BackupManagement {
       InstallDir = $InstallDir
       Action = $Action
       Keep = $Keep
+      File = $BackupFile
       Yes = $Yes
     }
     return
@@ -92,7 +94,8 @@ function Invoke-BackupManagement {
     Write-Host "Gestion des sauvegardes" -ForegroundColor Cyan
     Write-Host "  1. Lister les sauvegardes"
     Write-Host "  2. Conserver uniquement les plus recentes"
-    Write-Host "  3. Supprimer toutes les sauvegardes"
+    Write-Host "  3. Supprimer une selection"
+    Write-Host "  4. Supprimer toutes les sauvegardes"
     Write-Host "  0. Retour"
     $choice = Read-Host "Votre choix"
     switch ($choice) {
@@ -112,6 +115,12 @@ function Invoke-BackupManagement {
         }
       }
       "3" {
+        Invoke-KitScript "backup-maintenance.ps1" @{
+          InstallDir = $InstallDir
+          Action = "DeleteSelected"
+        }
+      }
+      "4" {
         Invoke-KitScript "backup-maintenance.ps1" @{
           InstallDir = $InstallDir
           Action = "DeleteAll"

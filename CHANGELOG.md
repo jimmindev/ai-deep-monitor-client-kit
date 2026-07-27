@@ -1,5 +1,26 @@
 # Historique des versions du Client Kit
 
+## v0.1.9 - 2026-07-27
+
+### Ajoute
+
+- Selection multiple des sauvegardes a supprimer sous Linux, NVIDIA Jetson et
+  Windows.
+- Navigation avec les fleches, coche avec Espace, validation avec Entree et
+  annulation avec Q.
+- Selection de secours par numeros et plages, par exemple `1,3,5-7`, pour les
+  terminaux sans mode interactif.
+- Commandes de suppression ciblee utilisables dans les tests et les procedures
+  d'administration.
+
+### Securise
+
+- Confirmation explicite avant toute suppression ciblee.
+- Resolution exacte du nom des archives afin de ne jamais supprimer une
+  sauvegarde seulement parce que son nom ressemble a la selection.
+- Tests de non-regression verifiant que les archives non selectionnees sont
+  conservees.
+
 ## v0.1.8 - 2026-07-27
 
 ### Ajoute

@@ -11,7 +11,7 @@ trap 'rm -rf -- "$INSTALL_DIR"' EXIT
   --no-start \
   --skip-docker-login
 
-grep -Fxq 'KIT_VERSION=v0.1.8' "${INSTALL_DIR}/.env"
+grep -Fxq 'KIT_VERSION=v0.1.9' "${INSTALL_DIR}/.env"
 grep -Fxq 'APP_VERSION=v0.1.5' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 test -x "${INSTALL_DIR}/update-client.sh"
@@ -25,7 +25,7 @@ test -f "${INSTALL_DIR}/client-platform.ps1"
   --no-start \
   --app-version v0.1.5
 
-grep -Fxq 'KIT_VERSION=v0.1.8' "${INSTALL_DIR}/.env"
+grep -Fxq 'KIT_VERSION=v0.1.9' "${INSTALL_DIR}/.env"
 
 BACKUP_DIR="${INSTALL_DIR}/test-backups"
 mkdir -p "$BACKUP_DIR"
@@ -40,4 +40,13 @@ touch -d '2026-01-03' "${BACKUP_DIR}/ai-deep-monitor-new.tar.gz"
   --yes
 test "$(find "$BACKUP_DIR" -maxdepth 1 -type f | wc -l)" -eq 2
 test ! -e "${BACKUP_DIR}/ai-deep-monitor-old.tar.gz"
+"${INSTALL_DIR}/backup-maintenance.sh" \
+  --install-dir "$INSTALL_DIR" \
+  --backup-dir "$BACKUP_DIR" \
+  --action delete-selected \
+  --file "ai-deep-monitor-middle.tar.gz" \
+  --yes
+test "$(find "$BACKUP_DIR" -maxdepth 1 -type f | wc -l)" -eq 1
+test ! -e "${BACKUP_DIR}/ai-deep-monitor-middle.tar.gz"
+test -e "${BACKUP_DIR}/ai-deep-monitor-new.tar.gz"
 printf 'LINUX_NO_START_OK\n'

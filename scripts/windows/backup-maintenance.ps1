@@ -1,10 +1,11 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
   [string]$BackupDir = "",
-  [ValidateSet("List", "Prune", "DeleteAll")]
+  [ValidateSet("List", "Prune", "DeleteSelected", "DeleteAll")]
   [string]$Action = "List",
   [ValidateRange(0, 10000)]
   [int]$Keep = 5,
+  [string[]]$File = @(),
   [switch]$Yes
 )
 
@@ -40,6 +41,114 @@ function Show-Backups {
     Format-Table -AutoSize
 }
 
+function Show-NumberedBackups {
+  Write-Host ""
+  Write-Host "Sauvegardes disponibles"
+  for ($index = 0; $index -lt $backups.Count; $index++) {
+    $backup = $backups[$index]
+    Write-Host ("  {0,2}. {1,8:N1} MB  {2}" -f ($index + 1), ($backup.Length / 1MB), $backup.Name)
+  }
+}
+
+function ConvertFrom-BackupSelection {
+  param([string]$Selection)
+
+  $selectedIndexes = [System.Collections.Generic.HashSet[int]]::new()
+  foreach ($partValue in ($Selection -split ",")) {
+    $part = $partValue.Trim()
+    if ($part -match "^(\d+)-(\d+)$") {
+      $start = [int]$Matches[1]
+      $end = [int]$Matches[2]
+      if ($start -gt $end) { throw "Plage invalide: $part" }
+      foreach ($number in $start..$end) {
+        if ($number -lt 1 -or $number -gt $backups.Count) {
+          throw "Numero hors liste: $number"
+        }
+        [void]$selectedIndexes.Add($number - 1)
+      }
+    } elseif ($part -match "^\d+$") {
+      $number = [int]$part
+      if ($number -lt 1 -or $number -gt $backups.Count) {
+        throw "Numero hors liste: $number"
+      }
+      [void]$selectedIndexes.Add($number - 1)
+    } else {
+      throw "Selection invalide: $part"
+    }
+  }
+
+  return @(
+    for ($index = 0; $index -lt $backups.Count; $index++) {
+      if ($selectedIndexes.Contains($index)) { $backups[$index] }
+    }
+  )
+}
+
+function Select-BackupsInteractive {
+  $cursor = 0
+  $selected = [bool[]]::new($backups.Count)
+
+  while ($true) {
+    Clear-Host
+    Write-Host "Selection des sauvegardes a supprimer" -ForegroundColor Cyan
+    Write-Host "Fleches: naviguer | Espace: cocher | Entree: continuer | Q: annuler"
+    Write-Host ""
+    for ($index = 0; $index -lt $backups.Count; $index++) {
+      $marker = if ($selected[$index]) { "x" } else { " " }
+      $line = "  [{0}] {1,8:N1} MB  {2}" -f $marker, ($backups[$index].Length / 1MB), $backups[$index].Name
+      if ($index -eq $cursor) {
+        Write-Host ("> $line") -ForegroundColor White -BackgroundColor DarkBlue
+      } else {
+        Write-Host ("  $line")
+      }
+    }
+
+    try {
+      $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    } catch {
+      return $null
+    }
+    switch ($key.VirtualKeyCode) {
+      38 { $cursor = ($cursor - 1 + $backups.Count) % $backups.Count }
+      40 { $cursor = ($cursor + 1) % $backups.Count }
+      32 { $selected[$cursor] = -not $selected[$cursor] }
+      13 {
+        $result = @(
+          for ($index = 0; $index -lt $backups.Count; $index++) {
+            if ($selected[$index]) { $backups[$index] }
+          }
+        )
+        if ($result.Count -gt 0) { return $result }
+      }
+    }
+    if ($key.Character -eq "q" -or $key.Character -eq "Q") {
+      return @()
+    }
+  }
+}
+
+function Select-Backups {
+  if ($File.Count -gt 0) {
+    return @(
+      foreach ($requestedName in $File) {
+        $match = @($backups | Where-Object Name -CEQ $requestedName)
+        if ($match.Count -eq 0) { throw "Sauvegarde introuvable: $requestedName" }
+        $match[0]
+      }
+    )
+  }
+
+  $interactiveSelection = Select-BackupsInteractive
+  if ($null -ne $interactiveSelection) {
+    return @($interactiveSelection)
+  }
+
+  Show-NumberedBackups
+  $selection = Read-Host "Numeros a supprimer (exemple: 1,3,5-7)"
+  if (-not $selection) { return @() }
+  return @(ConvertFrom-BackupSelection -Selection $selection)
+}
+
 switch ($Action) {
   "List" {
     Show-Backups
@@ -60,6 +169,29 @@ switch ($Action) {
     }
     $toDelete | Remove-Item -Force
     Write-Host "Nettoyage termine. $Keep sauvegarde(s) recente(s) conservee(s)."
+  }
+  "DeleteSelected" {
+    if ($backups.Count -eq 0) {
+      Write-Host "Aucune sauvegarde a supprimer."
+      return
+    }
+    $toDelete = @(Select-Backups)
+    if ($toDelete.Count -eq 0) {
+      Write-Host "Selection annulee."
+      return
+    }
+    Write-Host ""
+    Write-Host "Sauvegarde(s) selectionnee(s):"
+    $toDelete | ForEach-Object { Write-Host "  - $($_.Name)" }
+    if (-not $Yes) {
+      $answer = Read-Host "Supprimer definitivement ces $($toDelete.Count) sauvegarde(s) ? (o/N)"
+      if ($answer -notmatch "^(o|oui|y|yes)$") {
+        Write-Host "Suppression annulee."
+        return
+      }
+    }
+    $toDelete | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }
+    Write-Host "$($toDelete.Count) sauvegarde(s) supprimee(s)."
   }
   "DeleteAll" {
     if ($backups.Count -eq 0) {
