@@ -54,6 +54,12 @@ try {
   if ($envContent -notmatch "(?m)^KIT_VERSION=v0\.1\.10\r?$") {
     throw "La version du Client Kit attendue est absente."
   }
+  if ($envContent -notmatch "(?m)^OLLAMA_MODEL=llama3\.2:3b\r?$") {
+    throw "Le modele Ollama principal attendu est absent."
+  }
+  if ($envContent -notmatch "(?m)^OLLAMA_FALLBACK_MODEL=llama3\.2:3b\r?$") {
+    throw "Le modele Ollama de secours attendu est absent."
+  }
 
   & $launcherPath -InstallDir $testDir -Command help | Out-Null
 

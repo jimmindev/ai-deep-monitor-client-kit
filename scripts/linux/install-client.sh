@@ -193,7 +193,8 @@ UPDATE_CHECK_USER=
 UPDATE_CHECK_TOKEN=
 
 OLLAMA_IMAGE=ollama/ollama:latest
-OLLAMA_MODEL=llama3.1
+OLLAMA_MODEL=llama3.2:3b
+OLLAMA_FALLBACK_MODEL=llama3.2:3b
 OLLAMA_TEMPERATURE=0.2
 OLLAMA_NUM_PREDICT=512
 
@@ -225,8 +226,12 @@ EOF
 fi
 
 ensure_auth_config "$ENV_FILE"
+ensure_ollama_config "$ENV_FILE"
 if [[ "$AUTH_CONFIG_CHANGED" == "true" && "$existing_env" == "true" ]]; then
   log "Configuration d'authentification reparee; les donnees et comptes existants sont conserves."
+fi
+if [[ "$OLLAMA_CONFIG_CHANGED" == "true" && "$existing_env" == "true" ]]; then
+  log "Modele de secours Ollama ajoute; le modele configure reste conserve."
 fi
 
 if [[ "$NO_START" == "true" ]]; then

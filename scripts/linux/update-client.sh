@@ -72,8 +72,12 @@ done
 chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true
 write_env_value "$ENV_FILE" KIT_VERSION "$KIT_VERSION"
 ensure_auth_config "$ENV_FILE"
+ensure_ollama_config "$ENV_FILE"
 if [[ "$AUTH_CONFIG_CHANGED" == "true" ]]; then
   log "Configuration d'authentification reparee; les volumes SQL et les comptes existants restent inchanges."
+fi
+if [[ "$OLLAMA_CONFIG_CHANGED" == "true" ]]; then
+  log "Modele de secours Ollama ajoute; le modele configure reste conserve."
 fi
 
 if [[ "$NO_START" == "true" ]]; then

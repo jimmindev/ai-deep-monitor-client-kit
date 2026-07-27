@@ -423,7 +423,8 @@ UPDATE_CHECK_USER=
 UPDATE_CHECK_TOKEN=
 
 OLLAMA_IMAGE=ollama/ollama:latest
-OLLAMA_MODEL=llama3.1
+OLLAMA_MODEL=llama3.2:3b
+OLLAMA_FALLBACK_MODEL=llama3.2:3b
 OLLAMA_TEMPERATURE=0.2
 OLLAMA_NUM_PREDICT=512
 
@@ -455,6 +456,14 @@ API_PORT=$ApiPort
 } else {
   Write-DotEnvValue -Path $envTarget -Key "FRONTEND_PORT" -Value "$FrontendPort"
   Write-DotEnvValue -Path $envTarget -Key "API_PORT" -Value "$ApiPort"
+  $existingValues = Read-DotEnv -Path $envTarget
+  if (-not $existingValues["OLLAMA_MODEL"]) {
+    Write-DotEnvValue -Path $envTarget -Key "OLLAMA_MODEL" -Value "llama3.2:3b"
+  }
+  if (-not $existingValues["OLLAMA_FALLBACK_MODEL"]) {
+    Write-DotEnvValue -Path $envTarget -Key "OLLAMA_FALLBACK_MODEL" -Value "llama3.2:3b"
+    Write-Host "Modele de secours Ollama ajoute; le modele configure reste conserve."
+  }
   $oldDefaultCors = if ($requestedFrontendPort -eq 80) {
     "http://localhost"
   } else {

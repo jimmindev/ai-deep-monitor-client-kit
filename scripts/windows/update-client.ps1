@@ -236,6 +236,14 @@ $authRepair = Repair-AuthConfig -Path $envPath
 if ($authRepair.Changed) {
   Write-Host "Configuration d'authentification reparee; les volumes SQL et les comptes existants restent inchanges."
 }
+$envValues = Read-DotEnv -Path $envPath
+if (-not $envValues["OLLAMA_MODEL"]) {
+  Write-DotEnvValue -Path $envPath -Key "OLLAMA_MODEL" -Value "llama3.2:3b"
+}
+if (-not $envValues["OLLAMA_FALLBACK_MODEL"]) {
+  Write-DotEnvValue -Path $envPath -Key "OLLAMA_FALLBACK_MODEL" -Value "llama3.2:3b"
+  Write-Host "Modele de secours Ollama ajoute; le modele configure reste conserve."
+}
 $dockerPlatform = if ($NoStart) {
   Get-AiMonitorHostPlatform
 } else {

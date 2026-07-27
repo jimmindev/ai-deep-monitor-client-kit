@@ -273,6 +273,7 @@ write_env_value() {
 
 AUTH_CONFIG_CHANGED=false
 GENERATED_BOOTSTRAP_PASSWORD=""
+OLLAMA_CONFIG_CHANGED=false
 
 ensure_auth_config() {
   local env_file="$1"
@@ -312,6 +313,20 @@ AUTH_COOKIE_SAMESITE=lax
 TELEMETRY_RAW_RETENTION_DAYS=7
 TELEMETRY_ROLLUP_RETENTION_DAYS=365
 EOF
+}
+
+ensure_ollama_config() {
+  local env_file="$1"
+
+  if [[ -z "$(read_env_value "$env_file" OLLAMA_MODEL)" ]]; then
+    write_env_value "$env_file" OLLAMA_MODEL "llama3.2:3b"
+    OLLAMA_CONFIG_CHANGED=true
+  fi
+
+  if [[ -z "$(read_env_value "$env_file" OLLAMA_FALLBACK_MODEL)" ]]; then
+    write_env_value "$env_file" OLLAMA_FALLBACK_MODEL "llama3.2:3b"
+    OLLAMA_CONFIG_CHANGED=true
+  fi
 }
 
 print_bootstrap_credentials() {
