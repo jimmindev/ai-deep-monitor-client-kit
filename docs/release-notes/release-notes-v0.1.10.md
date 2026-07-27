@@ -28,6 +28,7 @@ nom. Une suppression ciblee accepte:
 - une plage: `2-5`;
 - une combinaison: `1,3,5-7`.
 
+Les points-virgules sont egalement acceptes comme separateurs.
 Une saisie vide annule l'operation et une confirmation reste obligatoire avant
 toute suppression.
 

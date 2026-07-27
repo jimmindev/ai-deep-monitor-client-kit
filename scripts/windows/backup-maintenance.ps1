@@ -54,7 +54,7 @@ function ConvertFrom-BackupSelection {
   param([string]$Selection)
 
   $selectedIndexes = [System.Collections.Generic.HashSet[int]]::new()
-  foreach ($partValue in ($Selection -split ",")) {
+  foreach ($partValue in ($Selection -split "[,;]")) {
     $part = $partValue.Trim()
     if ($part -match "^(\d+)-(\d+)$") {
       $start = [int]$Matches[1]

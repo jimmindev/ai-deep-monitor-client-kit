@@ -104,6 +104,7 @@ parse_numeric_selection() {
   local -a parts
   local -a flags=()
   selected_files=()
+  input="${input//;/,}"
   IFS=',' read -r -a parts <<<"$input"
   for part in "${parts[@]}"; do
     part="${part//[[:space:]]/}"
@@ -128,6 +129,7 @@ parse_numeric_selection() {
   for index in "${!backup_files[@]}"; do
     [[ "${flags[$index]:-0}" == "1" ]] && selected_files+=("${backup_files[$index]}")
   done
+  return 0
 }
 
 select_backups() {

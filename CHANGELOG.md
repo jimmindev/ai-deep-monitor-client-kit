@@ -14,6 +14,10 @@
 
 - Suppression de la navigation par fleches qui n'etait pas cliquable et
   variait selon le terminal utilise.
+- Correction du statut de retour de la selection numerique Linux: une
+  selection valide suivie d'elements non selectionnes n'est plus interpretee
+  comme une annulation.
+- Les virgules et les points-virgules sont acceptes comme separateurs.
 - Documentation d'installation alignee sur le comportement reel des lanceurs.
 - Test de non-regression couvrant la suppression de plusieurs sauvegardes par
   saisie numerique.

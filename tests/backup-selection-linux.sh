@@ -39,4 +39,28 @@ test -e "${TEST_DIR}/ai-deep-monitor-b.tar.gz"
 test ! -e "${TEST_DIR}/ai-deep-monitor-ab.tar.gz"
 test "$(find "$TEST_DIR" -maxdepth 1 -type f | wc -l)" -eq 1
 
-printf 'LINUX_NUMERIC_SELECTION_OK\n'
+touch "${TEST_DIR}/ai-deep-monitor-d.tar.gz"
+touch -d '2026-01-04' "${TEST_DIR}/ai-deep-monitor-d.tar.gz"
+
+cancel_output="$(
+  printf '1\nn\n' |
+    "${KIT_DIR}/scripts/linux/backup-maintenance.sh" \
+      --install-dir "${TEST_DIR}/install" \
+      --backup-dir "$TEST_DIR" \
+      --action delete-selected 2>&1 || true
+)"
+grep -Fq 'Suppression annulee' <<<"$cancel_output"
+
+test -e "${TEST_DIR}/ai-deep-monitor-d.tar.gz"
+
+printf '1;\no\n' |
+  "${KIT_DIR}/scripts/linux/backup-maintenance.sh" \
+    --install-dir "${TEST_DIR}/install" \
+    --backup-dir "$TEST_DIR" \
+    --action delete-selected
+
+test ! -e "${TEST_DIR}/ai-deep-monitor-d.tar.gz"
+test -e "${TEST_DIR}/ai-deep-monitor-b.tar.gz"
+test "$(find "$TEST_DIR" -maxdepth 1 -type f | wc -l)" -eq 1
+
+printf 'LINUX_NUMERIC_SELECTION_AND_CONFIRMATION_OK\n'
