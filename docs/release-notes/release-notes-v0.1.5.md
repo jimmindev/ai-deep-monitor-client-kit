@@ -26,19 +26,8 @@ l'installation Docker sur tous les postes pris en charge.
 La version du kit est volontairement independante de celle des images
 applicatives. Cette release ne demande donc pas une image applicative `v0.1.5`.
 
-## Installation Linux
+## Installation
 
-```bash
-chmod +x ./*.sh
-./install-client.sh
-```
-
-## Installation Windows
-
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\install-client.ps1 -AppVersion v0.1.4
-```
-
-Un token GitHub autorise a lire les packages prives reste necessaire pour
-telecharger les images applicatives.
+Cette page conserve l'historique fonctionnel de la version `v0.1.5`. Ses
+anciens points d'entree d'installation ont ete retires du kit courant.
+Utilisez le [guide d'installation actuel](../installation.md).

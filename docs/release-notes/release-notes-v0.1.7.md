@@ -27,8 +27,9 @@ multiarchitectures `amd64` et `arm64`.
 - Les archives Linux et Windows ont des noms stables et s'extraient toujours
   dans `ai-deep-monitor-client-kit`. Une nouvelle version ne cree plus un
   nouveau dossier local.
-- `cleanup-old-kits.sh` et `cleanup-old-kits.ps1` suppriment les anciens kits
-  apres confirmation, sans toucher a l'installation ou aux donnees.
+- Le dossier stable `ai-deep-monitor-client-kit` evite la creation de nouveaux
+  dossiers versionnes. Les anciens scripts temporaires de migration ne font
+  plus partie du kit courant.
 
 ## Installation Linux et Jetson
 
@@ -51,8 +52,12 @@ puis executer:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\install-client.ps1 -AppVersion v0.1.5
+.\ai-deep-monitor.ps1
 ```
+
+Pour une installation actuelle, utilisez toujours le
+[guide d'installation](../installation.md), qui remplace les anciennes
+procedures ponctuelles.
 
 ## Versions
 

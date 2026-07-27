@@ -43,30 +43,6 @@ Les archives de toutes les versions utilisent le meme dossier racine:
 `ai-deep-monitor-client-kit`. Une mise a jour ne cree donc plus un nouveau
 dossier portant le numero de version.
 
-## Nettoyer les anciens dossiers du kit
-
-Apres avoir extrait le kit stable, le nettoyeur retire les anciens dossiers
-`ai-deep-monitor-client-kit-v*` et les anciennes archives du meme dossier.
-Il ne touche pas a l'application active, a MySQL, aux volumes Docker ni aux
-sauvegardes.
-
-Linux et Jetson:
-
-```bash
-cd ~/aidp/ai-deep-monitor-client-kit
-chmod +x scripts/linux/cleanup-old-kits.sh
-./scripts/linux/cleanup-old-kits.sh
-```
-
-Windows, depuis le dossier stable extrait:
-
-```powershell
-.\scripts\windows\cleanup-old-kits.ps1
-```
-
-Le script affiche les elements trouves et demande une confirmation. Pour une
-execution non interactive, utiliser `--yes` sous Linux ou `-Yes` sous Windows.
-
 Le depot peut aussi etre clone sans authentification:
 
 ```bash
@@ -227,18 +203,6 @@ manuelle. Le script de mise a jour cree une sauvegarde avant tout changement.
 
 ## Verification et mise a jour
 
-Windows:
-
-```powershell
-C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command update
-```
-
-### Reparer l'authentification d'une installation existante
-
-Le kit `v0.1.7` verifie et repare les variables d'authentification dans
-`.env`, meme lorsque l'application reste en `v0.1.5`. Il ne remplace ni le
-mot de passe MySQL, ni les comptes applicatifs, ni les volumes existants.
-
 Linux:
 
 ```bash
@@ -251,9 +215,8 @@ Windows:
 C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command update
 ```
 
-Un `401` sur `/api/auth/refresh` avant connexion indique simplement
-l'absence de session. Une erreur `500` sur `/api/auth/login` doit disparaitre
-apres la reparation et la recreation automatique du conteneur API.
+La mise a jour conserve les comptes, les volumes MySQL, les donnees
+applicatives et les ports de l'installation existante.
 
 ## Sauvegarde
 

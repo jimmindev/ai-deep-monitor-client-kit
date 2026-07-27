@@ -39,16 +39,8 @@ occupe, jusqu'a produire l'erreur:
 Cette mise a jour concerne uniquement les scripts du kit. Elle ne modifie pas
 les images applicatives React, Python, MySQL ou Ollama.
 
-## Installation Linux
+## Installation
 
-```bash
-curl -fL \
-  -o ai-deep-monitor-client-kit-v0.1.6.tar.gz \
-  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/v0.1.6/ai-deep-monitor-client-kit-v0.1.6.tar.gz
-tar -xzf ai-deep-monitor-client-kit-v0.1.6.tar.gz
-cd ai-deep-monitor-client-kit-v0.1.6
-chmod +x ./*.sh
-./install-client.sh
-```
-
-Un token GitHub autorise a lire les images privees GHCR reste necessaire.
+Cette page conserve l'historique fonctionnel de la version `v0.1.6`. Son
+ancienne procedure avec un dossier versionne a ete retiree du kit courant.
+Utilisez le [guide d'installation actuel](../installation.md).
