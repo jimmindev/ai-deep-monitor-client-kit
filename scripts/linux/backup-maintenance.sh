@@ -130,59 +130,14 @@ parse_numeric_selection() {
   done
 }
 
-select_backups_interactive() {
-  local cursor=0 key rest index marker
-  local -a flags=()
-  selected_files=()
-  while true; do
-    printf '\033[2J\033[H'
-    printf '\033[1;36mSelection des sauvegardes a supprimer\033[0m\n'
-    printf 'Fleches: naviguer | Espace: cocher | Entree: continuer | Q: annuler\n\n'
-    for index in "${!backup_files[@]}"; do
-      marker=' '
-      [[ "${flags[$index]:-0}" == "1" ]] && marker='x'
-      if ((index == cursor)); then
-        printf '\033[1;44;37m  > [%s] %-10s %s\033[0m\n' \
-          "$marker" \
-          "$(du -h "${backup_files[$index]}" | awk '{print $1}')" \
-          "$(basename "${backup_files[$index]}")"
-      else
-        printf '    [%s] %-10s %s\n' \
-          "$marker" \
-          "$(du -h "${backup_files[$index]}" | awk '{print $1}')" \
-          "$(basename "${backup_files[$index]}")"
-      fi
-    done
-    IFS= read -rsn1 key || return 1
-    if [[ "$key" == $'\033' ]]; then
-      IFS= read -rsn2 -t 0.2 rest || rest=""
-      key+="$rest"
-    fi
-    case "$key" in
-      $'\033[A') cursor=$(((cursor - 1 + ${#backup_files[@]}) % ${#backup_files[@]})) ;;
-      $'\033[B') cursor=$(((cursor + 1) % ${#backup_files[@]})) ;;
-      ' ') [[ "${flags[$cursor]:-0}" == "1" ]] && flags[$cursor]=0 || flags[$cursor]=1 ;;
-      "")
-        for index in "${!backup_files[@]}"; do
-          [[ "${flags[$index]:-0}" == "1" ]] && selected_files+=("${backup_files[$index]}")
-        done
-        ((${#selected_files[@]} > 0)) && return 0
-        ;;
-      q|Q) return 1 ;;
-    esac
-  done
-}
-
 select_backups() {
   local input
   selected_files=()
   if ((${#REQUESTED_FILES[@]} > 0)); then
     resolve_requested_files
-  elif [[ -t 0 && -t 1 && "${TERM:-dumb}" != "dumb" ]]; then
-    select_backups_interactive || return 1
   else
     show_numbered_backups
-    read -r -p 'Numeros a supprimer (exemple: 1,3,5-7): ' input
+    read -r -p 'Numeros a supprimer (exemple: 1,3,5-7; vide pour annuler): ' input
     [[ -n "$input" ]] || return 1
     parse_numeric_selection "$input"
   fi

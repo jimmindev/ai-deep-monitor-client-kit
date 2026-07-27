@@ -84,49 +84,6 @@ function ConvertFrom-BackupSelection {
   )
 }
 
-function Select-BackupsInteractive {
-  $cursor = 0
-  $selected = [bool[]]::new($backups.Count)
-
-  while ($true) {
-    Clear-Host
-    Write-Host "Selection des sauvegardes a supprimer" -ForegroundColor Cyan
-    Write-Host "Fleches: naviguer | Espace: cocher | Entree: continuer | Q: annuler"
-    Write-Host ""
-    for ($index = 0; $index -lt $backups.Count; $index++) {
-      $marker = if ($selected[$index]) { "x" } else { " " }
-      $line = "  [{0}] {1,8:N1} MB  {2}" -f $marker, ($backups[$index].Length / 1MB), $backups[$index].Name
-      if ($index -eq $cursor) {
-        Write-Host ("> $line") -ForegroundColor White -BackgroundColor DarkBlue
-      } else {
-        Write-Host ("  $line")
-      }
-    }
-
-    try {
-      $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    } catch {
-      return $null
-    }
-    switch ($key.VirtualKeyCode) {
-      38 { $cursor = ($cursor - 1 + $backups.Count) % $backups.Count }
-      40 { $cursor = ($cursor + 1) % $backups.Count }
-      32 { $selected[$cursor] = -not $selected[$cursor] }
-      13 {
-        $result = @(
-          for ($index = 0; $index -lt $backups.Count; $index++) {
-            if ($selected[$index]) { $backups[$index] }
-          }
-        )
-        if ($result.Count -gt 0) { return $result }
-      }
-    }
-    if ($key.Character -eq "q" -or $key.Character -eq "Q") {
-      return @()
-    }
-  }
-}
-
 function Select-Backups {
   if ($File.Count -gt 0) {
     return @(
@@ -138,13 +95,8 @@ function Select-Backups {
     )
   }
 
-  $interactiveSelection = Select-BackupsInteractive
-  if ($null -ne $interactiveSelection) {
-    return @($interactiveSelection)
-  }
-
   Show-NumberedBackups
-  $selection = Read-Host "Numeros a supprimer (exemple: 1,3,5-7)"
+  $selection = Read-Host "Numeros a supprimer (exemple: 1,3,5-7; vide pour annuler)"
   if (-not $selection) { return @() }
   return @(ConvertFrom-BackupSelection -Selection $selection)
 }

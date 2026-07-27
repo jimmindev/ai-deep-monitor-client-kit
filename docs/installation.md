@@ -28,8 +28,8 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\ai-deep-monitor.ps1
 ```
 
-Selectionnez **Installer ou reparer** avec les fleches, puis validez avec
-`Entree`. Le menu reste ouvert apres l'operation ou apres une erreur. Le
+Saisissez le numero de **Installer ou reparer**, puis validez avec `Entree`.
+Le menu reste ouvert apres l'operation ou apres une erreur. Le
 dossier d'installation par defaut est `C:\ai-deep-monitor`.
 
 Docker Desktop est installe avec `winget` s'il est absent. Il doit utiliser le
@@ -49,9 +49,9 @@ chmod +x ./*.sh
 ./ai-deep-monitor.sh
 ```
 
-Selectionnez **Installer ou reparer** avec les fleches, puis validez avec
-`Entree`. Le menu reste ouvert apres l'operation ou apres une erreur. La
-touche `Q` permet de quitter. Le dossier d'installation par defaut est
+Saisissez le numero de **Installer ou reparer**, puis validez avec `Entree`.
+Le menu reste ouvert apres l'operation ou apres une erreur. Le choix `0`
+permet de quitter. Le dossier d'installation par defaut est
 `~/ai-deep-monitor`.
 
 Docker Engine et Compose v2 sont installes s'ils sont absents. Le kit choisit
@@ -120,10 +120,8 @@ Les sauvegardes ne sont jamais supprimees silencieusement. Le choix
 - choisir une ou plusieurs archives precises a supprimer;
 - supprimer toutes les archives avec une confirmation explicite.
 
-Pour une suppression ciblee, naviguez avec les fleches, cochez ou decochez
-chaque archive avec `Espace`, puis validez avec `Entree`. La touche `Q` annule
-la selection. Si le terminal ne prend pas en charge ce mode, saisissez les
-numeros ou les plages demandes, par exemple `1,3,5-7`.
+Pour une suppression ciblee, saisissez les numeros ou les plages demandes,
+par exemple `1,3,5-7`. Une saisie vide annule la selection.
 
 Commandes directes:
 

@@ -1,5 +1,23 @@
 # Historique des versions du Client Kit
 
+## v0.1.10 - 2026-07-27
+
+### Ameliore
+
+- Navigation uniformisee par numeros sous Linux, NVIDIA Jetson et Windows.
+- Meme convention dans le menu principal, les sous-menus et la gestion des
+  sauvegardes: un numero puis `Entree`, avec `0` pour revenir ou quitter.
+- Selection multiple des sauvegardes par numeros et plages, par exemple
+  `1,3,5-7`, sans dependance au support des touches speciales du terminal.
+
+### Corrige
+
+- Suppression de la navigation par fleches qui n'etait pas cliquable et
+  variait selon le terminal utilise.
+- Documentation d'installation alignee sur le comportement reel des lanceurs.
+- Test de non-regression couvrant la suppression de plusieurs sauvegardes par
+  saisie numerique.
+
 ## v0.1.9 - 2026-07-27
 
 ### Ajoute

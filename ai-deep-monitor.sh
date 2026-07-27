@@ -216,76 +216,12 @@ run_menu_action() {
   pause_before_menu
 }
 
-interactive_menu() {
-  local selected=0
-  local key rest
-  local -a labels=(
-    "Installer ou reparer"
-    "Mettre a jour"
-    "Afficher l'etat et les ports"
-    "Demarrer"
-    "Arreter sans supprimer les donnees"
-    "Creer une sauvegarde"
-    "Gerer ou supprimer les sauvegardes"
-    "Restaurer une sauvegarde"
-    "Afficher les journaux techniques"
-    "Desinstaller en conservant les donnees"
-    "TOUT SUPPRIMER"
-    "Quitter"
-  )
-  local -a actions=(
-    install_app
-    update_app
-    status_app
-    start_app
-    stop_app
-    backup_app
-    manage_backups
-    restore_app
-    logs_app
-    uninstall_partial
-    purge_all
-    exit
-  )
-
-  while true; do
-    printf '\033[2J\033[H'
-    printf '\033[1;36mAI Deep Monitor\033[0m\n'
-    printf 'Installation : %s\n\n' "$INSTALL_DIR"
-    printf 'Utilisez les fleches puis Entree.\n\n'
-
-    local index
-    for index in "${!labels[@]}"; do
-      if ((index == selected)); then
-        printf '\033[1;44;37m  > %-48s\033[0m\n' "${labels[$index]}"
-      else
-        printf '    %-48s\n' "${labels[$index]}"
-      fi
-    done
-
-    IFS= read -rsn1 key || return 0
-    if [[ "$key" == $'\033' ]]; then
-      IFS= read -rsn2 -t 0.2 rest || rest=""
-      key+="$rest"
-    fi
-
-    case "$key" in
-      $'\033[A') selected=$(((selected - 1 + ${#labels[@]}) % ${#labels[@]})) ;;
-      $'\033[B') selected=$(((selected + 1) % ${#labels[@]})) ;;
-      "")
-        if [[ "${actions[$selected]}" == "exit" ]]; then
-          return 0
-        fi
-        run_menu_action "${actions[$selected]}"
-        ;;
-      q|Q) return 0 ;;
-    esac
-  done
-}
-
-classic_menu() {
+menu() {
   local choice
   while true; do
+    if [[ -t 1 && "${TERM:-dumb}" != "dumb" ]]; then
+      printf '\033[2J\033[H'
+    fi
     cat <<'EOF'
 
 AI Deep Monitor
@@ -319,14 +255,6 @@ EOF
       *) warn "Choix invalide."; pause_before_menu ;;
     esac
   done
-}
-
-menu() {
-  if [[ -t 0 && -t 1 && "${TERM:-dumb}" != "dumb" ]]; then
-    interactive_menu
-  else
-    classic_menu
-  fi
 }
 
 while (($#)); do

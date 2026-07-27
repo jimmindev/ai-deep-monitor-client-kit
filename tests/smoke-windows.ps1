@@ -51,6 +51,9 @@ try {
   if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.5\r?$") {
     throw "La version applicative attendue est absente."
   }
+  if ($envContent -notmatch "(?m)^KIT_VERSION=v0\.1\.10\r?$") {
+    throw "La version du Client Kit attendue est absente."
+  }
 
   & $launcherPath -InstallDir $testDir -Command help | Out-Null
 

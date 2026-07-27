@@ -217,62 +217,24 @@ $menuItems = @(
   @{ Label = "Quitter"; Command = "quit" }
 )
 
-function Read-InteractiveMenu {
-  param([array]$Items)
-
-  $selected = 0
-  while ($true) {
-    Clear-Host
-    Write-Host "AI Deep Monitor" -ForegroundColor Cyan
-    Write-Host "Installation : $InstallDir"
-    Write-Host ""
-    Write-Host "Utilisez les fleches puis Entree." -ForegroundColor DarkGray
-    Write-Host ""
-
-    for ($index = 0; $index -lt $Items.Count; $index++) {
-      if ($index -eq $selected) {
-        Write-Host ("  > {0}" -f $Items[$index].Label) `
-          -ForegroundColor White -BackgroundColor DarkBlue
-      } else {
-        Write-Host ("    {0}" -f $Items[$index].Label)
-      }
-    }
-
-    try {
-      $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    } catch {
-      return $null
-    }
-
-    switch ($key.VirtualKeyCode) {
-      38 { $selected = ($selected - 1 + $Items.Count) % $Items.Count }
-      40 { $selected = ($selected + 1) % $Items.Count }
-      13 { return $Items[$selected].Command }
-    }
-    if ($key.Character -eq "q" -or $key.Character -eq "Q") {
-      return "quit"
-    }
-  }
-}
-
 while ($true) {
-  $selected = Read-InteractiveMenu -Items $menuItems
-  if ($null -eq $selected) {
-    Write-Host ""
-    for ($index = 0; $index -lt ($menuItems.Count - 1); $index++) {
-      Write-Host (" {0,2}. {1}" -f ($index + 1), $menuItems[$index].Label)
-    }
-    Write-Host "  0. Quitter"
-    $choice = Read-Host "Votre choix"
-    $parsedChoice = 0
-    if ($choice -eq "0") {
-      $selected = "quit"
-    } elseif ([int]::TryParse($choice, [ref]$parsedChoice) -and
-        $parsedChoice -ge 1 -and $parsedChoice -lt $menuItems.Count) {
-      $selected = $menuItems[$parsedChoice - 1].Command
-    } else {
-      $selected = ""
-    }
+  Clear-Host
+  Write-Host "AI Deep Monitor" -ForegroundColor Cyan
+  Write-Host "Installation : $InstallDir"
+  Write-Host ""
+  for ($index = 0; $index -lt ($menuItems.Count - 1); $index++) {
+    Write-Host (" {0,2}. {1}" -f ($index + 1), $menuItems[$index].Label)
+  }
+  Write-Host "  0. Quitter"
+  $choice = Read-Host "Votre choix"
+  $parsedChoice = 0
+  if ($choice -eq "0") {
+    $selected = "quit"
+  } elseif ([int]::TryParse($choice, [ref]$parsedChoice) -and
+      $parsedChoice -ge 1 -and $parsedChoice -lt $menuItems.Count) {
+    $selected = $menuItems[$parsedChoice - 1].Command
+  } else {
+    $selected = ""
   }
 
   if ($selected -eq "quit") {

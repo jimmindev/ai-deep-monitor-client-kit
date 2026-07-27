@@ -1,10 +1,10 @@
-# AI Deep Monitor - Client Kit v0.1.9
+# AI Deep Monitor - Client Kit v0.1.10
 
 Kit public d'installation, de mise a jour et de maintenance d'AI Deep Monitor.
 Il ne contient aucun code source React ou Python. L'application est livree sous
 forme d'images Docker privees publiees sur GHCR.
 
-La version du kit est `v0.1.9`. La version applicative stable installee par
+La version du kit est `v0.1.10`. La version applicative stable installee par
 defaut est `v0.1.5`.
 
 Le guide pas a pas est disponible dans
@@ -115,15 +115,15 @@ chmod +x ./*.sh
 ./ai-deep-monitor.sh
 ```
 
-Le menu se pilote avec les fleches du clavier et la touche `Entree`. Il reste
+Le menu affiche un numero devant chaque action. Saisissez ce numero puis
+validez avec `Entree`; `0` quitte ou revient au menu precedent. Le menu reste
 ouvert apres chaque action, y compris lorsqu'une commande affiche une erreur.
-La touche `Q` permet aussi de quitter. Le dossier d'installation par defaut
-est `~/ai-deep-monitor`.
+Le dossier d'installation par defaut est `~/ai-deep-monitor`.
 
 Dans le gestionnaire de sauvegardes, **Supprimer une selection** affiche les
-archives avec leur taille. Utilisez les fleches pour naviguer, `Espace` pour
-cocher plusieurs sauvegardes, puis `Entree` pour continuer. Une confirmation
-explicite reste obligatoire avant la suppression.
+archives avec leur numero et leur taille. Saisissez un ou plusieurs numeros,
+par exemple `1,3,5-7`, puis validez avec `Entree`. Une confirmation explicite
+reste obligatoire avant la suppression.
 
 Installation personnalisee:
 
@@ -145,13 +145,14 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\ai-deep-monitor.ps1
 ```
 
-Le menu se pilote avec les fleches du clavier et la touche `Entree`, puis
-revient automatiquement apres chaque action. Le dossier par defaut est
+Le menu affiche un numero devant chaque action. Saisissez ce numero puis
+validez avec `Entree`; `0` quitte ou revient au menu precedent. Il revient
+automatiquement apres chaque action. Le dossier par defaut est
 `C:\ai-deep-monitor`.
 
-Le gestionnaire de sauvegardes Windows utilise le meme selecteur multiple:
-fleches, `Espace`, puis `Entree`. Dans un terminal sans mode interactif, les
-archives peuvent etre choisies par numeros ou plages, par exemple `1,3,5-7`.
+Le gestionnaire de sauvegardes Windows utilise la meme selection numerique:
+les archives peuvent etre choisies par numeros ou plages, par exemple
+`1,3,5-7`.
 
 Pour un chemin personnalise:
 

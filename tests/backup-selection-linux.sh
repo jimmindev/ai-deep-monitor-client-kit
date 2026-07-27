@@ -22,4 +22,21 @@ test -e "${TEST_DIR}/ai-deep-monitor-ab.tar.gz"
 test -e "${TEST_DIR}/ai-deep-monitor-b.tar.gz"
 test "$(find "$TEST_DIR" -maxdepth 1 -type f | wc -l)" -eq 2
 
-printf 'LINUX_TARGETED_DELETE_OK\n'
+touch "${TEST_DIR}/ai-deep-monitor-c.tar.gz"
+touch -d '2026-01-01' "${TEST_DIR}/ai-deep-monitor-ab.tar.gz"
+touch -d '2026-01-02' "${TEST_DIR}/ai-deep-monitor-b.tar.gz"
+touch -d '2026-01-03' "${TEST_DIR}/ai-deep-monitor-c.tar.gz"
+
+printf '1,3\n' |
+  "${KIT_DIR}/scripts/linux/backup-maintenance.sh" \
+    --install-dir "${TEST_DIR}/install" \
+    --backup-dir "$TEST_DIR" \
+    --action delete-selected \
+    --yes
+
+test ! -e "${TEST_DIR}/ai-deep-monitor-c.tar.gz"
+test -e "${TEST_DIR}/ai-deep-monitor-b.tar.gz"
+test ! -e "${TEST_DIR}/ai-deep-monitor-ab.tar.gz"
+test "$(find "$TEST_DIR" -maxdepth 1 -type f | wc -l)" -eq 1
+
+printf 'LINUX_NUMERIC_SELECTION_OK\n'
