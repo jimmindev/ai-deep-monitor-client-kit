@@ -146,10 +146,15 @@ unset github_token
 project_name="$(project_name_from_dir "$INSTALL_DIR")"
 compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
 compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
-compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+if ! compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d; then
+  show_startup_diagnostics "$project_name" "$COMPOSE_FILE" "$ENV_FILE"
+  die "Le stack Docker n'a pas redemarre. Le fichier ${ENV_FILE}.before-${APP_VERSION}.bak permet un retour arriere."
+fi
 
-wait_for_container ai-monitor-client-api 300 ||
+if ! wait_for_container ai-monitor-client-api 300; then
+  show_startup_diagnostics "$project_name" "$COMPOSE_FILE" "$ENV_FILE"
   die "L'API n'est pas operationnelle apres la mise a jour. Le fichier ${ENV_FILE}.before-${APP_VERSION}.bak permet un retour arriere."
+fi
 
 log "Mise a jour terminee: ${APP_VERSION} sur ${DOCKER_PLATFORM}."
 print_bootstrap_credentials

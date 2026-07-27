@@ -141,11 +141,24 @@ services:
       OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.2:3b}"
       OLLAMA_FALLBACK_MODEL: "${OLLAMA_FALLBACK_MODEL:-llama3.2:1b}"
     entrypoint: ["/bin/sh", "-c"]
-    command: >-
-      for model in "$${OLLAMA_MODEL}" "$${OLLAMA_FALLBACK_MODEL}"; do
-        [ -z "$${model}" ] && continue;
-        ollama show "$${model}" >/dev/null 2>&1 || ollama pull "$${model}" || exit 1;
-      done
+    command:
+      - |
+        installed=""
+        for model in "$${OLLAMA_MODEL}" "$${OLLAMA_FALLBACK_MODEL}"; do
+          [ -n "$${model}" ] || continue
+          [ "$${model}" = "$${installed}" ] && continue
+          installed="$${model}"
+          echo "[AI Deep Monitor] Verification du modele Ollama $${model}..."
+          ollama show "$${model}" >/dev/null 2>&1 && continue
+          attempt=1
+          while [ "$${attempt}" -le 3 ]; do
+            echo "[AI Deep Monitor] Telechargement de $${model} (tentative $${attempt}/3)..."
+            ollama pull "$${model}" && break
+            [ "$${attempt}" -eq 3 ] && exit 1
+            attempt=$$((attempt + 1))
+            sleep 5
+          done
+        done
     depends_on:
       ollama:
         condition: service_healthy

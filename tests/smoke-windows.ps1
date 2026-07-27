@@ -51,7 +51,7 @@ try {
   if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.5\r?$") {
     throw "La version applicative attendue est absente."
   }
-  if ($envContent -notmatch "(?m)^KIT_VERSION=v0\.1\.11\r?$") {
+  if ($envContent -notmatch "(?m)^KIT_VERSION=v0\.1\.12\r?$") {
     throw "La version du Client Kit attendue est absente."
   }
   if ($envContent -notmatch "(?m)^OLLAMA_MODEL=llama3\.2:3b\r?$") {
@@ -111,6 +111,16 @@ try {
   }
   if (-not (Test-Path -LiteralPath $newBackup.FullName)) {
     throw "La suppression ciblee Windows a supprime une sauvegarde non selectionnee."
+  }
+
+  $composeJson = & docker compose `
+    -f (Join-Path $repositoryRoot "deploy\docker-compose.release.yml") `
+    --env-file $envPath `
+    config --format json | ConvertFrom-Json
+  $modelCommand = [string]$composeJson.services."ollama-models".command[0]
+  if ($modelCommand -notmatch 'for model in "\$\$\{OLLAMA_MODEL\}" "\$\$\{OLLAMA_FALLBACK_MODEL\}"' -or
+      $modelCommand -notmatch 'ollama pull "\$\$\{model\}"') {
+    throw "La commande d'initialisation Ollama a ete decoupee par Docker Compose."
   }
   Write-Output "WINDOWS_SMOKE_OK"
 } finally {

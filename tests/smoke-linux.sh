@@ -11,7 +11,7 @@ trap 'rm -rf -- "$INSTALL_DIR"' EXIT
   --no-start \
   --skip-docker-login
 
-grep -Fxq 'KIT_VERSION=v0.1.11' "${INSTALL_DIR}/.env"
+grep -Fxq 'KIT_VERSION=v0.1.12' "${INSTALL_DIR}/.env"
 grep -Fxq 'APP_VERSION=v0.1.5' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_MODEL=llama3.2:3b' "${INSTALL_DIR}/.env"
@@ -29,7 +29,7 @@ sed -i 's/^OLLAMA_FALLBACK_MODEL=.*/OLLAMA_FALLBACK_MODEL=llama3.1/' "${INSTALL_
   --no-start \
   --app-version v0.1.5
 
-grep -Fxq 'KIT_VERSION=v0.1.11' "${INSTALL_DIR}/.env"
+grep -Fxq 'KIT_VERSION=v0.1.12' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_MODEL=llama3.2:3b' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_FALLBACK_MODEL=llama3.2:1b' "${INSTALL_DIR}/.env"
 
@@ -55,4 +55,12 @@ test ! -e "${BACKUP_DIR}/ai-deep-monitor-old.tar.gz"
 test "$(find "$BACKUP_DIR" -maxdepth 1 -type f | wc -l)" -eq 1
 test ! -e "${BACKUP_DIR}/ai-deep-monitor-middle.tar.gz"
 test -e "${BACKUP_DIR}/ai-deep-monitor-new.tar.gz"
+
+compose_command="$(docker compose \
+  -f "${KIT_DIR}/deploy/docker-compose.release.yml" \
+  --env-file "${INSTALL_DIR}/.env" \
+  config --format json |
+  python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["ollama-models"]["command"][0])')"
+grep -Fq 'for model in "$${OLLAMA_MODEL}" "$${OLLAMA_FALLBACK_MODEL}"' <<<"$compose_command"
+grep -Fq 'ollama pull "$${model}"' <<<"$compose_command"
 printf 'LINUX_NO_START_OK\n'

@@ -1,5 +1,26 @@
 # Historique des versions du Client Kit
 
+## v0.1.12 - 2026-07-27
+
+### Corrige
+
+- Corrige l'echec `ollama-models exited with code 2` observe sur NVIDIA Jetson
+  et les autres plateformes Docker Compose.
+- Transmet la boucle d'installation des modeles a `/bin/sh -c` comme un script
+  unique au lieu d'une liste d'arguments invalide.
+- Evite de telecharger deux fois le meme modele lorsque le modele principal et
+  le modele de secours sont identiques.
+- Reessaie automatiquement trois fois le telechargement de chaque modele
+  Ollama avant de signaler une erreur.
+
+### Diagnostic
+
+- Affiche automatiquement l'etat des services et les derniers journaux de
+  MySQL, de la sandbox, d'Ollama, de l'initialisation des modeles et de l'API
+  lorsque l'installation ou la mise a jour Docker echoue.
+- Ajoute un test de non-regression qui verifie la forme finale de la commande
+  `ollama-models` apres interpretation par Docker Compose.
+
 ## v0.1.11 - 2026-07-27
 
 - corrige la migration des anciennes configurations Ollama `llama3.1` ;

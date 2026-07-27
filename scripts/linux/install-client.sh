@@ -259,7 +259,10 @@ fi
 
 log "Telechargement des images Docker..."
 compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
-compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+if ! compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d; then
+  show_startup_diagnostics "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE"
+  die "Le stack Docker n'a pas demarre correctement. Le diagnostic ci-dessus indique le service bloque."
+fi
 
 if ! wait_for_container ai-monitor-client-api 300; then
   show_startup_diagnostics "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE"

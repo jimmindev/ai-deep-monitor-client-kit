@@ -1,10 +1,10 @@
-# AI Deep Monitor - Client Kit v0.1.11
+# AI Deep Monitor - Client Kit v0.1.12
 
 Kit public d'installation, de mise a jour et de maintenance d'AI Deep Monitor.
 Il ne contient aucun code source React ou Python. L'application est livree sous
 forme d'images Docker privees publiees sur GHCR.
 
-La version du kit est `v0.1.11`. La version applicative stable installee par
+La version du kit est `v0.1.12`. La version applicative stable installee par
 defaut est `v0.1.5`.
 
 Le guide pas a pas est disponible dans
