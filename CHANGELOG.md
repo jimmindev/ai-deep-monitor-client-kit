@@ -1,9 +1,11 @@
 # Historique des versions du Client Kit
 
-## Prochaine mise a jour
+## v0.1.8 - 2026-07-27
 
 ### Ajoute
 
+- Menus interactifs Linux, NVIDIA Jetson et Windows pilotes avec les fleches
+  du clavier et la touche Entree.
 - Racine du depot simplifiee autour des deux lanceurs client.
 - Gestionnaire de sauvegardes Linux et Windows permettant de lister les
   archives, de conserver uniquement les N plus recentes ou de toutes les
@@ -20,6 +22,7 @@
 
 ### Corrige
 
+- Le lanceur interactif reste ouvert apres chaque action et apres les erreurs.
 - La detection des ports Windows distingue maintenant un port publie par
   l'installation active d'un port occupe par un autre service.
 - En cas d'echec du stack sous Windows, les journaux MySQL, sandbox, Ollama et

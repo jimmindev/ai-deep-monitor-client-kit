@@ -28,8 +28,9 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\ai-deep-monitor.ps1
 ```
 
-Choisissez **1. Installer ou reparer**. Le dossier d'installation par defaut
-est `C:\ai-deep-monitor`.
+Selectionnez **Installer ou reparer** avec les fleches, puis validez avec
+`Entree`. Le menu reste ouvert apres l'operation ou apres une erreur. Le
+dossier d'installation par defaut est `C:\ai-deep-monitor`.
 
 Docker Desktop est installe avec `winget` s'il est absent. Il doit utiliser le
 mode **Linux containers**.
@@ -48,8 +49,10 @@ chmod +x ./*.sh
 ./ai-deep-monitor.sh
 ```
 
-Choisissez **1. Installer ou reparer**. Le dossier d'installation par defaut
-est `~/ai-deep-monitor`.
+Selectionnez **Installer ou reparer** avec les fleches, puis validez avec
+`Entree`. Le menu reste ouvert apres l'operation ou apres une erreur. La
+touche `Q` permet de quitter. Le dossier d'installation par defaut est
+`~/ai-deep-monitor`.
 
 Docker Engine et Compose v2 sont installes s'ils sont absents. Le kit choisit
 automatiquement `linux/amd64` sur PC x64 et `linux/arm64` sur NVIDIA Jetson.

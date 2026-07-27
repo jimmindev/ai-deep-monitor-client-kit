@@ -193,39 +193,81 @@ if ($Command) {
   exit 0
 }
 
+$menuItems = @(
+  @{ Label = "Installer ou reparer"; Command = "install" },
+  @{ Label = "Verifier et installer une mise a jour"; Command = "update" },
+  @{ Label = "Afficher l'etat des services"; Command = "status" },
+  @{ Label = "Demarrer l'application"; Command = "start" },
+  @{ Label = "Arreter sans supprimer les donnees"; Command = "stop" },
+  @{ Label = "Creer une sauvegarde"; Command = "backup" },
+  @{ Label = "Gerer ou supprimer les sauvegardes"; Command = "backups" },
+  @{ Label = "Restaurer une sauvegarde"; Command = "restore" },
+  @{ Label = "Afficher les journaux techniques"; Command = "logs" },
+  @{ Label = "Desinstaller en conservant les donnees"; Command = "uninstall" },
+  @{ Label = "TOUT SUPPRIMER"; Command = "purge" },
+  @{ Label = "Quitter"; Command = "quit" }
+)
+
+function Read-InteractiveMenu {
+  param([array]$Items)
+
+  $selected = 0
+  while ($true) {
+    Clear-Host
+    Write-Host "AI Deep Monitor" -ForegroundColor Cyan
+    Write-Host "Installation : $InstallDir"
+    Write-Host ""
+    Write-Host "Utilisez les fleches puis Entree." -ForegroundColor DarkGray
+    Write-Host ""
+
+    for ($index = 0; $index -lt $Items.Count; $index++) {
+      if ($index -eq $selected) {
+        Write-Host ("  > {0}" -f $Items[$index].Label) `
+          -ForegroundColor White -BackgroundColor DarkBlue
+      } else {
+        Write-Host ("    {0}" -f $Items[$index].Label)
+      }
+    }
+
+    try {
+      $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    } catch {
+      return $null
+    }
+
+    switch ($key.VirtualKeyCode) {
+      38 { $selected = ($selected - 1 + $Items.Count) % $Items.Count }
+      40 { $selected = ($selected + 1) % $Items.Count }
+      13 { return $Items[$selected].Command }
+    }
+    if ($key.Character -eq "q" -or $key.Character -eq "Q") {
+      return "quit"
+    }
+  }
+}
+
 while ($true) {
-  Clear-Host
-  Write-Host "AI Deep Monitor" -ForegroundColor Cyan
-  Write-Host "Installation : $InstallDir"
-  Write-Host ""
-  Write-Host "  1. Installer ou reparer"
-  Write-Host "  2. Verifier et installer une mise a jour"
-  Write-Host "  3. Afficher l'etat des services"
-  Write-Host "  4. Demarrer l'application"
-  Write-Host "  5. Arreter sans supprimer les donnees"
-  Write-Host "  6. Creer une sauvegarde"
-  Write-Host "  7. Gerer ou supprimer les sauvegardes"
-  Write-Host "  8. Restaurer une sauvegarde"
-  Write-Host "  9. Afficher les journaux techniques"
-  Write-Host " 10. Desinstaller en conservant les donnees"
-  Write-Host " 11. TOUT SUPPRIMER"
-  Write-Host "  0. Quitter"
-  Write-Host ""
-  $choice = Read-Host "Votre choix"
-  $selected = switch ($choice) {
-    "1" { "install" }
-    "2" { "update" }
-    "3" { "status" }
-    "4" { "start" }
-    "5" { "stop" }
-    "6" { "backup" }
-    "7" { "backups" }
-    "8" { "restore" }
-    "9" { "logs" }
-    "10" { "uninstall" }
-    "11" { "purge" }
-    "0" { return }
-    default { "" }
+  $selected = Read-InteractiveMenu -Items $menuItems
+  if ($null -eq $selected) {
+    Write-Host ""
+    for ($index = 0; $index -lt ($menuItems.Count - 1); $index++) {
+      Write-Host (" {0,2}. {1}" -f ($index + 1), $menuItems[$index].Label)
+    }
+    Write-Host "  0. Quitter"
+    $choice = Read-Host "Votre choix"
+    $parsedChoice = 0
+    if ($choice -eq "0") {
+      $selected = "quit"
+    } elseif ([int]::TryParse($choice, [ref]$parsedChoice) -and
+        $parsedChoice -ge 1 -and $parsedChoice -lt $menuItems.Count) {
+      $selected = $menuItems[$parsedChoice - 1].Command
+    } else {
+      $selected = ""
+    }
+  }
+
+  if ($selected -eq "quit") {
+    return
   }
   if (-not $selected) {
     Write-Warning "Choix invalide."
@@ -235,8 +277,10 @@ while ($true) {
   try {
     Invoke-SelectedCommand $selected
   } catch {
-    Write-Error $_
+    Write-Host ""
+    Write-Host ("[AI Deep Monitor] ERREUR: {0}" -f $_.Exception.Message) `
+      -ForegroundColor Red
   }
   Write-Host ""
-  Read-Host "Appuie sur Entree pour revenir au menu" | Out-Null
+  Read-Host "Appuyez sur Entree pour revenir au menu" | Out-Null
 }

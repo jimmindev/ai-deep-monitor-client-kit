@@ -172,7 +172,6 @@ purge_all() {
     --mode full \
     --remove-images \
     --yes
-  exit 0
 }
 
 run_command() {
@@ -195,7 +194,94 @@ run_command() {
   esac
 }
 
-menu() {
+pause_before_menu() {
+  [[ -t 0 ]] || return 0
+  printf '\n'
+  read -r -p 'Appuyez sur Entree pour revenir au menu...' _
+}
+
+run_menu_action() {
+  local action="$1"
+
+  # Les fonctions internes utilisent die/exit pour les commandes directes.
+  # Le sous-processus limite cet arret a l'action et preserve le menu.
+  if ! (
+    set +e
+    "$action"
+  ); then
+    warn "L'action a echoue. Consultez le message ci-dessus."
+  fi
+  pause_before_menu
+}
+
+interactive_menu() {
+  local selected=0
+  local key rest
+  local -a labels=(
+    "Installer ou reparer"
+    "Mettre a jour"
+    "Afficher l'etat et les ports"
+    "Demarrer"
+    "Arreter sans supprimer les donnees"
+    "Creer une sauvegarde"
+    "Gerer ou supprimer les sauvegardes"
+    "Restaurer une sauvegarde"
+    "Afficher les journaux techniques"
+    "Desinstaller en conservant les donnees"
+    "TOUT SUPPRIMER"
+    "Quitter"
+  )
+  local -a actions=(
+    install_app
+    update_app
+    status_app
+    start_app
+    stop_app
+    backup_app
+    manage_backups
+    restore_app
+    logs_app
+    uninstall_partial
+    purge_all
+    exit
+  )
+
+  while true; do
+    printf '\033[2J\033[H'
+    printf '\033[1;36mAI Deep Monitor\033[0m\n'
+    printf 'Installation : %s\n\n' "$INSTALL_DIR"
+    printf 'Utilisez les fleches puis Entree.\n\n'
+
+    local index
+    for index in "${!labels[@]}"; do
+      if ((index == selected)); then
+        printf '\033[1;44;37m  > %-48s\033[0m\n' "${labels[$index]}"
+      else
+        printf '    %-48s\n' "${labels[$index]}"
+      fi
+    done
+
+    IFS= read -rsn1 key || return 0
+    if [[ "$key" == $'\033' ]]; then
+      IFS= read -rsn2 -t 0.2 rest || rest=""
+      key+="$rest"
+    fi
+
+    case "$key" in
+      $'\033[A') selected=$(((selected - 1 + ${#labels[@]}) % ${#labels[@]})) ;;
+      $'\033[B') selected=$(((selected + 1) % ${#labels[@]})) ;;
+      "")
+        if [[ "${actions[$selected]}" == "exit" ]]; then
+          return 0
+        fi
+        run_menu_action "${actions[$selected]}"
+        ;;
+      q|Q) return 0 ;;
+    esac
+  done
+}
+
+classic_menu() {
   local choice
   while true; do
     cat <<'EOF'
@@ -214,23 +300,31 @@ AI Deep Monitor
 11. TOUT SUPPRIMER
 0. Quitter
 EOF
-    read -r -p 'Votre choix: ' choice
+    read -r -p 'Votre choix: ' choice || return 0
     case "$choice" in
-      1) install_app ;;
-      2) update_app ;;
-      3) status_app ;;
-      4) start_app ;;
-      5) stop_app ;;
-      6) backup_app ;;
-      7) manage_backups ;;
-      8) restore_app ;;
-      9) logs_app ;;
-      10) uninstall_partial ;;
-      11) purge_all ;;
-      0) exit 0 ;;
-      *) warn "Choix invalide." ;;
+      1) run_menu_action install_app ;;
+      2) run_menu_action update_app ;;
+      3) run_menu_action status_app ;;
+      4) run_menu_action start_app ;;
+      5) run_menu_action stop_app ;;
+      6) run_menu_action backup_app ;;
+      7) run_menu_action manage_backups ;;
+      8) run_menu_action restore_app ;;
+      9) run_menu_action logs_app ;;
+      10) run_menu_action uninstall_partial ;;
+      11) run_menu_action purge_all ;;
+      0) return 0 ;;
+      *) warn "Choix invalide."; pause_before_menu ;;
     esac
   done
+}
+
+menu() {
+  if [[ -t 0 && -t 1 && "${TERM:-dumb}" != "dumb" ]]; then
+    interactive_menu
+  else
+    classic_menu
+  fi
 }
 
 while (($#)); do

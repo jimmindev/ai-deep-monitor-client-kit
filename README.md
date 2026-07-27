@@ -1,10 +1,10 @@
-# AI Deep Monitor - Client Kit v0.1.7
+# AI Deep Monitor - Client Kit v0.1.8
 
 Kit public d'installation, de mise a jour et de maintenance d'AI Deep Monitor.
 Il ne contient aucun code source React ou Python. L'application est livree sous
 forme d'images Docker privees publiees sur GHCR.
 
-La version du kit est `v0.1.7`. La version applicative stable installee par
+La version du kit est `v0.1.8`. La version applicative stable installee par
 defaut est `v0.1.5`.
 
 Le guide pas a pas est disponible dans
@@ -115,9 +115,10 @@ chmod +x ./*.sh
 ./ai-deep-monitor.sh
 ```
 
-Le menu permet d'installer, reparer, mettre a jour, sauvegarder, restaurer,
-diagnostiquer et desinstaller. Le dossier par defaut est
-`~/ai-deep-monitor`.
+Le menu se pilote avec les fleches du clavier et la touche `Entree`. Il reste
+ouvert apres chaque action, y compris lorsqu'une commande affiche une erreur.
+La touche `Q` permet aussi de quitter. Le dossier d'installation par defaut
+est `~/ai-deep-monitor`.
 
 Installation personnalisee:
 
@@ -139,7 +140,8 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\ai-deep-monitor.ps1
 ```
 
-Choisir **1. Installer ou reparer**. Le dossier par defaut est
+Le menu se pilote avec les fleches du clavier et la touche `Entree`, puis
+revient automatiquement apres chaque action. Le dossier par defaut est
 `C:\ai-deep-monitor`.
 
 Pour un chemin personnalise:
