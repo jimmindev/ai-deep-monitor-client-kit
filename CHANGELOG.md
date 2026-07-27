@@ -1,5 +1,13 @@
 # Historique des versions du Client Kit
 
+## v0.1.11 - 2026-07-27
+
+- corrige la migration des anciennes configurations Ollama `llama3.1` ;
+- selectionne automatiquement `llama3.2:1b` sur les machines ARM64 de moins de 6 Go de RAM ;
+- conserve `llama3.2:3b` sur les machines disposant de ressources suffisantes ;
+- installe toujours `llama3.2:1b` comme modele de secours ;
+- resynchronise Docker lorsqu'une configuration Ollama a ete reparee, sans toucher aux volumes SQL.
+
 ## v0.1.10 - 2026-07-27
 
 ### Ameliore

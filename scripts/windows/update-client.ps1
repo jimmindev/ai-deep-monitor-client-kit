@@ -231,18 +231,24 @@ if (-not (Test-Path -LiteralPath $envPath)) {
 
 $envValues = Read-DotEnv -Path $envPath
 $previousKitVersion = $envValues["KIT_VERSION"]
-Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.10"
+Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.11"
 $authRepair = Repair-AuthConfig -Path $envPath
 if ($authRepair.Changed) {
   Write-Host "Configuration d'authentification reparee; les volumes SQL et les comptes existants restent inchanges."
 }
 $envValues = Read-DotEnv -Path $envPath
-if (-not $envValues["OLLAMA_MODEL"]) {
+$ollamaConfigChanged = $false
+if (-not $envValues["OLLAMA_MODEL"] -or $envValues["OLLAMA_MODEL"] -eq "llama3.1") {
   Write-DotEnvValue -Path $envPath -Key "OLLAMA_MODEL" -Value "llama3.2:3b"
+  $ollamaConfigChanged = $true
 }
-if (-not $envValues["OLLAMA_FALLBACK_MODEL"]) {
-  Write-DotEnvValue -Path $envPath -Key "OLLAMA_FALLBACK_MODEL" -Value "llama3.2:3b"
-  Write-Host "Modele de secours Ollama ajoute; le modele configure reste conserve."
+if (-not $envValues["OLLAMA_FALLBACK_MODEL"] -or
+    $envValues["OLLAMA_FALLBACK_MODEL"] -in @("llama3.1", "llama3.2:3b")) {
+  Write-DotEnvValue -Path $envPath -Key "OLLAMA_FALLBACK_MODEL" -Value "llama3.2:1b"
+  $ollamaConfigChanged = $true
+}
+if ($ollamaConfigChanged) {
+  Write-Host "Configuration Ollama actualisee; les donnees existantes sont conservees."
 }
 $dockerPlatform = if ($NoStart) {
   Get-AiMonitorHostPlatform
@@ -299,11 +305,11 @@ if (-not $AppVersion) {
 
 $refreshImages = $currentVersion -eq $AppVersion
 if ($refreshImages) {
-  if ($previousKitVersion -eq "v0.1.10" -and -not $authRepair.Changed) {
-    Write-Host "Application deja en $AppVersion et kit deja en v0.1.10."
+  if ($previousKitVersion -eq "v0.1.11" -and -not $authRepair.Changed -and -not $ollamaConfigChanged) {
+    Write-Host "Application deja en $AppVersion et kit deja en v0.1.11."
     exit 0
   }
-  Write-Host "L'application reste en $AppVersion; le deploiement est resynchronise pour $dockerPlatform avec le kit v0.1.10."
+  Write-Host "L'application reste en $AppVersion; le deploiement est resynchronise pour $dockerPlatform avec le kit v0.1.11."
 } elseif (-not $Yes -and -not $versionWasSpecified) {
   $answer = Read-Host "Mettre a jour de $currentVersion vers $AppVersion ? (o/N)"
   if ($answer -notin @("o", "O", "oui", "OUI", "y", "Y", "yes", "YES")) {

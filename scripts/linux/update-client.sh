@@ -77,7 +77,7 @@ if [[ "$AUTH_CONFIG_CHANGED" == "true" ]]; then
   log "Configuration d'authentification reparee; les volumes SQL et les comptes existants restent inchanges."
 fi
 if [[ "$OLLAMA_CONFIG_CHANGED" == "true" ]]; then
-  log "Modele de secours Ollama ajoute; le modele configure reste conserve."
+  log "Configuration Ollama adaptee a cette machine; les donnees existantes sont conservees."
 fi
 
 if [[ "$NO_START" == "true" ]]; then
@@ -113,7 +113,9 @@ fi
 current_version="$(read_env_value "$ENV_FILE" APP_VERSION)"
 refresh_images=false
 if [[ "$current_version" == "$APP_VERSION" ]]; then
-  if [[ "$previous_kit_version" == "$KIT_VERSION" && "$AUTH_CONFIG_CHANGED" == "false" ]]; then
+  if [[ "$previous_kit_version" == "$KIT_VERSION" &&
+        "$AUTH_CONFIG_CHANGED" == "false" &&
+        "$OLLAMA_CONFIG_CHANGED" == "false" ]]; then
     log "L'application est deja en ${APP_VERSION} et le kit en ${KIT_VERSION}."
     exit 0
   fi

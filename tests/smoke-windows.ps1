@@ -51,14 +51,28 @@ try {
   if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.5\r?$") {
     throw "La version applicative attendue est absente."
   }
-  if ($envContent -notmatch "(?m)^KIT_VERSION=v0\.1\.10\r?$") {
+  if ($envContent -notmatch "(?m)^KIT_VERSION=v0\.1\.11\r?$") {
     throw "La version du Client Kit attendue est absente."
   }
   if ($envContent -notmatch "(?m)^OLLAMA_MODEL=llama3\.2:3b\r?$") {
     throw "Le modele Ollama principal attendu est absent."
   }
-  if ($envContent -notmatch "(?m)^OLLAMA_FALLBACK_MODEL=llama3\.2:3b\r?$") {
+  if ($envContent -notmatch "(?m)^OLLAMA_FALLBACK_MODEL=llama3\.2:1b\r?$") {
     throw "Le modele Ollama de secours attendu est absent."
+  }
+
+  $envContent = $envContent `
+    -replace "(?m)^OLLAMA_MODEL=.*$", "OLLAMA_MODEL=llama3.1" `
+    -replace "(?m)^OLLAMA_FALLBACK_MODEL=.*$", "OLLAMA_FALLBACK_MODEL=llama3.1"
+  Set-Content -LiteralPath $envPath -Value $envContent -Encoding UTF8
+  & (Join-Path $testDir "update-client.ps1") `
+    -InstallDir $testDir `
+    -NoStart `
+    -AppVersion "v0.1.5"
+  $envContent = Get-Content -LiteralPath $envPath -Raw
+  if ($envContent -notmatch "(?m)^OLLAMA_MODEL=llama3\.2:3b\r?$" -or
+      $envContent -notmatch "(?m)^OLLAMA_FALLBACK_MODEL=llama3\.2:1b\r?$") {
+    throw "La migration de l'ancienne configuration Ollama a echoue."
   }
 
   & $launcherPath -InstallDir $testDir -Command help | Out-Null

@@ -85,7 +85,7 @@ services:
       UPDATE_CHECK_TOKEN: "${UPDATE_CHECK_TOKEN:-}"
       OLLAMA_HOST: "http://ollama:11434"
       OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.2:3b}"
-      OLLAMA_FALLBACK_MODEL: "${OLLAMA_FALLBACK_MODEL:-llama3.2:3b}"
+      OLLAMA_FALLBACK_MODEL: "${OLLAMA_FALLBACK_MODEL:-llama3.2:1b}"
       OLLAMA_TEMPERATURE: "${OLLAMA_TEMPERATURE:-0.2}"
       OLLAMA_NUM_PREDICT: "${OLLAMA_NUM_PREDICT:-512}"
       TELEMETRY_RAW_RETENTION_DAYS: "${TELEMETRY_RAW_RETENTION_DAYS:-7}"
@@ -139,7 +139,7 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.2:3b}"
-      OLLAMA_FALLBACK_MODEL: "${OLLAMA_FALLBACK_MODEL:-llama3.2:3b}"
+      OLLAMA_FALLBACK_MODEL: "${OLLAMA_FALLBACK_MODEL:-llama3.2:1b}"
     entrypoint: ["/bin/sh", "-c"]
     command: >-
       for model in "$${OLLAMA_MODEL}" "$${OLLAMA_FALLBACK_MODEL}"; do

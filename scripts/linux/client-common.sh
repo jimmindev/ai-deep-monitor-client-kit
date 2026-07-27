@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-export KIT_VERSION="v0.1.10"
+export KIT_VERSION="v0.1.11"
 export DEFAULT_APP_VERSION="v0.1.5"
 export DOCKER_PLATFORM=""
 DOCKER_CMD=(docker)
@@ -317,14 +317,31 @@ EOF
 
 ensure_ollama_config() {
   local env_file="$1"
+  local current_model
+  local current_fallback
+  local recommended_model="llama3.2:3b"
+  local architecture
+  local memory_kb
 
-  if [[ -z "$(read_env_value "$env_file" OLLAMA_MODEL)" ]]; then
-    write_env_value "$env_file" OLLAMA_MODEL "llama3.2:3b"
+  architecture="$(uname -m 2>/dev/null || true)"
+  memory_kb="$(awk '/^MemTotal:/ { print $2; exit }' /proc/meminfo 2>/dev/null || true)"
+  if [[ "$architecture" =~ ^(aarch64|arm64)$ ]] &&
+     [[ "$memory_kb" =~ ^[0-9]+$ ]] &&
+     (( memory_kb < 6291456 )); then
+    recommended_model="llama3.2:1b"
+  fi
+
+  current_model="$(read_env_value "$env_file" OLLAMA_MODEL)"
+  if [[ -z "$current_model" || "$current_model" == "llama3.1" ||
+        ( "$recommended_model" == "llama3.2:1b" && "$current_model" == "llama3.2:3b" ) ]]; then
+    write_env_value "$env_file" OLLAMA_MODEL "$recommended_model"
     OLLAMA_CONFIG_CHANGED=true
   fi
 
-  if [[ -z "$(read_env_value "$env_file" OLLAMA_FALLBACK_MODEL)" ]]; then
-    write_env_value "$env_file" OLLAMA_FALLBACK_MODEL "llama3.2:3b"
+  current_fallback="$(read_env_value "$env_file" OLLAMA_FALLBACK_MODEL)"
+  if [[ -z "$current_fallback" || "$current_fallback" == "llama3.1" ||
+        "$current_fallback" == "llama3.2:3b" ]]; then
+    write_env_value "$env_file" OLLAMA_FALLBACK_MODEL "llama3.2:1b"
     OLLAMA_CONFIG_CHANGED=true
   fi
 }

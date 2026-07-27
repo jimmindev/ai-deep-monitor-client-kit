@@ -373,7 +373,7 @@ if ($existingEnv) {
   if ($existingValues["FRONTEND_PORT"]) { $FrontendPort = [int]$existingValues["FRONTEND_PORT"] }
   if ($existingValues["API_PORT"]) { $ApiPort = [int]$existingValues["API_PORT"] }
   if (-not $CorsOrigins -and $existingValues["CORS_ORIGINS"]) { $CorsOrigins = $existingValues["CORS_ORIGINS"] }
-  Write-DotEnvValue -Path $envTarget -Key "KIT_VERSION" -Value "v0.1.10"
+  Write-DotEnvValue -Path $envTarget -Key "KIT_VERSION" -Value "v0.1.11"
   Write-DotEnvValue -Path $envTarget -Key "DOCKER_PLATFORM" -Value $dockerPlatform
   Write-Host "Installation existante detectee: configuration et volumes conserves."
 }
@@ -412,7 +412,7 @@ if (-not $existingEnv) {
   $envContent = @"
 GITHUB_OWNER=$GithubOwner
 GITHUB_REPOSITORY_NAME=ai-deep-monitor
-KIT_VERSION=v0.1.10
+KIT_VERSION=v0.1.11
 APP_VERSION=$AppVersion
 APP_CHANNEL=stable
 DOCKER_PLATFORM=$dockerPlatform
@@ -424,7 +424,7 @@ UPDATE_CHECK_TOKEN=
 
 OLLAMA_IMAGE=ollama/ollama:latest
 OLLAMA_MODEL=llama3.2:3b
-OLLAMA_FALLBACK_MODEL=llama3.2:3b
+OLLAMA_FALLBACK_MODEL=llama3.2:1b
 OLLAMA_TEMPERATURE=0.2
 OLLAMA_NUM_PREDICT=512
 
@@ -457,12 +457,13 @@ API_PORT=$ApiPort
   Write-DotEnvValue -Path $envTarget -Key "FRONTEND_PORT" -Value "$FrontendPort"
   Write-DotEnvValue -Path $envTarget -Key "API_PORT" -Value "$ApiPort"
   $existingValues = Read-DotEnv -Path $envTarget
-  if (-not $existingValues["OLLAMA_MODEL"]) {
+  if (-not $existingValues["OLLAMA_MODEL"] -or $existingValues["OLLAMA_MODEL"] -eq "llama3.1") {
     Write-DotEnvValue -Path $envTarget -Key "OLLAMA_MODEL" -Value "llama3.2:3b"
   }
-  if (-not $existingValues["OLLAMA_FALLBACK_MODEL"]) {
-    Write-DotEnvValue -Path $envTarget -Key "OLLAMA_FALLBACK_MODEL" -Value "llama3.2:3b"
-    Write-Host "Modele de secours Ollama ajoute; le modele configure reste conserve."
+  if (-not $existingValues["OLLAMA_FALLBACK_MODEL"] -or
+      $existingValues["OLLAMA_FALLBACK_MODEL"] -in @("llama3.1", "llama3.2:3b")) {
+    Write-DotEnvValue -Path $envTarget -Key "OLLAMA_FALLBACK_MODEL" -Value "llama3.2:1b"
+    Write-Host "Configuration Ollama actualisee; les donnees existantes sont conservees."
   }
   $oldDefaultCors = if ($requestedFrontendPort -eq 80) {
     "http://localhost"
