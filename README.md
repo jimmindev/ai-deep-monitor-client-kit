@@ -108,6 +108,9 @@ controlees par l'API puis une seconde fois par l'agent hote.
 - Linux et Jetson: service systemd non-root, sans capacite Linux et avec un
   systeme de fichiers protege.
 - Python 3 est installe automatiquement si la machine ne le fournit pas deja.
+- Les sauvegardes de securite creees par la mise a jour integree restent dans
+  l'espace prive de l'agent; elles ne necessitent aucun droit d'ecriture dans
+  le dossier personnel protege par systemd.
 
 Une desinstallation partielle conserve l'agent pour permettre une reparation
 rapide. Une desinstallation complete le retire avec l'application.

@@ -42,7 +42,7 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.0.0"
+AGENT_VERSION = "3.0.1"
 MAX_COMMAND_BYTES = 4_000
 MAX_OUTPUT_BYTES = 400_000
 MAX_TIMEOUT_SECONDS = 20.0
@@ -51,6 +51,12 @@ STALE_JOB_SECONDS = 300
 MAX_UPDATE_SECONDS = 1_800
 VERSION_PATTERN = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 STOP = False
+
+
+class UpdateStepError(RuntimeError):
+    def __init__(self, message: str, error_code: str):
+        super().__init__(message)
+        self.error_code = error_code
 
 
 def canonical(payload: dict) -> bytes:
@@ -429,9 +435,40 @@ def run_maintenance_process(
         "ok": process.returncode == 0 and not timed_out,
         "exit_code": process.returncode,
         "timed_out": timed_out,
-        # Never sent to the API or browser; useful only for local debugging.
+        # Only a short, redacted diagnostic is ever allowed to leave the agent.
         "output_tail": combined[-MAX_OUTPUT_BYTES:].decode("utf-8", errors="replace"),
     }
+
+
+def safe_maintenance_error(result: dict) -> str:
+    """Return one useful maintenance error line without leaking credentials."""
+    if result.get("timed_out"):
+        return "délai maximal dépassé"
+
+    output = str(result.get("output_tail") or "")[-8_000:]
+    secret_patterns = (
+        (r"(?i)(authorization\s*:\s*(?:bearer|basic)\s+)\S+", r"\1[masqué]"),
+        (r"(?i)\b(gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)\b", "[masqué]"),
+        (
+            r"(?i)\b([A-Z0-9_]*(?:password|passwd|token|secret|mysql_pwd)[A-Z0-9_]*)\s*([=:])\s*([^\s,;]+)",
+            r"\1\2[masqué]",
+        ),
+    )
+    for pattern, replacement in secret_patterns:
+        output = re.sub(pattern, replacement, output)
+
+    lines = [re.sub(r"\s+", " ", line).strip() for line in output.splitlines()]
+    detail = next((line for line in reversed(lines) if line), "")
+    if len(detail) > 260:
+        detail = f"…{detail[-259:]}"
+    return detail
+
+
+def failed_step_message(label: str, result: dict) -> str:
+    detail = safe_maintenance_error(result)
+    exit_code = result.get("exit_code")
+    code = f" (code {exit_code})" if exit_code not in (None, 0) else ""
+    return f"{label}{code}{f' : {detail}' if detail else '.'}"
 
 
 class HostAgent:
@@ -457,6 +494,7 @@ class HostAgent:
         self.state_dir = (
             state_dir or (self.install_dir / ".host-agent-state")
         ).resolve()
+        self.safety_backup_dir = self.state_dir / "update-backups"
         self.update_thread: threading.Thread | None = None
         self.seen_nonces: dict[str, float] = {}
         for directory in (
@@ -468,10 +506,12 @@ class HostAgent:
             self.update_processing,
             self.update_status,
             self.state_dir,
+            self.safety_backup_dir,
         ):
             directory.mkdir(parents=True, exist_ok=True)
         if os.name != "nt":
             os.chmod(self.state_dir, 0o700)
+            os.chmod(self.safety_backup_dir, 0o700)
         # If the host rebooted during maintenance, let the signed job resume.
         # Terminal jobs are short lived and keep their existing cleanup rules.
         for interrupted in self.update_processing.glob("*.json"):
@@ -734,6 +774,8 @@ class HostAgent:
                 str(backup),
                 "-InstallDir",
                 str(self.install_dir),
+                "-DestinationDir",
+                str(self.safety_backup_dir),
             ], common + [str(update)]
 
         bash = shutil.which("bash")
@@ -746,6 +788,8 @@ class HostAgent:
             str(backup),
             "--install-dir",
             str(self.install_dir),
+            "--destination-dir",
+            str(self.safety_backup_dir),
         ], [bash, str(update)]
 
     def rollback_update(self, env_backup: Path) -> bool:
@@ -919,7 +963,13 @@ class HostAgent:
                     timeout=MAX_UPDATE_SECONDS,
                 )
                 if not backup_result["ok"]:
-                    raise RuntimeError("La sauvegarde de sécurité a échoué.")
+                    raise UpdateStepError(
+                        failed_step_message(
+                            "La sauvegarde de sécurité a échoué",
+                            backup_result,
+                        ),
+                        "backup_failed",
+                    )
                 context["backup_created"] = True
 
             self.write_update_status(
@@ -1018,7 +1068,7 @@ class HostAgent:
                     phase="failed",
                     progress=100,
                     message=str(exc)[:500] or "La mise à jour a échoué.",
-                    error_code="update_validation_failed",
+                    error_code=getattr(exc, "error_code", "update_validation_failed"),
                     backup_created=context["backup_created"],
                     rollback_performed=context["rollback_performed"],
                 )

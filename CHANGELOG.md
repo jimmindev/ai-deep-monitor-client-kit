@@ -11,3 +11,11 @@ et reglages lors d'une reparation ou d'une mise a jour.
 Le kit prend en charge Windows, Linux x64 et NVIDIA Jetson ARM64. Il fournit le
 menu interactif, les sauvegardes/restaurations et l'agent de terminal hote
 restreint sans embarquer les sources privees de l'application.
+
+## Correctifs du canal permanent
+
+- Les sauvegardes lancees avant une mise a jour integree sont maintenant
+  stockees dans l'espace prive et autorise de l'agent hote. Cela corrige leur
+  echec sous Linux et NVIDIA Jetson sans relacher le confinement systemd.
+- Les erreurs de maintenance remontent un diagnostic court et expurge des
+  mots de passe, tokens et autres secrets.
