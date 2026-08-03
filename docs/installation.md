@@ -51,7 +51,7 @@ mkdir -p ~/aidp
 cd ~/aidp
 curl -fL \
   -o ai-deep-monitor-client-kit.tar.gz \
-  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.tar.gz
+  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/latest/ai-deep-monitor-client-kit.tar.gz
 tar -xzf ai-deep-monitor-client-kit.tar.gz
 cd ai-deep-monitor-client-kit
 chmod +x ./*.sh

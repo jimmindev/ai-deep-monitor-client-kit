@@ -11,7 +11,7 @@ param(
 $ErrorActionPreference = "Stop"
 $kitRoot = $PSScriptRoot
 $repositoryRoot = Join-Path $PSScriptRoot "..\.."
-if (Test-Path -LiteralPath (Join-Path $repositoryRoot "VERSION")) {
+if (Test-Path -LiteralPath (Join-Path $repositoryRoot "AI-Deep-Monitor.cmd")) {
   $kitRoot = (Resolve-Path -LiteralPath $repositoryRoot).Path
 }
 
@@ -91,6 +91,17 @@ function Write-DotEnvValue {
   } else {
     $content = "$Key=$Value`r`n" + $content
   }
+  Set-Content -LiteralPath $Path -Value $content -Encoding UTF8
+}
+
+function Remove-DotEnvValue {
+  param(
+    [string]$Path,
+    [string]$Key
+  )
+  if (-not (Test-Path -LiteralPath $Path)) { return }
+  $pattern = "^$([regex]::Escape($Key))="
+  $content = @(Get-Content -LiteralPath $Path | Where-Object { $_ -notmatch $pattern })
   Set-Content -LiteralPath $Path -Value $content -Encoding UTF8
 }
 
@@ -211,8 +222,7 @@ $kitFiles = @(
   "AI-Deep-Monitor.cmd",
   "ai-deep-monitor.sh",
   "ai-deep-monitor.ps1",
-  "README_CLIENT.md",
-  "VERSION"
+  "README_CLIENT.md"
 )
 foreach ($fileName in $kitFiles) {
   $source = Resolve-KitSource $fileName
@@ -225,6 +235,7 @@ foreach ($fileName in $kitFiles) {
     Copy-Item -LiteralPath $source -Destination $target -Force
   }
 }
+Remove-Item -LiteralPath (Join-Path $InstallDir "VERSION") -Force -ErrorAction SilentlyContinue
 Sync-AiMonitorHostTerminalAgent -SourceRoot $kitRoot -InstallDir $InstallDir | Out-Null
 
 if (-not (Test-Path -LiteralPath $composePath)) {
@@ -235,8 +246,7 @@ if (-not (Test-Path -LiteralPath $envPath)) {
 }
 
 $envValues = Read-DotEnv -Path $envPath
-$previousKitVersion = $envValues["KIT_VERSION"]
-Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.15"
+Remove-DotEnvValue -Path $envPath -Key "KIT_VERSION"
 $terminalValues = Read-DotEnv -Path $envPath
 if (-not $terminalValues["HOST_TERMINAL_QUEUE_GID"]) {
   Write-DotEnvValue -Path $envPath -Key "HOST_TERMINAL_QUEUE_GID" -Value "10003"
@@ -317,11 +327,11 @@ if (-not $AppVersion) {
 
 $refreshImages = $currentVersion -eq $AppVersion
 if ($refreshImages) {
-  if ($previousKitVersion -eq "v0.1.15" -and -not $authRepair.Changed -and -not $ollamaConfigChanged) {
-    Write-Host "Application deja en $AppVersion et kit deja en v0.1.15."
+  if (-not $authRepair.Changed -and -not $ollamaConfigChanged) {
+    Write-Host "Application deja en $AppVersion; les outils de maintenance sont synchronises."
     exit 0
   }
-  Write-Host "L'application reste en $AppVersion; le deploiement est resynchronise pour $dockerPlatform avec le kit v0.1.15."
+  Write-Host "L'application reste en $AppVersion; le deploiement est resynchronise pour $dockerPlatform."
 } elseif (-not $Yes -and -not $versionWasSpecified) {
   $answer = Read-Host "Mettre a jour de $currentVersion vers $AppVersion ? (o/N)"
   if ($answer -notin @("o", "O", "oui", "OUI", "y", "Y", "yes", "YES")) {

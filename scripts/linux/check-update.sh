@@ -38,7 +38,6 @@ fi
 latest_version="$(latest_common_app_version "$owner" "$github_user" "$github_token")"
 [[ -n "$latest_version" ]] || die "Aucune version commune API/frontend n'a ete trouvee."
 
-printf 'Kit installe        : %s\n' "$(read_env_value "$ENV_FILE" KIT_VERSION)"
 printf 'Application installee: %s\n' "$current_version"
 printf 'Application disponible: %s\n' "$latest_version"
 

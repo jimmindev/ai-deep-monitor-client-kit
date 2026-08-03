@@ -2,7 +2,6 @@
 
 set -Eeuo pipefail
 
-export KIT_VERSION="v0.1.15"
 export DEFAULT_APP_VERSION="v0.1.9"
 export DOCKER_PLATFORM=""
 DOCKER_CMD=(docker)
@@ -287,6 +286,18 @@ write_env_value() {
   ' "$file" >"$tmp"
   mv "$tmp" "$file"
   chmod 600 "$file"
+}
+
+remove_env_value() {
+  local file="$1"
+  local key="$2"
+  local tmp
+  [[ -f "$file" ]] || return 0
+  tmp="$(mktemp)"
+  awk -v unwanted="$key" '
+    index($0, unwanted "=") != 1 { print }
+  ' "$file" >"$tmp"
+  mv -f "$tmp" "$file"
 }
 
 AUTH_CONFIG_CHANGED=false

@@ -2,17 +2,16 @@ name: Publier le Client Kit
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag existant a publier (vX.Y.Z)"
-        required: true
-        type: string
 
 permissions:
   contents: write
+
+concurrency:
+  group: client-kit-latest
+  cancel-in-progress: true
 
 jobs:
   release:
@@ -21,35 +20,42 @@ jobs:
       - name: Recuperer le depot
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
-
-      - name: Valider la version
-        shell: bash
-        env:
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-        run: |
-          test "$(tr -d '\r\n' < VERSION)" = "$RELEASE_TAG"
+          fetch-depth: 0
 
       - name: Construire les archives stables
         shell: bash
         run: |
           chmod +x scripts/package-release.sh
           scripts/package-release.sh artifacts
-          unzip -Z1 artifacts/ai-deep-monitor-client-kit.zip |
-            awk -F/ 'NF && $1 != "ai-deep-monitor-client-kit" { exit 1 }'
-          tar -tzf artifacts/ai-deep-monitor-client-kit.tar.gz |
-            awk -F/ 'NF && $1 != "ai-deep-monitor-client-kit" { exit 1 }'
+          unzip -Z1 artifacts/ai-deep-monitor-client-kit.zip > /tmp/client-kit-zip.list
+          tar -tzf artifacts/ai-deep-monitor-client-kit.tar.gz > /tmp/client-kit-tar.list
+          ! grep -Ehq '(^|/)VERSION$|release-notes' \
+            /tmp/client-kit-zip.list /tmp/client-kit-tar.list
+          ! grep -Ehv '^ai-deep-monitor-client-kit(/|$)' \
+            /tmp/client-kit-zip.list /tmp/client-kit-tar.list | grep -q .
 
-      - name: Creer ou actualiser la release
+      - name: Actualiser la release permanente
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         run: |
-          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release create "$RELEASE_TAG" --title "AI Deep Monitor Client Kit $RELEASE_TAG" --generate-notes
+          git tag --force latest "$GITHUB_SHA"
+          git push origin refs/tags/latest --force
+
+          if gh release view latest >/dev/null 2>&1; then
+            gh release edit latest \
+              --title "AI Deep Monitor Client Kit" \
+              --notes "Installateur permanent Windows, Linux et NVIDIA Jetson. Les fichiers de cette release sont remplaces automatiquement a chaque mise a jour du kit." \
+              --latest
+          else
+            gh release create latest \
+              --target "$GITHUB_SHA" \
+              --title "AI Deep Monitor Client Kit" \
+              --notes "Installateur permanent Windows, Linux et NVIDIA Jetson. Les fichiers de cette release sont remplaces automatiquement a chaque mise a jour du kit." \
+              --latest
           fi
-          gh release upload "$RELEASE_TAG" \
+
+          gh release upload latest \
             artifacts/ai-deep-monitor-client-kit.zip \
             artifacts/ai-deep-monitor-client-kit.tar.gz \
             artifacts/ai-deep-monitor-client-kit-SHA256.txt \
