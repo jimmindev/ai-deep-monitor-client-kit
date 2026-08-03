@@ -333,6 +333,7 @@ $kitFiles = @(
   "backup-maintenance.sh",
   "restore-client.sh",
   "uninstall-client.sh",
+  "repair-terminal.sh",
   "install-client.ps1",
   "update-client.ps1",
   "check-update.ps1",
@@ -340,6 +341,8 @@ $kitFiles = @(
   "backup-maintenance.ps1",
   "restore-client.ps1",
   "uninstall-client.ps1",
+  "repair-terminal.ps1",
+  "AI-Deep-Monitor.cmd",
   "ai-deep-monitor.sh",
   "ai-deep-monitor.ps1",
   "README_CLIENT.md",
@@ -374,7 +377,7 @@ if ($existingEnv) {
   if ($existingValues["FRONTEND_PORT"]) { $FrontendPort = [int]$existingValues["FRONTEND_PORT"] }
   if ($existingValues["API_PORT"]) { $ApiPort = [int]$existingValues["API_PORT"] }
   if (-not $CorsOrigins -and $existingValues["CORS_ORIGINS"]) { $CorsOrigins = $existingValues["CORS_ORIGINS"] }
-  Write-DotEnvValue -Path $envTarget -Key "KIT_VERSION" -Value "v0.1.14"
+  Write-DotEnvValue -Path $envTarget -Key "KIT_VERSION" -Value "v0.1.15"
   Write-DotEnvValue -Path $envTarget -Key "DOCKER_PLATFORM" -Value $dockerPlatform
   Write-Host "Installation existante detectee: configuration et volumes conserves."
 }
@@ -413,7 +416,7 @@ if (-not $existingEnv) {
   $envContent = @"
 GITHUB_OWNER=$GithubOwner
 GITHUB_REPOSITORY_NAME=ai-deep-monitor
-KIT_VERSION=v0.1.14
+KIT_VERSION=v0.1.15
 APP_VERSION=$AppVersion
 APP_CHANNEL=stable
 DOCKER_PLATFORM=$dockerPlatform
@@ -507,7 +510,7 @@ if ($NoStart) {
   exit 0
 }
 
-Install-AiMonitorHostTerminalAgent -InstallDir $installPath.FullName
+Install-AiMonitorHostTerminalAgent -InstallDir $installPath.FullName -Required
 docker compose -f $composeTarget --env-file $envTarget config --quiet
 
 if ($existingVolumes.Count -gt 0) {

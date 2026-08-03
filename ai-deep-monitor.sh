@@ -20,6 +20,7 @@ Commandes:
   update        Rechercher et installer une mise a jour
   status        Afficher l'etat des services et les ports
   logs          Afficher les journaux de l'API
+  terminal      Installer, reparer et verifier le terminal hote
   backup        Creer une sauvegarde
   backups       Lister ou nettoyer les sauvegardes
   restore       Restaurer une sauvegarde
@@ -81,6 +82,11 @@ logs_app() {
   load_installation
   compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
     logs --tail=200 api collector mysql sandbox ollama
+}
+
+repair_terminal() {
+  require_installation
+  "$(kit_script repair-terminal.sh)" --install-dir "$INSTALL_DIR"
 }
 
 backup_app() {
@@ -184,6 +190,7 @@ run_command() {
     update) update_app ;;
     status) status_app ;;
     logs) logs_app ;;
+    terminal|repair-terminal) repair_terminal ;;
     backup) backup_app ;;
     backups) manage_backups "${1:-menu}" "${2:-5}" ;;
     restore) restore_app "${1:-}" ;;
@@ -234,8 +241,9 @@ AI Deep Monitor
 7. Gerer ou supprimer les sauvegardes
 8. Restaurer une sauvegarde
 9. Afficher les journaux techniques
-10. Desinstaller en conservant les donnees
-11. TOUT SUPPRIMER
+10. Reparer et verifier le terminal hote
+11. Desinstaller en conservant les donnees
+12. TOUT SUPPRIMER
 0. Quitter
 EOF
     read -r -p 'Votre choix: ' choice || return 0
@@ -249,8 +257,9 @@ EOF
       7) run_menu_action manage_backups ;;
       8) run_menu_action restore_app ;;
       9) run_menu_action logs_app ;;
-      10) run_menu_action uninstall_partial ;;
-      11) run_menu_action purge_all ;;
+      10) run_menu_action repair_terminal ;;
+      11) run_menu_action uninstall_partial ;;
+      12) run_menu_action purge_all ;;
       0) return 0 ;;
       *) warn "Choix invalide."; pause_before_menu ;;
     esac

@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [ValidateSet("", "install", "update", "status", "logs", "backup", "backups", "restore", "stop", "start", "uninstall", "purge", "help")]
+  [ValidateSet("", "install", "update", "status", "logs", "terminal", "repair-terminal", "backup", "backups", "restore", "stop", "start", "uninstall", "purge", "help")]
   [string]$Command = "",
   [ValidateSet("Menu", "List", "Prune", "DeleteSelected", "DeleteAll")]
   [string]$BackupAction = "Menu",
@@ -59,6 +59,7 @@ Commandes directes:
   .\ai-deep-monitor.ps1 -Command update
   .\ai-deep-monitor.ps1 -Command status
   .\ai-deep-monitor.ps1 -Command logs
+  .\ai-deep-monitor.ps1 -Command terminal
   .\ai-deep-monitor.ps1 -Command backup
   .\ai-deep-monitor.ps1 -Command backups
   .\ai-deep-monitor.ps1 -Command restore
@@ -147,6 +148,9 @@ function Invoke-SelectedCommand {
     "logs" {
       Invoke-Compose @("logs", "--tail=200")
     }
+    { $_ -in @("terminal", "repair-terminal") } {
+      Invoke-KitScript "repair-terminal.ps1" @{ InstallDir = $InstallDir }
+    }
     "backup" {
       Invoke-KitScript "backup-client.ps1" @{ InstallDir = $InstallDir }
     }
@@ -212,6 +216,7 @@ $menuItems = @(
   @{ Label = "Gerer ou supprimer les sauvegardes"; Command = "backups" },
   @{ Label = "Restaurer une sauvegarde"; Command = "restore" },
   @{ Label = "Afficher les journaux techniques"; Command = "logs" },
+  @{ Label = "Reparer et verifier le terminal hote"; Command = "terminal" },
   @{ Label = "Desinstaller en conservant les donnees"; Command = "uninstall" },
   @{ Label = "TOUT SUPPRIMER"; Command = "purge" },
   @{ Label = "Quitter"; Command = "quit" }

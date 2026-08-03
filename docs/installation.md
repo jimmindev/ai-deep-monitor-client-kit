@@ -1,8 +1,9 @@
 # AI Deep Monitor - Installation client
 
 Ce kit installe et maintient AI Deep Monitor avec Docker sans livrer les
-sources React ou API de l'application. Pour une utilisation normale, lancez uniquement
-`ai-deep-monitor.sh` sous Linux ou `ai-deep-monitor.ps1` sous Windows.
+sources React ou API de l'application. Pour une utilisation normale, lancez
+uniquement `ai-deep-monitor.sh` sous Linux/Jetson ou double-cliquez sur
+`AI-Deep-Monitor.cmd` sous Windows.
 
 Le kit installe egalement l'agent local du terminal de diagnostic. Cet agent
 reste separe des conteneurs, s'execute sans droits administrateur et applique
@@ -25,8 +26,11 @@ privees de l'application sur `ghcr.io`.
 ## Installation Windows
 
 1. Extrayez `ai-deep-monitor-client-kit.zip`.
-2. Ouvrez PowerShell dans le dossier extrait.
-3. Executez:
+2. Double-cliquez sur `AI-Deep-Monitor.cmd`.
+
+Le lanceur ouvre directement le menu. Si l'ouverture par double-clic est
+bloquee par une politique d'entreprise, ouvrez PowerShell dans le dossier
+extrait puis executez:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
@@ -96,8 +100,9 @@ Le menu actuel propose:
 7. gerer les sauvegardes;
 8. restaurer une sauvegarde;
 9. afficher les journaux;
-10. desinstaller les conteneurs en conservant les donnees;
-11. tout supprimer.
+10. reparer et verifier le terminal hote;
+11. desinstaller les conteneurs en conservant les donnees;
+12. tout supprimer.
 
 ## Sauvegardes
 
@@ -151,13 +156,13 @@ sauvegardes validees et une copie externe recente.
 
 ### Partielle
 
-Le choix **10** retire les conteneurs et le reseau. Il conserve les volumes
+Le choix **11** retire les conteneurs et le reseau. Il conserve les volumes
 MySQL et applicatifs, les images Docker, `.env`, le dossier d'installation et
 les sauvegardes.
 
 ### Complete
 
-Le choix **11. TOUT SUPPRIMER** cree d'abord une sauvegarde externe, puis
+Le choix **12. TOUT SUPPRIMER** cree d'abord une sauvegarde externe, puis
 supprime les conteneurs, les volumes, les images du stack et le dossier
 d'installation. La sauvegarde externe est volontairement conservee. Utilisez
 ensuite le gestionnaire de sauvegardes si sa suppression est reellement
@@ -166,6 +171,8 @@ souhaitee.
 ## Diagnostic
 
 Le choix **3** affiche l'etat des services et le choix **9** leurs journaux.
+Le choix **10** reinstalle le terminal hote et verifie immediatement son signal.
+Sous Linux/Jetson, un echec affiche aussi les dernieres lignes de `systemd`.
 Si l'API ne devient pas saine, l'installateur affiche automatiquement les
 derniers journaux de MySQL, Ollama, de la sandbox et de l'API.
 
