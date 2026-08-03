@@ -14,6 +14,9 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Lorsqu’une mise à jour échoue, l’agent conserve maintenant l’étape exacte,
+  la cause, le code de retour et les dernières lignes techniques utiles même
+  après une restauration automatique réussie.
 - Les sauvegardes lancees avant une mise a jour integree sont maintenant
   stockees dans l'espace prive et autorise de l'agent hote. Cela corrige leur
   echec sous Linux et NVIDIA Jetson sans relacher le confinement systemd.
