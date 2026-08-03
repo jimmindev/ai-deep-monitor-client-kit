@@ -1,6 +1,6 @@
 # AI Deep Monitor Client Kit v0.1.15
 
-Cette version corrective conserve AI Deep Monitor `v0.1.8` et repare sa
+Cette version corrective livre AI Deep Monitor `v0.1.9` et repare sa
 distribution ainsi que l'activation du terminal hote.
 
 ## Correctifs importants

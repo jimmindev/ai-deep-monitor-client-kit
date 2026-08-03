@@ -2,6 +2,11 @@
 
 ## v0.1.15 - 2026-08-03
 
+### Livre AI Deep Monitor v0.1.9
+
+- Installe `v0.1.9` par defaut avec la composition des cubes dans le chatbot et
+  le guidage simplifie du terminal hote.
+
 ### Installation et terminal hote
 
 - Retablit une archive client propre contenue dans un unique dossier
