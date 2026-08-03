@@ -16,12 +16,6 @@ for command_name in zip tar sha256sum; do
   }
 done
 
-version="$(tr -d '\r\n' <"${REPOSITORY_ROOT}/VERSION")"
-[[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
-  printf 'Version invalide: %s\n' "$version" >&2
-  exit 1
-}
-
 mkdir -p "$OUTPUT_DIR"
 OUTPUT_DIR="$(cd "$OUTPUT_DIR" && pwd -P)"
 temporary_dir="$(mktemp -d)"
@@ -32,13 +26,13 @@ mkdir -p "$package_root"
 for directory in deploy docs host_terminal_agent scripts; do
   cp -a "${REPOSITORY_ROOT}/${directory}" "$package_root/"
 done
+rm -rf -- "${package_root}/docs/release-notes"
 for file in \
   AI-Deep-Monitor.cmd \
   ai-deep-monitor.ps1 \
   ai-deep-monitor.sh \
   CHANGELOG.md \
-  README.md \
-  VERSION; do
+  README.md; do
   cp -a "${REPOSITORY_ROOT}/${file}" "$package_root/"
 done
 
@@ -59,5 +53,5 @@ rm -f -- \
   sha256sum "$ZIP_NAME" "$TAR_NAME" >"$CHECKSUM_NAME"
 )
 
-printf 'Client Kit %s construit dans %s\n' "$version" "$OUTPUT_DIR"
+printf 'Client Kit construit dans %s\n' "$OUTPUT_DIR"
 printf 'Les deux archives contiennent uniquement le dossier racine %s/.\n' "$ROOT_NAME"

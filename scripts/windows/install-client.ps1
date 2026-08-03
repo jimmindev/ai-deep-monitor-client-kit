@@ -13,7 +13,7 @@ param(
 $ErrorActionPreference = "Stop"
 $kitRoot = $PSScriptRoot
 $repositoryRoot = Join-Path $PSScriptRoot "..\.."
-if (Test-Path -LiteralPath (Join-Path $repositoryRoot "VERSION")) {
+if (Test-Path -LiteralPath (Join-Path $repositoryRoot "AI-Deep-Monitor.cmd")) {
   $kitRoot = (Resolve-Path -LiteralPath $repositoryRoot).Path
 }
 
@@ -267,6 +267,17 @@ function Write-DotEnvValue {
   Set-Content -LiteralPath $Path -Value $content -Encoding UTF8
 }
 
+function Remove-DotEnvValue {
+  param(
+    [string]$Path,
+    [string]$Key
+  )
+  if (-not (Test-Path -LiteralPath $Path)) { return }
+  $pattern = "^$([regex]::Escape($Key))="
+  $content = @(Get-Content -LiteralPath $Path | Where-Object { $_ -notmatch $pattern })
+  Set-Content -LiteralPath $Path -Value $content -Encoding UTF8
+}
+
 function Repair-AuthConfig {
   param([string]$Path)
   $values = Read-DotEnv -Path $Path
@@ -345,8 +356,7 @@ $kitFiles = @(
   "AI-Deep-Monitor.cmd",
   "ai-deep-monitor.sh",
   "ai-deep-monitor.ps1",
-  "README_CLIENT.md",
-  "VERSION"
+  "README_CLIENT.md"
 )
 foreach ($fileName in $kitFiles) {
   $source = Resolve-KitSource $fileName
@@ -357,6 +367,7 @@ foreach ($fileName in $kitFiles) {
     }
   }
 }
+Remove-Item -LiteralPath (Join-Path $installPath.FullName "VERSION") -Force -ErrorAction SilentlyContinue
 Sync-AiMonitorHostTerminalAgent -SourceRoot $kitRoot -InstallDir $installPath.FullName | Out-Null
 
 $existingEnv = Test-Path -LiteralPath $envTarget
@@ -377,7 +388,7 @@ if ($existingEnv) {
   if ($existingValues["FRONTEND_PORT"]) { $FrontendPort = [int]$existingValues["FRONTEND_PORT"] }
   if ($existingValues["API_PORT"]) { $ApiPort = [int]$existingValues["API_PORT"] }
   if (-not $CorsOrigins -and $existingValues["CORS_ORIGINS"]) { $CorsOrigins = $existingValues["CORS_ORIGINS"] }
-  Write-DotEnvValue -Path $envTarget -Key "KIT_VERSION" -Value "v0.1.15"
+  Remove-DotEnvValue -Path $envTarget -Key "KIT_VERSION"
   Write-DotEnvValue -Path $envTarget -Key "DOCKER_PLATFORM" -Value $dockerPlatform
   Write-Host "Installation existante detectee: configuration et volumes conserves."
 }
@@ -416,7 +427,6 @@ if (-not $existingEnv) {
   $envContent = @"
 GITHUB_OWNER=$GithubOwner
 GITHUB_REPOSITORY_NAME=ai-deep-monitor
-KIT_VERSION=v0.1.15
 APP_VERSION=$AppVersion
 APP_CHANNEL=stable
 DOCKER_PLATFORM=$dockerPlatform

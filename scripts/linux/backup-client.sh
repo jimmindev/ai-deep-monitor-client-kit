@@ -83,7 +83,6 @@ cat >"${staging_dir}/manifest.json" <<EOF
   "formatVersion": 2,
   "application": "AI Deep Monitor",
   "appVersion": "${version}",
-  "kitVersion": "${KIT_VERSION}",
   "createdAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "hostName": "$(hostname)",
   "mysqlSha256": "$(sha256sum "${staging_dir}/mysql.sql" | awk '{print $1}')",

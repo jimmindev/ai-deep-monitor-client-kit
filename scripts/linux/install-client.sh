@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/client-common.sh"
 
 KIT_ROOT="$SCRIPT_DIR"
-[[ -f "${SCRIPT_DIR}/../../VERSION" ]] && KIT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+[[ -f "${SCRIPT_DIR}/../../ai-deep-monitor.sh" ]] && KIT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 kit_source() {
   local name="$1"
@@ -122,7 +122,6 @@ kit_files=(
   repair-terminal.ps1
   AI-Deep-Monitor.cmd
   README_CLIENT.md
-  VERSION
 )
 
 for file in "${kit_files[@]}"; do
@@ -132,6 +131,7 @@ for file in "${kit_files[@]}"; do
     cp -f "$source_file" "${INSTALL_DIR}/${file}"
   fi
 done
+rm -f -- "${INSTALL_DIR}/VERSION"
 chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true
 sync_host_terminal_agent
 
@@ -160,7 +160,7 @@ if [[ "$existing_env" == "true" ]]; then
   requested_frontend_port="$FRONTEND_PORT"
   requested_api_port="$API_PORT"
   [[ -n "$CORS_ORIGINS" ]] || CORS_ORIGINS="$(read_env_value "$ENV_FILE" CORS_ORIGINS)"
-  write_env_value "$ENV_FILE" KIT_VERSION "$KIT_VERSION"
+  remove_env_value "$ENV_FILE" KIT_VERSION
   write_env_value "$ENV_FILE" DOCKER_PLATFORM "$DOCKER_PLATFORM"
   log "Installation existante detectee: configuration et volumes conserves."
 fi
@@ -204,7 +204,6 @@ else
   cat >"$ENV_FILE" <<EOF
 GITHUB_OWNER=${GITHUB_OWNER}
 GITHUB_REPOSITORY_NAME=ai-deep-monitor
-KIT_VERSION=${KIT_VERSION}
 APP_VERSION=${APP_VERSION}
 APP_CHANNEL=stable
 DOCKER_PLATFORM=${DOCKER_PLATFORM}

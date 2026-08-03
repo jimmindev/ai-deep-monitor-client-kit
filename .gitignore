@@ -9,3 +9,4 @@ data/
 backups/
 generated_backups/
 uploaded_mibs/
+/artifacts/

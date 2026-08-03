@@ -1,12 +1,12 @@
-# AI Deep Monitor - Client Kit v0.1.15
+# AI Deep Monitor - Client Kit
 
 Kit public d'installation, de mise a jour et de maintenance d'AI Deep Monitor.
 Il ne contient pas les sources React ou API de l'application, uniquement
 l'agent terminal local restreint. L'application est livree sous forme d'images
 Docker privees publiees sur GHCR.
 
-La version du kit est `v0.1.15`. La version applicative stable installee par
-defaut est `v0.1.9`.
+Le kit suit un canal permanent sans numero de version propre. La version
+applicative stable installee par defaut est `v0.1.9`.
 
 Le guide pas a pas est disponible dans
 [docs/installation.md](docs/installation.md).
@@ -19,13 +19,12 @@ ai-deep-monitor-client-kit/
 |-- AI-Deep-Monitor.cmd      # double-clic Windows vers le menu
 |-- ai-deep-monitor.ps1      # point d'entree PowerShell
 |-- deploy/                  # definition Docker Compose
-|-- docs/                    # installation et notes de version
+|-- docs/                    # guide d'installation
 |-- host_terminal_agent/     # agent local restreint Windows/Linux/Jetson
 |-- scripts/                 # implementation interne Linux et Windows
 |-- tests/                   # tests de non-regression du kit
 |-- CHANGELOG.md
-|-- README.md
-`-- VERSION
+`-- README.md
 ```
 
 Pour une utilisation normale, ne lancez que `ai-deep-monitor.sh` ou
@@ -35,17 +34,16 @@ Pour une utilisation normale, ne lancez que `ai-deep-monitor.sh` ou
 
 - Depot public:
   [github.com/jimmindev/ai-deep-monitor-client-kit](https://github.com/jimmindev/ai-deep-monitor-client-kit)
-- Derniere version:
+- Installateur permanent:
   [github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest)
 - Linux:
-  [ai-deep-monitor-client-kit.tar.gz](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.tar.gz)
+  [ai-deep-monitor-client-kit.tar.gz](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/latest/ai-deep-monitor-client-kit.tar.gz)
 - Windows:
-  [ai-deep-monitor-client-kit.zip](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.zip)
+  [ai-deep-monitor-client-kit.zip](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/latest/ai-deep-monitor-client-kit.zip)
 
-A partir de la `v0.1.15`, les deux archives utilisent toujours le meme dossier
-racine `ai-deep-monitor-client-kit`. Elles ne dispersent plus leurs fichiers
-dans le dossier courant et une mise a jour ne cree pas de dossier portant le
-numero de version.
+Les deux archives utilisent toujours le meme dossier racine
+`ai-deep-monitor-client-kit`. Elles ne dispersent pas leurs fichiers dans le
+dossier courant et une mise a jour ne cree aucun dossier versionne.
 
 Le depot peut aussi etre clone sans authentification:
 
@@ -123,7 +121,7 @@ mkdir -p ~/aidp
 cd ~/aidp
 curl -fL \
   -o ai-deep-monitor-client-kit.tar.gz \
-  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.tar.gz
+  https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/latest/ai-deep-monitor-client-kit.tar.gz
 tar -xzf ai-deep-monitor-client-kit.tar.gz
 cd ai-deep-monitor-client-kit
 ```
