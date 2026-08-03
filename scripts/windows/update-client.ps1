@@ -3,6 +3,7 @@ param(
   [string]$AppVersion = "",
   [switch]$SkipDockerLogin,
   [switch]$SkipBackup,
+  [switch]$SkipAgentInstall,
   [switch]$NoStart,
   [switch]$Yes
 )
@@ -232,7 +233,7 @@ if (-not (Test-Path -LiteralPath $envPath)) {
 
 $envValues = Read-DotEnv -Path $envPath
 $previousKitVersion = $envValues["KIT_VERSION"]
-Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.13"
+Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.14"
 $terminalValues = Read-DotEnv -Path $envPath
 if (-not $terminalValues["HOST_TERMINAL_QUEUE_GID"]) {
   Write-DotEnvValue -Path $envPath -Key "HOST_TERMINAL_QUEUE_GID" -Value "10003"
@@ -313,11 +314,11 @@ if (-not $AppVersion) {
 
 $refreshImages = $currentVersion -eq $AppVersion
 if ($refreshImages) {
-  if ($previousKitVersion -eq "v0.1.13" -and -not $authRepair.Changed -and -not $ollamaConfigChanged) {
-    Write-Host "Application deja en $AppVersion et kit deja en v0.1.13."
+  if ($previousKitVersion -eq "v0.1.14" -and -not $authRepair.Changed -and -not $ollamaConfigChanged) {
+    Write-Host "Application deja en $AppVersion et kit deja en v0.1.14."
     exit 0
   }
-  Write-Host "L'application reste en $AppVersion; le deploiement est resynchronise pour $dockerPlatform avec le kit v0.1.13."
+  Write-Host "L'application reste en $AppVersion; le deploiement est resynchronise pour $dockerPlatform avec le kit v0.1.14."
 } elseif (-not $Yes -and -not $versionWasSpecified) {
   $answer = Read-Host "Mettre a jour de $currentVersion vers $AppVersion ? (o/N)"
   if ($answer -notin @("o", "O", "oui", "OUI", "y", "Y", "yes", "YES")) {
@@ -350,7 +351,9 @@ if ($NoStart) {
   exit 0
 }
 
-Install-AiMonitorHostTerminalAgent -InstallDir $InstallDir
+if (-not $SkipAgentInstall) {
+  Install-AiMonitorHostTerminalAgent -InstallDir $InstallDir
+}
 if (-not $SkipDockerLogin) {
   if (-not $plainToken) {
     Write-Host "Connexion au registry prive GHCR."

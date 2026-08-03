@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [string]$AppVersion = "v0.1.7",
+  [string]$AppVersion = "v0.1.8",
   [string]$GithubOwner = "jimmindev",
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
@@ -374,7 +374,7 @@ if ($existingEnv) {
   if ($existingValues["FRONTEND_PORT"]) { $FrontendPort = [int]$existingValues["FRONTEND_PORT"] }
   if ($existingValues["API_PORT"]) { $ApiPort = [int]$existingValues["API_PORT"] }
   if (-not $CorsOrigins -and $existingValues["CORS_ORIGINS"]) { $CorsOrigins = $existingValues["CORS_ORIGINS"] }
-  Write-DotEnvValue -Path $envTarget -Key "KIT_VERSION" -Value "v0.1.13"
+  Write-DotEnvValue -Path $envTarget -Key "KIT_VERSION" -Value "v0.1.14"
   Write-DotEnvValue -Path $envTarget -Key "DOCKER_PLATFORM" -Value $dockerPlatform
   Write-Host "Installation existante detectee: configuration et volumes conserves."
 }
@@ -413,7 +413,7 @@ if (-not $existingEnv) {
   $envContent = @"
 GITHUB_OWNER=$GithubOwner
 GITHUB_REPOSITORY_NAME=ai-deep-monitor
-KIT_VERSION=v0.1.13
+KIT_VERSION=v0.1.14
 APP_VERSION=$AppVersion
 APP_CHANNEL=stable
 DOCKER_PLATFORM=$dockerPlatform

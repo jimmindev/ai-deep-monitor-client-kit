@@ -11,8 +11,8 @@ trap 'rm -rf -- "$INSTALL_DIR"' EXIT
   --no-start \
   --skip-docker-login
 
-grep -Fxq 'KIT_VERSION=v0.1.13' "${INSTALL_DIR}/.env"
-grep -Fxq 'APP_VERSION=v0.1.7' "${INSTALL_DIR}/.env"
+grep -Fxq 'KIT_VERSION=v0.1.14' "${INSTALL_DIR}/.env"
+grep -Fxq 'APP_VERSION=v0.1.8' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_MODEL=llama3.2:3b' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_FALLBACK_MODEL=llama3.2:1b' "${INSTALL_DIR}/.env"
@@ -35,9 +35,9 @@ sed -i 's/^TERMINAL_SESSION_TTL_SECONDS=.*/TERMINAL_SESSION_TTL_SECONDS=420/' "$
 "${INSTALL_DIR}/update-client.sh" \
   --install-dir "$INSTALL_DIR" \
   --no-start \
-  --app-version v0.1.7
+  --app-version v0.1.8
 
-grep -Fxq 'KIT_VERSION=v0.1.13' "${INSTALL_DIR}/.env"
+grep -Fxq 'KIT_VERSION=v0.1.14' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_MODEL=llama3.2:3b' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_FALLBACK_MODEL=llama3.2:1b' "${INSTALL_DIR}/.env"
 grep -Fxq 'HOST_TERMINAL_QUEUE_GID=12003' "${INSTALL_DIR}/.env"

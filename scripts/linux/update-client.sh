@@ -62,6 +62,7 @@ INSTALL_DIR="${HOME}/ai-deep-monitor"
 APP_VERSION=""
 SKIP_DOCKER_LOGIN=false
 SKIP_BACKUP=false
+SKIP_AGENT_INSTALL=false
 NO_START=false
 ASSUME_YES=false
 
@@ -72,6 +73,7 @@ Usage: ./update-client.sh [options]
   --app-version VERSION
   --skip-docker-login
   --skip-backup
+  --skip-agent-install
   --no-start
   --yes
 EOF
@@ -83,6 +85,7 @@ while (($#)); do
     --app-version) APP_VERSION="$2"; shift 2 ;;
     --skip-docker-login) SKIP_DOCKER_LOGIN=true; shift ;;
     --skip-backup) SKIP_BACKUP=true; shift ;;
+    --skip-agent-install) SKIP_AGENT_INSTALL=true; shift ;;
     --no-start) NO_START=true; shift ;;
     --yes) ASSUME_YES=true; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -182,7 +185,9 @@ fi
 unset github_token
 
 project_name="$(project_name_from_dir "$INSTALL_DIR")"
-install_host_terminal_agent
+if [[ "$SKIP_AGENT_INSTALL" == "false" ]]; then
+  install_host_terminal_agent
+fi
 compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
 compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
 if ! compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d; then

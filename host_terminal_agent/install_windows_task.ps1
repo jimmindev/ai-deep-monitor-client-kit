@@ -12,11 +12,14 @@ if ($env:OS -ne "Windows_NT") {
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $agentPath = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "agent.py")).Path
 $jobsPath = Join-Path $projectRoot "host_terminal_jobs"
+$stateRoot = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { $projectRoot }
+$statePath = Join-Path $stateRoot "AI-Deep-Monitor\HostAgent"
 $pythonCommand = Get-Command python.exe -ErrorAction Stop
 $pythonPath = $pythonCommand.Source
 $account = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
 New-Item -ItemType Directory -Path $jobsPath -Force | Out-Null
+New-Item -ItemType Directory -Path $statePath -Force | Out-Null
 
 # Une réinstallation doit réellement charger la nouvelle politique. On arrête
 # uniquement l'agent dont la ligne de commande contient ce chemin absolu précis.
@@ -41,7 +44,7 @@ if (-not $remainingAgent -and (Test-Path -LiteralPath $lockPath)) {
     Remove-Item -LiteralPath $lockPath -Force
 }
 
-$arguments = '"{0}" --jobs-dir "{1}"' -f $agentPath, $jobsPath
+$arguments = '"{0}" --jobs-dir "{1}" --install-dir "{2}" --state-dir "{3}"' -f $agentPath, $jobsPath, $projectRoot, $statePath
 $action = New-ScheduledTaskAction `
     -Execute $pythonPath `
     -Argument $arguments `
@@ -92,13 +95,14 @@ if (-not $installedTask) {
     $escapedAgent = $agentPath.Replace('"', '""')
     $escapedJobs = $jobsPath.Replace('"', '""')
     $escapedRoot = $projectRoot.Replace('"', '""')
+    $escapedState = $statePath.Replace('"', '""')
     $launcher = @"
 Set shell = CreateObject("WScript.Shell")
 shell.CurrentDirectory = "$escapedRoot"
-shell.Run Chr(34) & "$escapedPython" & Chr(34) & " " & Chr(34) & "$escapedAgent" & Chr(34) & " --jobs-dir " & Chr(34) & "$escapedJobs" & Chr(34), 0, False
+shell.Run Chr(34) & "$escapedPython" & Chr(34) & " " & Chr(34) & "$escapedAgent" & Chr(34) & " --jobs-dir " & Chr(34) & "$escapedJobs" & Chr(34) & " --install-dir " & Chr(34) & "$escapedRoot" & Chr(34) & " --state-dir " & Chr(34) & "$escapedState" & Chr(34), 0, False
 "@
     [System.IO.File]::WriteAllText($launcherPath, $launcher, [System.Text.UTF8Encoding]::new($false))
-    $startArguments = '"{0}" --jobs-dir "{1}"' -f $agentPath, $jobsPath
+    $startArguments = '"{0}" --jobs-dir "{1}" --install-dir "{2}" --state-dir "{3}"' -f $agentPath, $jobsPath, $projectRoot, $statePath
     Start-Process `
         -FilePath $pythonWindowless `
         -ArgumentList $startArguments `
