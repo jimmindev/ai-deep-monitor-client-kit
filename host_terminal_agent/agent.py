@@ -42,7 +42,7 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.0.1"
+AGENT_VERSION = "3.1.0"
 MAX_COMMAND_BYTES = 4_000
 MAX_OUTPUT_BYTES = 400_000
 MAX_TIMEOUT_SECONDS = 20.0
@@ -440,12 +440,13 @@ def run_maintenance_process(
     }
 
 
-def safe_maintenance_error(result: dict) -> str:
-    """Return one useful maintenance error line without leaking credentials."""
+def safe_maintenance_diagnostics(result: dict, *, max_lines: int = 12) -> list[str]:
+    """Return useful maintenance output without leaking credentials."""
     if result.get("timed_out"):
-        return "délai maximal dépassé"
+        return ["Délai maximal dépassé."]
 
     output = str(result.get("output_tail") or "")[-8_000:]
+    output = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", output)
     secret_patterns = (
         (r"(?i)(authorization\s*:\s*(?:bearer|basic)\s+)\S+", r"\1[masqué]"),
         (r"(?i)\b(gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)\b", "[masqué]"),
@@ -457,11 +458,21 @@ def safe_maintenance_error(result: dict) -> str:
     for pattern, replacement in secret_patterns:
         output = re.sub(pattern, replacement, output)
 
-    lines = [re.sub(r"\s+", " ", line).strip() for line in output.splitlines()]
-    detail = next((line for line in reversed(lines) if line), "")
-    if len(detail) > 260:
-        detail = f"…{detail[-259:]}"
-    return detail
+    lines: list[str] = []
+    for raw_line in output.splitlines():
+        line = re.sub(r"\s+", " ", raw_line).strip()
+        if not line or (lines and line == lines[-1]):
+            continue
+        if len(line) > 320:
+            line = f"…{line[-319:]}"
+        lines.append(line)
+    return lines[-max(1, min(max_lines, 20)):]
+
+
+def safe_maintenance_error(result: dict) -> str:
+    """Return one useful maintenance error line without leaking credentials."""
+    lines = safe_maintenance_diagnostics(result, max_lines=1)
+    return lines[-1] if lines else ""
 
 
 def failed_step_message(label: str, result: dict) -> str:
@@ -469,6 +480,30 @@ def failed_step_message(label: str, result: dict) -> str:
     exit_code = result.get("exit_code")
     code = f" (code {exit_code})" if exit_code not in (None, 0) else ""
     return f"{label}{code}{f' : {detail}' if detail else '.'}"
+
+
+def record_update_failure(
+    context: dict,
+    *,
+    code: str,
+    step: str,
+    reason: str,
+    hint: str,
+    result: dict | None = None,
+) -> None:
+    result = result or {}
+    details = safe_maintenance_diagnostics(result)
+    context.update(
+        {
+            "failure_code": str(code)[:100],
+            "failure_step": str(step)[:120],
+            "failure_reason": str(reason)[:500],
+            "failure_hint": str(hint)[:500],
+            "failure_details": details,
+            "failure_exit_code": result.get("exit_code"),
+            "failure_timed_out": bool(result.get("timed_out")),
+        }
+    )
 
 
 class HostAgent:
@@ -495,6 +530,7 @@ class HostAgent:
             state_dir or (self.install_dir / ".host-agent-state")
         ).resolve()
         self.safety_backup_dir = self.state_dir / "update-backups"
+        self.last_api_health_state = "inconnu"
         self.update_thread: threading.Thread | None = None
         self.seen_nonces: dict[str, float] = {}
         for directory in (
@@ -818,7 +854,12 @@ class HostAgent:
     def compose_command(self, *arguments: str, timeout: float = 600) -> dict:
         docker = shutil.which("docker", path=trusted_search_path())
         if not docker:
-            return {"ok": False, "exit_code": 127, "timed_out": False}
+            return {
+                "ok": False,
+                "exit_code": 127,
+                "timed_out": False,
+                "output_tail": "Docker est introuvable dans le chemin système autorisé.",
+            }
         return run_maintenance_process(
             [
                 docker,
@@ -862,12 +903,13 @@ class HostAgent:
                     ),
                 )
                 state = result.stdout.decode("utf-8", errors="replace").strip().lower()
+                self.last_api_health_state = state or "état non retourné"
                 if result.returncode == 0 and state in {"healthy", "running"}:
                     return True
                 if state in {"unhealthy", "exited", "dead"}:
                     return False
             except (OSError, subprocess.TimeoutExpired):
-                pass
+                self.last_api_health_state = "contrôle Docker inaccessible"
             time.sleep(2)
         return False
 
@@ -963,11 +1005,20 @@ class HostAgent:
                     timeout=MAX_UPDATE_SECONDS,
                 )
                 if not backup_result["ok"]:
+                    backup_reason = failed_step_message(
+                        "La sauvegarde de sécurité a échoué",
+                        backup_result,
+                    )
+                    record_update_failure(
+                        context,
+                        code="backup_failed",
+                        step="Sauvegarde de sécurité",
+                        reason=backup_reason,
+                        hint="Vérifiez l’espace disque disponible et l’accès de l’agent à Docker.",
+                        result=backup_result,
+                    )
                     raise UpdateStepError(
-                        failed_step_message(
-                            "La sauvegarde de sécurité a échoué",
-                            backup_result,
-                        ),
+                        backup_reason,
                         "backup_failed",
                     )
                 context["backup_created"] = True
@@ -983,12 +1034,28 @@ class HostAgent:
                 write_env_value(env_path, "APP_VERSION", target)
             env_changed = True
             config_result = self.compose_command("config", "--quiet", timeout=60)
-            pull_result = (
-                self.compose_command("pull", timeout=MAX_UPDATE_SECONDS)
-                if config_result["ok"]
-                else config_result
-            )
-            deployment_ok = bool(pull_result["ok"])
+            deployment_ok = bool(config_result["ok"])
+            if not deployment_ok:
+                record_update_failure(
+                    context,
+                    code="docker_configuration_failed",
+                    step="Validation de la configuration Docker",
+                    reason=failed_step_message("La configuration Docker est invalide", config_result),
+                    hint="Vérifiez le fichier .env et docker-compose.release.yml de l’installation.",
+                    result=config_result,
+                )
+            if deployment_ok:
+                pull_result = self.compose_command("pull", timeout=MAX_UPDATE_SECONDS)
+                deployment_ok = bool(pull_result["ok"])
+                if not deployment_ok:
+                    record_update_failure(
+                        context,
+                        code="image_download_failed",
+                        step="Téléchargement des images Docker",
+                        reason=failed_step_message("Le téléchargement des images a échoué", pull_result),
+                        hint="Vérifiez Internet, l’accès à GHCR, le token GitHub et l’espace disque disponible.",
+                        result=pull_result,
+                    )
             if deployment_ok:
                 self.write_update_status(
                     context,
@@ -997,9 +1064,17 @@ class HostAgent:
                     message="Redémarrage des services avec la nouvelle version.",
                     backup_created=True,
                 )
-                deployment_ok = bool(
-                    self.compose_command("up", "-d", timeout=900)["ok"]
-                )
+                start_result = self.compose_command("up", "-d", timeout=900)
+                deployment_ok = bool(start_result["ok"])
+                if not deployment_ok:
+                    record_update_failure(
+                        context,
+                        code="service_start_failed",
+                        step="Redémarrage des services Docker",
+                        reason=failed_step_message("Le redémarrage des services a échoué", start_result),
+                        hint="Vérifiez les ports, la mémoire disponible et l’état du moteur Docker.",
+                        result=start_result,
+                    )
             if deployment_ok:
                 self.write_update_status(
                     context,
@@ -1009,13 +1084,39 @@ class HostAgent:
                     backup_created=True,
                 )
                 deployment_ok = self.wait_for_api_health(300)
+                if not deployment_ok:
+                    logs_result = self.compose_command(
+                        "logs",
+                        "--no-color",
+                        "--tail",
+                        "40",
+                        "api",
+                        timeout=30,
+                    )
+                    health_state = self.last_api_health_state
+                    record_update_failure(
+                        context,
+                        code="api_health_failed",
+                        step="Contrôle de santé de l’API",
+                        reason=(
+                            "L’API n’a pas retrouvé un état sain "
+                            f"(dernier état Docker : {health_state})."
+                        ),
+                        hint="Consultez le journal technique ci-dessous pour identifier l’erreur de démarrage de l’API.",
+                        result=logs_result,
+                    )
 
             if not deployment_ok:
+                failure_step = context.get("failure_step") or "Étape de déploiement inconnue"
+                failure_reason = context.get("failure_reason") or "Cause non déterminée."
                 self.write_update_status(
                     context,
                     phase="rolling_back",
                     progress=90,
-                    message="Échec détecté : restauration de la version précédente.",
+                    message=(
+                        f"Échec pendant « {failure_step} » : {failure_reason} "
+                        "Restauration de la version précédente."
+                    ),
                     error_code="update_failed",
                     backup_created=True,
                 )
@@ -1027,9 +1128,11 @@ class HostAgent:
                     phase="rolled_back" if rollback_ok else "failed",
                     progress=100,
                     message=(
-                        "La mise à jour a échoué et la version précédente a été restaurée."
+                        f"Échec pendant « {failure_step} » : {failure_reason} "
+                        "La version précédente a été restaurée."
                         if rollback_ok
-                        else "La mise à jour et la restauration ont échoué. Intervention requise."
+                        else f"Échec pendant « {failure_step} » : {failure_reason} "
+                        "La restauration a également échoué. Intervention requise."
                     ),
                     error_code="update_rolled_back" if rollback_ok else "rollback_failed",
                     backup_created=True,
@@ -1045,7 +1148,19 @@ class HostAgent:
                 backup_created=True,
             )
         except Exception as exc:
+            if not context.get("failure_code"):
+                exception_result = {"output_tail": str(exc)}
+                record_update_failure(
+                    context,
+                    code=getattr(exc, "error_code", "unexpected_update_error"),
+                    step="Validation ou maintenance",
+                    reason=safe_maintenance_error(exception_result) or "Erreur inattendue.",
+                    hint="Consultez le journal technique puis vérifiez l’état de Docker et de l’installation.",
+                    result=exception_result,
+                )
             if env_changed and env_backup and context["backup_created"]:
+                failure_step = context.get("failure_step") or "Maintenance"
+                failure_reason = context.get("failure_reason") or "Cause non déterminée."
                 rollback_ok = self.rollback_update(env_backup)
                 context["rollback_performed"] = rollback_ok
                 keep_env_backup = not rollback_ok
@@ -1054,9 +1169,11 @@ class HostAgent:
                     phase="rolled_back" if rollback_ok else "failed",
                     progress=100,
                     message=(
-                        "Une erreur inattendue est survenue ; la version précédente a été restaurée."
+                        f"Échec pendant « {failure_step} » : {failure_reason} "
+                        "La version précédente a été restaurée."
                         if rollback_ok
-                        else "Une erreur inattendue empêche la mise à jour et sa restauration automatique."
+                        else f"Échec pendant « {failure_step} » : {failure_reason} "
+                        "La restauration automatique est impossible."
                     ),
                     error_code="update_rolled_back" if rollback_ok else "rollback_failed",
                     backup_created=True,
