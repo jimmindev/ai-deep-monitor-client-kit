@@ -11,27 +11,37 @@ trap 'rm -rf -- "$INSTALL_DIR"' EXIT
   --no-start \
   --skip-docker-login
 
-grep -Fxq 'KIT_VERSION=v0.1.12' "${INSTALL_DIR}/.env"
-grep -Fxq 'APP_VERSION=v0.1.5' "${INSTALL_DIR}/.env"
+grep -Fxq 'KIT_VERSION=v0.1.13' "${INSTALL_DIR}/.env"
+grep -Fxq 'APP_VERSION=v0.1.7' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_MODEL=llama3.2:3b' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_FALLBACK_MODEL=llama3.2:1b' "${INSTALL_DIR}/.env"
+grep -Fxq 'HOST_TERMINAL_QUEUE_GID=10003' "${INSTALL_DIR}/.env"
+grep -Fxq 'TERMINAL_SESSION_TTL_SECONDS=300' "${INSTALL_DIR}/.env"
 test -x "${INSTALL_DIR}/update-client.sh"
 test -x "${INSTALL_DIR}/backup-maintenance.sh"
 test -x "${INSTALL_DIR}/ai-deep-monitor.sh"
 test -f "${INSTALL_DIR}/docker-compose.release.yml"
 test -f "${INSTALL_DIR}/client-platform.ps1"
+test -f "${INSTALL_DIR}/host_terminal_agent/agent.py"
+test -f "${INSTALL_DIR}/host_terminal_agent/terminal_policy.py"
+test -x "${INSTALL_DIR}/host_terminal_agent/install_linux_service.sh"
+python3 "${INSTALL_DIR}/host_terminal_agent/agent.py" --help >/dev/null
 
 sed -i 's/^OLLAMA_MODEL=.*/OLLAMA_MODEL=llama3.1/' "${INSTALL_DIR}/.env"
 sed -i 's/^OLLAMA_FALLBACK_MODEL=.*/OLLAMA_FALLBACK_MODEL=llama3.1/' "${INSTALL_DIR}/.env"
+sed -i 's/^HOST_TERMINAL_QUEUE_GID=.*/HOST_TERMINAL_QUEUE_GID=12003/' "${INSTALL_DIR}/.env"
+sed -i 's/^TERMINAL_SESSION_TTL_SECONDS=.*/TERMINAL_SESSION_TTL_SECONDS=420/' "${INSTALL_DIR}/.env"
 "${INSTALL_DIR}/update-client.sh" \
   --install-dir "$INSTALL_DIR" \
   --no-start \
-  --app-version v0.1.5
+  --app-version v0.1.7
 
-grep -Fxq 'KIT_VERSION=v0.1.12' "${INSTALL_DIR}/.env"
+grep -Fxq 'KIT_VERSION=v0.1.13' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_MODEL=llama3.2:3b' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_FALLBACK_MODEL=llama3.2:1b' "${INSTALL_DIR}/.env"
+grep -Fxq 'HOST_TERMINAL_QUEUE_GID=12003' "${INSTALL_DIR}/.env"
+grep -Fxq 'TERMINAL_SESSION_TTL_SECONDS=420' "${INSTALL_DIR}/.env"
 
 BACKUP_DIR="${INSTALL_DIR}/test-backups"
 mkdir -p "$BACKUP_DIR"
@@ -63,4 +73,8 @@ compose_command="$(docker compose \
   python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["ollama-models"]["command"][0])')"
 grep -Fq 'for model in "$${OLLAMA_MODEL}" "$${OLLAMA_FALLBACK_MODEL}"' <<<"$compose_command"
 grep -Fq 'ollama pull "$${model}"' <<<"$compose_command"
+docker compose \
+  -f "${KIT_DIR}/deploy/docker-compose.release.yml" \
+  --env-file "${INSTALL_DIR}/.env" \
+  config --services | grep -Fxq collector
 printf 'LINUX_NO_START_OK\n'

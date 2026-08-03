@@ -25,6 +25,39 @@ kit_source() {
   return 1
 }
 
+sync_host_terminal_agent() {
+  local source_dir="${KIT_ROOT}/host_terminal_agent"
+  local target_dir="${INSTALL_DIR}/host_terminal_agent"
+  local file
+  [[ -d "$source_dir" ]] || return 0
+  [[ "$(cd "$source_dir" && pwd)" == "$(mkdir -p "$target_dir" && cd "$target_dir" && pwd)" ]] && return 0
+  for file in agent.py terminal_policy.py install_linux_service.sh uninstall_linux_service.sh install_windows_task.ps1 uninstall_windows_task.ps1 README.md; do
+    [[ -f "${source_dir}/${file}" ]] && cp -f "${source_dir}/${file}" "${target_dir}/${file}"
+  done
+  chmod +x "${target_dir}"/*.sh 2>/dev/null || true
+}
+
+install_host_terminal_agent() {
+  local installer="${INSTALL_DIR}/host_terminal_agent/install_linux_service.sh"
+  local run_user="${AI_DEEP_TERMINAL_USER:-${SUDO_USER:-${USER:-}}}"
+  [[ -f "$installer" ]] || { warn "Agent terminal hote absent du kit."; return 0; }
+  if [[ -z "$run_user" || "$run_user" == "root" ]]; then
+    run_user="$(logname 2>/dev/null || true)"
+  fi
+  if [[ -z "$run_user" || "$run_user" == "root" ]]; then
+    warn "Agent terminal non mis a jour: definissez AI_DEEP_TERMINAL_USER avec un utilisateur Linux non-root."
+    return 0
+  fi
+  ensure_python3 || return 0
+  local queue_gid
+  queue_gid="$(read_env_value "$ENV_FILE" HOST_TERMINAL_QUEUE_GID)"
+  queue_gid="${queue_gid:-10003}"
+  configure_sudo
+  if ! run_root env HOST_TERMINAL_QUEUE_GID="$queue_gid" bash "$installer" "$run_user"; then
+    warn "L'application est mise a jour, mais l'agent terminal hote doit etre reinstalle manuellement."
+  fi
+}
+
 INSTALL_DIR="${HOME}/ai-deep-monitor"
 APP_VERSION=""
 SKIP_DOCKER_LOGIN=false
@@ -70,9 +103,14 @@ for file in docker-compose.release.yml client-common.sh client-platform.ps1 ai-d
   fi
 done
 chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true
+sync_host_terminal_agent
 write_env_value "$ENV_FILE" KIT_VERSION "$KIT_VERSION"
 ensure_auth_config "$ENV_FILE"
 ensure_ollama_config "$ENV_FILE"
+[[ -n "$(read_env_value "$ENV_FILE" HOST_TERMINAL_QUEUE_GID)" ]] ||
+  write_env_value "$ENV_FILE" HOST_TERMINAL_QUEUE_GID 10003
+[[ -n "$(read_env_value "$ENV_FILE" TERMINAL_SESSION_TTL_SECONDS)" ]] ||
+  write_env_value "$ENV_FILE" TERMINAL_SESSION_TTL_SECONDS 300
 if [[ "$AUTH_CONFIG_CHANGED" == "true" ]]; then
   log "Configuration d'authentification reparee; les volumes SQL et les comptes existants restent inchanges."
 fi
@@ -144,6 +182,7 @@ fi
 unset github_token
 
 project_name="$(project_name_from_dir "$INSTALL_DIR")"
+install_host_terminal_agent
 compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
 compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
 if ! compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d; then

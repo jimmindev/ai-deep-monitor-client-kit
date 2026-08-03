@@ -52,6 +52,12 @@ if [[ "$MODE" == "partial" ]]; then
   exit 0
 fi
 
+agent_uninstaller="${INSTALL_DIR}/host_terminal_agent/uninstall_linux_service.sh"
+if [[ -f "$agent_uninstaller" ]]; then
+  configure_sudo
+  run_root bash "$agent_uninstaller" || warn "L'agent terminal hote devra etre retire manuellement."
+fi
+
 down_args=(down --volumes --remove-orphans)
 [[ "$REMOVE_IMAGES" == "false" ]] || down_args+=(--rmi all)
 compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "${down_args[@]}"

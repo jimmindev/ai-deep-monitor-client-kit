@@ -1,11 +1,12 @@
-# AI Deep Monitor - Client Kit v0.1.12
+# AI Deep Monitor - Client Kit v0.1.13
 
 Kit public d'installation, de mise a jour et de maintenance d'AI Deep Monitor.
-Il ne contient aucun code source React ou Python. L'application est livree sous
-forme d'images Docker privees publiees sur GHCR.
+Il ne contient pas les sources React ou API de l'application, uniquement
+l'agent terminal local restreint. L'application est livree sous forme d'images
+Docker privees publiees sur GHCR.
 
-La version du kit est `v0.1.12`. La version applicative stable installee par
-defaut est `v0.1.5`.
+La version du kit est `v0.1.13`. La version applicative stable installee par
+defaut est `v0.1.7`.
 
 Le guide pas a pas est disponible dans
 [docs/installation.md](docs/installation.md).
@@ -18,6 +19,7 @@ ai-deep-monitor-client-kit/
 |-- ai-deep-monitor.ps1      # point d'entree Windows
 |-- deploy/                  # definition Docker Compose
 |-- docs/                    # installation et notes de version
+|-- host_terminal_agent/     # agent local restreint Windows/Linux/Jetson
 |-- scripts/                 # implementation interne Linux et Windows
 |-- tests/                   # tests de non-regression du kit
 |-- CHANGELOG.md
@@ -93,6 +95,22 @@ Docker est verifie automatiquement. S'il est absent:
 - Windows: Docker Desktop est installe avec `winget`
 - Linux: Docker Engine et Compose v2 sont installes depuis le depot officiel
   Docker de la distribution
+
+## Terminal hote protege
+
+Le kit installe aussi l'agent local necessaire au menu **Serveur > Terminal**.
+Il s'execute avec des droits standard, sans port reseau supplementaire, et ne
+recoit jamais le mot de passe AI Deep Monitor. Les commandes autorisees sont
+controlees par l'API puis une seconde fois par l'agent hote.
+
+- Windows: tache planifiee a droits limites, avec repli sur le demarrage
+  utilisateur si la creation de la tache n'est pas autorisee.
+- Linux et Jetson: service systemd non-root, sans capacite Linux et avec un
+  systeme de fichiers protege.
+- Python 3 est installe automatiquement si la machine ne le fournit pas deja.
+
+Une desinstallation partielle conserve l'agent pour permettre une reparation
+rapide. Une desinstallation complete le retire avec l'application.
 
 ## Installation Linux
 
@@ -276,7 +294,7 @@ Linux:
 
 ```bash
 ~/ai-deep-monitor/ai-deep-monitor.sh restore \
-  ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.5-DATE.tar.gz
+  ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.7-DATE.tar.gz
 ```
 
 Windows:

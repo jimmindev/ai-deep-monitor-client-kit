@@ -25,6 +25,39 @@ kit_source() {
   return 1
 }
 
+sync_host_terminal_agent() {
+  local source_dir="${KIT_ROOT}/host_terminal_agent"
+  local target_dir="${INSTALL_DIR}/host_terminal_agent"
+  local file
+  [[ -d "$source_dir" ]] || return 0
+  [[ "$(cd "$source_dir" && pwd)" == "$(mkdir -p "$target_dir" && cd "$target_dir" && pwd)" ]] && return 0
+  for file in agent.py terminal_policy.py install_linux_service.sh uninstall_linux_service.sh install_windows_task.ps1 uninstall_windows_task.ps1 README.md; do
+    [[ -f "${source_dir}/${file}" ]] && cp -f "${source_dir}/${file}" "${target_dir}/${file}"
+  done
+  chmod +x "${target_dir}"/*.sh 2>/dev/null || true
+}
+
+install_host_terminal_agent() {
+  local installer="${INSTALL_DIR}/host_terminal_agent/install_linux_service.sh"
+  local run_user="${AI_DEEP_TERMINAL_USER:-${SUDO_USER:-${USER:-}}}"
+  [[ -f "$installer" ]] || { warn "Agent terminal hote absent du kit."; return 0; }
+  if [[ -z "$run_user" || "$run_user" == "root" ]]; then
+    run_user="$(logname 2>/dev/null || true)"
+  fi
+  if [[ -z "$run_user" || "$run_user" == "root" ]]; then
+    warn "Agent terminal non installe: definissez AI_DEEP_TERMINAL_USER avec un utilisateur Linux non-root."
+    return 0
+  fi
+  ensure_python3 || return 0
+  local queue_gid
+  queue_gid="$(read_env_value "$ENV_FILE" HOST_TERMINAL_QUEUE_GID)"
+  queue_gid="${queue_gid:-10003}"
+  configure_sudo
+  if ! run_root env HOST_TERMINAL_QUEUE_GID="$queue_gid" bash "$installer" "$run_user"; then
+    warn "L'application est installee, mais l'agent terminal hote doit etre installe manuellement."
+  fi
+}
+
 INSTALL_DIR="${HOME}/ai-deep-monitor"
 APP_VERSION="$DEFAULT_APP_VERSION"
 GITHUB_OWNER="jimmindev"
@@ -41,7 +74,7 @@ Usage: ./install-client.sh [options]
 
 Options:
   --install-dir CHEMIN       Dossier cible (defaut: ~/ai-deep-monitor)
-  --app-version VERSION      Version applicative (defaut: v0.1.5)
+  --app-version VERSION      Version applicative (defaut: v0.1.7)
   --github-owner NOM         Proprietaire des images GHCR
   --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
@@ -112,6 +145,7 @@ for file in "${kit_files[@]}"; do
   fi
 done
 chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true
+sync_host_terminal_agent
 
 existing_env=false
 [[ -f "$ENV_FILE" ]] && existing_env=true
@@ -227,6 +261,10 @@ fi
 
 ensure_auth_config "$ENV_FILE"
 ensure_ollama_config "$ENV_FILE"
+[[ -n "$(read_env_value "$ENV_FILE" HOST_TERMINAL_QUEUE_GID)" ]] ||
+  write_env_value "$ENV_FILE" HOST_TERMINAL_QUEUE_GID 10003
+[[ -n "$(read_env_value "$ENV_FILE" TERMINAL_SESSION_TTL_SECONDS)" ]] ||
+  write_env_value "$ENV_FILE" TERMINAL_SESSION_TTL_SECONDS 300
 if [[ "$AUTH_CONFIG_CHANGED" == "true" && "$existing_env" == "true" ]]; then
   log "Configuration d'authentification reparee; les donnees et comptes existants sont conserves."
 fi
@@ -240,6 +278,7 @@ if [[ "$NO_START" == "true" ]]; then
   exit 0
 fi
 
+install_host_terminal_agent
 compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
 [[ -z "$existing_volumes" ]] || log "Volumes existants reutilises."
 

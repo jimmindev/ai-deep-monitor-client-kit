@@ -2,8 +2,8 @@
 
 set -Eeuo pipefail
 
-export KIT_VERSION="v0.1.12"
-export DEFAULT_APP_VERSION="v0.1.5"
+export KIT_VERSION="v0.1.13"
+export DEFAULT_APP_VERSION="v0.1.7"
 export DOCKER_PLATFORM=""
 DOCKER_CMD=(docker)
 SUDO_CMD=()
@@ -37,6 +37,24 @@ configure_sudo() {
 
 run_root() {
   "${SUDO_CMD[@]}" "$@"
+}
+
+ensure_python3() {
+  command -v python3 >/dev/null 2>&1 && return 0
+  configure_sudo
+  log "Python 3 est requis par le terminal hote; installation automatique..."
+  if command -v apt-get >/dev/null 2>&1; then
+    run_root apt-get update
+    run_root apt-get install -y python3
+  elif command -v dnf >/dev/null 2>&1; then
+    run_root dnf -y install python3
+  elif command -v yum >/dev/null 2>&1; then
+    run_root yum -y install python3
+  else
+    warn "Gestionnaire de paquets non pris en charge; installez Python 3 puis relancez."
+    return 1
+  fi
+  command -v python3 >/dev/null 2>&1
 }
 
 install_docker_linux() {
@@ -496,7 +514,7 @@ show_startup_diagnostics() {
   compose_exec -p "$project" -f "$compose_file" --env-file "$env_file" ps || true
   warn "Derniers journaux utiles:"
   compose_exec -p "$project" -f "$compose_file" --env-file "$env_file" \
-    logs --tail=120 mysql sandbox ollama ollama-models api || true
+    logs --tail=120 mysql sandbox ollama ollama-models api collector || true
 }
 
 project_name_from_dir() {

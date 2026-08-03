@@ -41,6 +41,11 @@ try {
       throw "Fichier client non copie: $requiredFile"
     }
   }
+  foreach ($agentFile in @("agent.py", "terminal_policy.py", "install_windows_task.ps1")) {
+    if (-not (Test-Path -LiteralPath (Join-Path $testDir "host_terminal_agent\$agentFile"))) {
+      throw "Fichier de l'agent terminal non copie: $agentFile"
+    }
+  }
   $envContent = Get-Content -LiteralPath $envPath -Raw
   if ($envContent -match "(?m)^FRONTEND_PORT=18080\r?$") {
     throw "Le port web occupe n'a pas ete remplace."
@@ -48,10 +53,10 @@ try {
   if ($envContent -match "(?m)^API_PORT=18081\r?$") {
     throw "Le port API occupe n'a pas ete remplace."
   }
-  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.5\r?$") {
+  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.7\r?$") {
     throw "La version applicative attendue est absente."
   }
-  if ($envContent -notmatch "(?m)^KIT_VERSION=v0\.1\.12\r?$") {
+  if ($envContent -notmatch "(?m)^KIT_VERSION=v0\.1\.13\r?$") {
     throw "La version du Client Kit attendue est absente."
   }
   if ($envContent -notmatch "(?m)^OLLAMA_MODEL=llama3\.2:3b\r?$") {
@@ -60,19 +65,31 @@ try {
   if ($envContent -notmatch "(?m)^OLLAMA_FALLBACK_MODEL=llama3\.2:1b\r?$") {
     throw "Le modele Ollama de secours attendu est absent."
   }
+  if ($envContent -notmatch "(?m)^HOST_TERMINAL_QUEUE_GID=10003\r?$" -or
+      $envContent -notmatch "(?m)^TERMINAL_SESSION_TTL_SECONDS=300\r?$") {
+    throw "La configuration du terminal hote est incomplete."
+  }
+  & python (Join-Path $testDir "host_terminal_agent\agent.py") --help | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "L'agent terminal autonome ne demarre pas." }
 
   $envContent = $envContent `
     -replace "(?m)^OLLAMA_MODEL=.*$", "OLLAMA_MODEL=llama3.1" `
-    -replace "(?m)^OLLAMA_FALLBACK_MODEL=.*$", "OLLAMA_FALLBACK_MODEL=llama3.1"
+    -replace "(?m)^OLLAMA_FALLBACK_MODEL=.*$", "OLLAMA_FALLBACK_MODEL=llama3.1" `
+    -replace "(?m)^HOST_TERMINAL_QUEUE_GID=.*$", "HOST_TERMINAL_QUEUE_GID=12003" `
+    -replace "(?m)^TERMINAL_SESSION_TTL_SECONDS=.*$", "TERMINAL_SESSION_TTL_SECONDS=420"
   Set-Content -LiteralPath $envPath -Value $envContent -Encoding UTF8
   & (Join-Path $testDir "update-client.ps1") `
     -InstallDir $testDir `
     -NoStart `
-    -AppVersion "v0.1.5"
+    -AppVersion "v0.1.7"
   $envContent = Get-Content -LiteralPath $envPath -Raw
   if ($envContent -notmatch "(?m)^OLLAMA_MODEL=llama3\.2:3b\r?$" -or
       $envContent -notmatch "(?m)^OLLAMA_FALLBACK_MODEL=llama3\.2:1b\r?$") {
     throw "La migration de l'ancienne configuration Ollama a echoue."
+  }
+  if ($envContent -notmatch "(?m)^HOST_TERMINAL_QUEUE_GID=12003\r?$" -or
+      $envContent -notmatch "(?m)^TERMINAL_SESSION_TTL_SECONDS=420\r?$") {
+    throw "La mise a jour a ecrase une configuration terminal personnalisee."
   }
 
   & $launcherPath -InstallDir $testDir -Command help | Out-Null
@@ -121,6 +138,9 @@ try {
   if ($modelCommand -notmatch 'for model in "\$\$\{OLLAMA_MODEL\}" "\$\$\{OLLAMA_FALLBACK_MODEL\}"' -or
       $modelCommand -notmatch 'ollama pull "\$\$\{model\}"') {
     throw "La commande d'initialisation Ollama a ete decoupee par Docker Compose."
+  }
+  if (-not $composeJson.services.collector) {
+    throw "Le service collector est absent du Compose client."
   }
   Write-Output "WINDOWS_SMOKE_OK"
 } finally {

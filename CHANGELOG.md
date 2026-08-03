@@ -1,5 +1,30 @@
 # Historique des versions du Client Kit
 
+## v0.1.13 - 2026-08-03
+
+### Livre AI Deep Monitor v0.1.7
+
+- Installe `v0.1.7` par defaut sur Windows, Linux x64 et NVIDIA Jetson ARM64.
+- Ajoute le service `collector` qui alimente la supervision physique et les
+  vues dashboard, plan 2D et Builder 3D.
+- Branche la file locale signee utilisee par le terminal de diagnostic hote.
+
+### Terminal hote protege
+
+- Embarque l'agent et sa politique de securite sans livrer le code source de
+  l'application.
+- Installe ou met a jour automatiquement l'agent Windows et le service systemd
+  Linux/Jetson ; Python 3 est installe si necessaire.
+- Conserve une double validation des commandes, une session courte et une
+  execution sans droits administrateur.
+- Retire automatiquement l'agent lors d'une desinstallation complete.
+
+### Fiabilise
+
+- Le compose, l'agent et la politique sont synchronises pendant une
+  installation, une reparation ou une mise a jour.
+- Les diagnostics de demarrage incluent maintenant le collecteur.
+
 ## v0.1.12 - 2026-07-27
 
 ### Corrige
