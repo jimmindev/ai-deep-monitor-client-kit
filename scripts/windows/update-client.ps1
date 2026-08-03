@@ -221,6 +221,7 @@ foreach ($fileName in $kitFiles) {
     Copy-Item -LiteralPath $source -Destination $target -Force
   }
 }
+Sync-AiMonitorHostTerminalAgent -SourceRoot $kitRoot -InstallDir $InstallDir | Out-Null
 
 if (-not (Test-Path -LiteralPath $composePath)) {
   throw "Compose introuvable: $composePath. Lance d'abord install-client.ps1."
@@ -231,7 +232,14 @@ if (-not (Test-Path -LiteralPath $envPath)) {
 
 $envValues = Read-DotEnv -Path $envPath
 $previousKitVersion = $envValues["KIT_VERSION"]
-Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.12"
+Write-DotEnvValue -Path $envPath -Key "KIT_VERSION" -Value "v0.1.13"
+$terminalValues = Read-DotEnv -Path $envPath
+if (-not $terminalValues["HOST_TERMINAL_QUEUE_GID"]) {
+  Write-DotEnvValue -Path $envPath -Key "HOST_TERMINAL_QUEUE_GID" -Value "10003"
+}
+if (-not $terminalValues["TERMINAL_SESSION_TTL_SECONDS"]) {
+  Write-DotEnvValue -Path $envPath -Key "TERMINAL_SESSION_TTL_SECONDS" -Value "300"
+}
 $authRepair = Repair-AuthConfig -Path $envPath
 if ($authRepair.Changed) {
   Write-Host "Configuration d'authentification reparee; les volumes SQL et les comptes existants restent inchanges."
@@ -305,11 +313,11 @@ if (-not $AppVersion) {
 
 $refreshImages = $currentVersion -eq $AppVersion
 if ($refreshImages) {
-  if ($previousKitVersion -eq "v0.1.12" -and -not $authRepair.Changed -and -not $ollamaConfigChanged) {
-    Write-Host "Application deja en $AppVersion et kit deja en v0.1.12."
+  if ($previousKitVersion -eq "v0.1.13" -and -not $authRepair.Changed -and -not $ollamaConfigChanged) {
+    Write-Host "Application deja en $AppVersion et kit deja en v0.1.13."
     exit 0
   }
-  Write-Host "L'application reste en $AppVersion; le deploiement est resynchronise pour $dockerPlatform avec le kit v0.1.12."
+  Write-Host "L'application reste en $AppVersion; le deploiement est resynchronise pour $dockerPlatform avec le kit v0.1.13."
 } elseif (-not $Yes -and -not $versionWasSpecified) {
   $answer = Read-Host "Mettre a jour de $currentVersion vers $AppVersion ? (o/N)"
   if ($answer -notin @("o", "O", "oui", "OUI", "y", "Y", "yes", "YES")) {
@@ -342,6 +350,7 @@ if ($NoStart) {
   exit 0
 }
 
+Install-AiMonitorHostTerminalAgent -InstallDir $InstallDir
 if (-not $SkipDockerLogin) {
   if (-not $plainToken) {
     Write-Host "Connexion au registry prive GHCR."
@@ -363,7 +372,7 @@ if ($LASTEXITCODE -ne 0) {
   Write-Warning "Etat des services:"
   docker compose -f $composePath --env-file $envPath ps
   Write-Warning "Derniers journaux utiles:"
-  docker compose -f $composePath --env-file $envPath logs --tail=120 mysql sandbox ollama ollama-models api
+  docker compose -f $composePath --env-file $envPath logs --tail=120 mysql sandbox ollama ollama-models api collector
   throw "Le stack Docker n'a pas redemarre. Consulte les journaux ci-dessus."
 }
 docker compose -f $composePath --env-file $envPath ps

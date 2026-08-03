@@ -60,6 +60,15 @@ if ($Mode -eq "Partial") {
   exit 0
 }
 
+$agentUninstaller = Join-Path $InstallDir "host_terminal_agent\uninstall_windows_task.ps1"
+if (Test-Path -LiteralPath $agentUninstaller -PathType Leaf) {
+  try {
+    & $agentUninstaller
+  } catch {
+    Write-Warning "L'agent terminal hote devra etre retire manuellement: $($_.Exception.Message)"
+  }
+}
+
 $downArgs = @("down", "--volumes", "--remove-orphans")
 if ($RemoveImages) { $downArgs += @("--rmi", "all") }
 & docker @composeArgs @downArgs

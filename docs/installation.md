@@ -1,8 +1,13 @@
 # AI Deep Monitor - Installation client
 
 Ce kit installe et maintient AI Deep Monitor avec Docker sans livrer les
-sources React ou Python. Pour une utilisation normale, lancez uniquement
+sources React ou API de l'application. Pour une utilisation normale, lancez uniquement
 `ai-deep-monitor.sh` sous Linux ou `ai-deep-monitor.ps1` sous Windows.
+
+Le kit installe egalement l'agent local du terminal de diagnostic. Cet agent
+reste separe des conteneurs, s'execute sans droits administrateur et applique
+la meme politique restrictive sous Windows, Linux et NVIDIA Jetson. Python 3
+est installe automatiquement si necessaire.
 
 ## Telechargement
 

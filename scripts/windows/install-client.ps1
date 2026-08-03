@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [string]$AppVersion = "v0.1.5",
+  [string]$AppVersion = "v0.1.7",
   [string]$GithubOwner = "jimmindev",
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
@@ -202,7 +202,7 @@ function Show-StartupDiagnostics {
   )
   Write-Warning "Le demarrage Docker a echoue. Etat des services:"
   & docker compose -f $ComposePath --env-file $EnvPath ps -a 2>$null
-  foreach ($service in @("mysql", "sandbox", "ollama", "ollama-models", "api")) {
+  foreach ($service in @("mysql", "sandbox", "ollama", "ollama-models", "api", "collector")) {
     Write-Host ""
     Write-Host "===== $service ====="
     & docker compose -f $ComposePath --env-file $EnvPath logs --tail=100 $service 2>$null
@@ -354,6 +354,7 @@ foreach ($fileName in $kitFiles) {
     }
   }
 }
+Sync-AiMonitorHostTerminalAgent -SourceRoot $kitRoot -InstallDir $installPath.FullName | Out-Null
 
 $existingEnv = Test-Path -LiteralPath $envTarget
 $bootstrapAdminPassword = $null
@@ -373,7 +374,7 @@ if ($existingEnv) {
   if ($existingValues["FRONTEND_PORT"]) { $FrontendPort = [int]$existingValues["FRONTEND_PORT"] }
   if ($existingValues["API_PORT"]) { $ApiPort = [int]$existingValues["API_PORT"] }
   if (-not $CorsOrigins -and $existingValues["CORS_ORIGINS"]) { $CorsOrigins = $existingValues["CORS_ORIGINS"] }
-  Write-DotEnvValue -Path $envTarget -Key "KIT_VERSION" -Value "v0.1.12"
+  Write-DotEnvValue -Path $envTarget -Key "KIT_VERSION" -Value "v0.1.13"
   Write-DotEnvValue -Path $envTarget -Key "DOCKER_PLATFORM" -Value $dockerPlatform
   Write-Host "Installation existante detectee: configuration et volumes conserves."
 }
@@ -412,7 +413,7 @@ if (-not $existingEnv) {
   $envContent = @"
 GITHUB_OWNER=$GithubOwner
 GITHUB_REPOSITORY_NAME=ai-deep-monitor
-KIT_VERSION=v0.1.12
+KIT_VERSION=v0.1.13
 APP_VERSION=$AppVersion
 APP_CHANNEL=stable
 DOCKER_PLATFORM=$dockerPlatform
@@ -445,6 +446,8 @@ AUTH_COOKIE_SAMESITE=lax
 
 TELEMETRY_RAW_RETENTION_DAYS=7
 TELEMETRY_ROLLUP_RETENTION_DAYS=365
+HOST_TERMINAL_QUEUE_GID=10003
+TERMINAL_SESSION_TTL_SECONDS=300
 
 CORS_ORIGINS=$CorsOrigins
 
@@ -482,6 +485,13 @@ API_PORT=$ApiPort
 }
 
 $authRepair = Repair-AuthConfig -Path $envTarget
+$terminalValues = Read-DotEnv -Path $envTarget
+if (-not $terminalValues["HOST_TERMINAL_QUEUE_GID"]) {
+  Write-DotEnvValue -Path $envTarget -Key "HOST_TERMINAL_QUEUE_GID" -Value "10003"
+}
+if (-not $terminalValues["TERMINAL_SESSION_TTL_SECONDS"]) {
+  Write-DotEnvValue -Path $envTarget -Key "TERMINAL_SESSION_TTL_SECONDS" -Value "300"
+}
 if ($authRepair.BootstrapPassword) {
   $bootstrapAdminPassword = $authRepair.BootstrapPassword
 }
@@ -497,6 +507,7 @@ if ($NoStart) {
   exit 0
 }
 
+Install-AiMonitorHostTerminalAgent -InstallDir $installPath.FullName
 docker compose -f $composeTarget --env-file $envTarget config --quiet
 
 if ($existingVolumes.Count -gt 0) {

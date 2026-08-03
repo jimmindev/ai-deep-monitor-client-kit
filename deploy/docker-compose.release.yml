@@ -92,6 +92,8 @@ services:
       TELEMETRY_ROLLUP_RETENTION_DAYS: "${TELEMETRY_ROLLUP_RETENTION_DAYS:-365}"
       CHATBOT_DATA_DIR: /app/data
       SANDBOX_JOBS_DIR: /sandbox/jobs
+      HOST_TERMINAL_JOBS_DIR: /host-terminal/jobs
+      TERMINAL_SESSION_TTL_SECONDS: "${TERMINAL_SESSION_TTL_SECONDS:-300}"
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
@@ -99,8 +101,10 @@ services:
       - client_uploaded_mibs:/app/uploaded_mibs
       - client_generated_backups:/app/generated_backups
       - client_sandbox_jobs:/sandbox/jobs
+      - ./host_terminal_jobs:/host-terminal/jobs
     group_add:
       - "10001"
+      - "${HOST_TERMINAL_QUEUE_GID:-10003}"
     depends_on:
       mysql:
         condition: service_healthy
@@ -116,6 +120,25 @@ services:
       timeout: 5s
       retries: 12
       start_period: 20s
+
+  collector:
+    image: "ghcr.io/${GITHUB_OWNER:-jimmindev}/ai-deep-monitor-api:${APP_VERSION:-latest}"
+    platform: "${DOCKER_PLATFORM:-linux/amd64}"
+    container_name: ai-monitor-client-collector
+    restart: unless-stopped
+    command: ["python", "-m", "app.collector"]
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_USER: "${MYSQL_USER}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
+      PYTHONPATH: /app
+      PHYSICAL_COLLECTOR_TICK_SECONDS: "${PHYSICAL_COLLECTOR_TICK_SECONDS:-5}"
+      PHYSICAL_COLLECTOR_RETRY_SECONDS: "${PHYSICAL_COLLECTOR_RETRY_SECONDS:-5}"
+    depends_on:
+      api:
+        condition: service_healthy
 
   ollama:
     image: "${OLLAMA_IMAGE:-ollama/ollama:latest}"
