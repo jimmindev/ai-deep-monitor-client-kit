@@ -1,12 +1,12 @@
-# AI Deep Monitor - Client Kit v0.1.13
+# AI Deep Monitor - Client Kit v0.1.14
 
 Kit public d'installation, de mise a jour et de maintenance d'AI Deep Monitor.
 Il ne contient pas les sources React ou API de l'application, uniquement
 l'agent terminal local restreint. L'application est livree sous forme d'images
 Docker privees publiees sur GHCR.
 
-La version du kit est `v0.1.13`. La version applicative stable installee par
-defaut est `v0.1.7`.
+La version du kit est `v0.1.14`. La version applicative stable installee par
+defaut est `v0.1.8`.
 
 Le guide pas a pas est disponible dans
 [docs/installation.md](docs/installation.md).
@@ -294,7 +294,7 @@ Linux:
 
 ```bash
 ~/ai-deep-monitor/ai-deep-monitor.sh restore \
-  ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.7-DATE.tar.gz
+  ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.8-DATE.tar.gz
 ```
 
 Windows:

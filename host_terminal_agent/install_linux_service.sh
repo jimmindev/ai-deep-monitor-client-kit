@@ -16,6 +16,7 @@ fail() {
 [[ "${EUID}" -eq 0 ]] || fail "l'installation doit être lancée avec sudo."
 command -v systemctl >/dev/null 2>&1 || fail "systemd est requis sur cet hôte."
 command -v python3 >/dev/null 2>&1 || fail "python3 est requis sur cet hôte."
+command -v docker >/dev/null 2>&1 || fail "Docker est requis sur cet hôte."
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd -P)"
@@ -34,6 +35,11 @@ id "${RUN_USER}" >/dev/null 2>&1 || fail "l'utilisateur ${RUN_USER} n'existe pas
 
 RUN_GROUP="$(id -gn "${RUN_USER}")"
 PYTHON_BIN="$(command -v python3)"
+DOCKER_SOCKET="/var/run/docker.sock"
+[[ -S "${DOCKER_SOCKET}" ]] || fail "le socket Docker ${DOCKER_SOCKET} est introuvable."
+DOCKER_GID="$(stat -c '%g' "${DOCKER_SOCKET}")"
+DOCKER_GROUP="$(getent group "${DOCKER_GID}" | cut -d: -f1 || true)"
+[[ -n "${DOCKER_GROUP}" ]] || fail "aucun groupe système ne correspond au socket Docker."
 
 QUEUE_GROUP="$(getent group "${QUEUE_GID}" | cut -d: -f1 || true)"
 if [[ -z "${QUEUE_GROUP}" ]]; then
@@ -47,7 +53,7 @@ if [[ -z "${QUEUE_GROUP}" ]]; then
   QUEUE_GROUP="${QUEUE_GROUP_NAME}"
 fi
 
-usermod --append --groups "${QUEUE_GROUP}" "${RUN_USER}"
+usermod --append --groups "${QUEUE_GROUP},${DOCKER_GROUP}" "${RUN_USER}"
 
 install -d -o root -g root -m 0755 "${INSTALL_DIR}"
 install -o root -g root -m 0755 "${SCRIPT_DIR}/agent.py" "${INSTALL_DIR}/agent.py"
@@ -71,25 +77,27 @@ Wants=docker.service
 Type=simple
 User=${RUN_USER}
 Group=${RUN_GROUP}
-SupplementaryGroups=${QUEUE_GROUP}
+SupplementaryGroups=${QUEUE_GROUP} ${DOCKER_GROUP}
 WorkingDirectory=${STATE_DIR}
 Environment="AI_DEEP_TERMINAL_POLICY_PATH=${INSTALL_DIR}/terminal_policy.py"
 Environment="PYTHONUNBUFFERED=1"
-ExecStart="${PYTHON_BIN}" "${INSTALL_DIR}/agent.py" --jobs-dir "${JOBS_DIR}"
+ExecStart="${PYTHON_BIN}" "${INSTALL_DIR}/agent.py" --jobs-dir "${JOBS_DIR}" --install-dir "${PROJECT_ROOT}" --state-dir "${STATE_DIR}"
 Restart=always
 RestartSec=3
 TimeoutStopSec=10
 UMask=0007
 
 # Confinement : aucun root, aucune capacité, système en lecture seule. Seuls la
-# file signée et le répertoire d'état peuvent être modifiés par ce service.
+# file signée, le répertoire d'état et l'installation à mettre à jour peuvent
+# être modifiés par ce service. Le protocole signé n'accepte aucune commande
+# Docker arbitraire : uniquement l'action de mise à jour validée.
 NoNewPrivileges=true
 CapabilityBoundingSet=
 AmbientCapabilities=
 ProtectSystem=strict
 ProtectHome=read-only
 ReadOnlyPaths="${INSTALL_DIR}"
-ReadWritePaths="${STATE_DIR}" "${JOBS_DIR}"
+ReadWritePaths="${STATE_DIR}" "${JOBS_DIR}" "${PROJECT_ROOT}"
 PrivateTmp=true
 PrivateDevices=true
 ProtectClock=true

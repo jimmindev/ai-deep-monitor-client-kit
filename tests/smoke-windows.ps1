@@ -53,10 +53,10 @@ try {
   if ($envContent -match "(?m)^API_PORT=18081\r?$") {
     throw "Le port API occupe n'a pas ete remplace."
   }
-  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.7\r?$") {
+  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.8\r?$") {
     throw "La version applicative attendue est absente."
   }
-  if ($envContent -notmatch "(?m)^KIT_VERSION=v0\.1\.13\r?$") {
+  if ($envContent -notmatch "(?m)^KIT_VERSION=v0\.1\.14\r?$") {
     throw "La version du Client Kit attendue est absente."
   }
   if ($envContent -notmatch "(?m)^OLLAMA_MODEL=llama3\.2:3b\r?$") {
@@ -81,7 +81,7 @@ try {
   & (Join-Path $testDir "update-client.ps1") `
     -InstallDir $testDir `
     -NoStart `
-    -AppVersion "v0.1.7"
+    -AppVersion "v0.1.8"
   $envContent = Get-Content -LiteralPath $envPath -Raw
   if ($envContent -notmatch "(?m)^OLLAMA_MODEL=llama3\.2:3b\r?$" -or
       $envContent -notmatch "(?m)^OLLAMA_FALLBACK_MODEL=llama3\.2:1b\r?$") {

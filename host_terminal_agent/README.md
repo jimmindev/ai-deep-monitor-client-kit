@@ -4,6 +4,12 @@ Cet agent permet au terminal d'administration AI-Deep Monitor d'exécuter unique
 des diagnostics approuvés sur la machine qui héberge Docker, sans exposer de port
 réseau ni transmettre de mot de passe système.
 
+Il traite également une action de maintenance dédiée permettant d'installer une
+version stable validée depuis l'interface. Cette action n'accepte ni commande
+shell ni arguments Docker libres : elle impose une sauvegarde, vérifie que la
+version augmente, utilise le compose client officiel, contrôle la santé de l'API
+et restaure l'environnement précédent en cas d'échec.
+
 Le terminal fonctionne avec une liste blanche stricte appliquée deux fois : dans
 l'API et dans l'agent. Les commandes de fichiers, comptes, mots de passe, scripts,
 téléchargements, élévation et accès interne aux conteneurs sont refusées.
@@ -60,8 +66,11 @@ sudo bash ./host_terminal_agent/install_linux_service.sh mon_utilisateur
 
 Le programme et sa politique sont copiés dans
 `/opt/ai-deep-monitor-host-terminal/`, détenus par `root` et en lecture seule pour
-l'agent. Le service n'a aucune capacité Linux, ne peut pas élever ses privilèges et
-ne peut écrire que dans son état et la file signée `host_terminal_jobs/`.
+l'agent. Le service n'a aucune capacité Linux et ne peut pas élever ses privilèges.
+Pour effectuer la maintenance, il appartient au groupe du socket Docker et peut
+écrire uniquement dans son état, la file signée `host_terminal_jobs/` et le
+dossier d'installation AI-Deep Monitor. Le code exécuté reste celui qui est
+installé en lecture seule dans `/opt`.
 
 État et journaux :
 
@@ -93,3 +102,11 @@ créée localement au premier démarrage afin de signer les travaux et leurs ré
 Ce dossier est ignoré par Git. L'agent utilise un répertoire de travail temporaire,
 un environnement minimal et PowerShell sans profil. Sous Windows, `cmd.exe` n'est
 pas proposé afin de réduire les possibilités de contournement.
+
+Les états de mise à jour signés sont conservés trente jours dans
+`host_terminal_jobs/updates/status/`. Les copies temporaires de `.env` utilisées
+pour un éventuel retour arrière restent dans le dossier privé de l'agent et ne
+sont jamais montées dans les conteneurs. Elles sont supprimées après une
+installation ou une restauration réussie. Si la restauration automatique échoue,
+la copie est conservée pour permettre une récupération manuelle par
+l'administrateur de la VM.

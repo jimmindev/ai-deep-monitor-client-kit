@@ -3,6 +3,8 @@
 *.log
 *.tmp
 *.bak
+__pycache__/
+*.py[cod]
 data/
 backups/
 generated_backups/

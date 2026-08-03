@@ -1,5 +1,19 @@
 # Historique des versions du Client Kit
 
+## v0.1.14 - 2026-08-03
+
+### Mise a jour depuis l'application
+
+- Livre AI Deep Monitor `v0.1.8` par defaut.
+- Etend l'agent hote signe avec une action de mise a jour applicative fixe,
+  sans ouvrir l'acces a des commandes Docker arbitraires.
+- Cree une sauvegarde complete, telecharge les images officielles, redemarre
+  les services et controle la sante de l'API.
+- Restaure automatiquement la version precedente si le deploiement echoue.
+- Conserve la progression hors des conteneurs afin que l'interface puisse
+  reprendre son suivi apres le redemarrage.
+- Prend en charge Windows, Linux x64 et NVIDIA Jetson ARM64.
+
 ## v0.1.13 - 2026-08-03
 
 ### Livre AI Deep Monitor v0.1.7
