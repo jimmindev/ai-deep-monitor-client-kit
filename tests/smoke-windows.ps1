@@ -3,6 +3,7 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $testDir = Join-Path $repositoryRoot ".tmp-windows-smoke"
 $frontendListener = $null
 $apiListener = $null
+$agentProcess = $null
 
 try {
   if (Test-Path -LiteralPath $testDir) {
@@ -35,6 +36,9 @@ try {
     "client-common.sh",
     "backup-maintenance.ps1",
     "backup-maintenance.sh",
+    "repair-terminal.ps1",
+    "repair-terminal.sh",
+    "AI-Deep-Monitor.cmd",
     "README_CLIENT.md"
   )) {
     if (-not (Test-Path -LiteralPath (Join-Path $testDir $requiredFile))) {
@@ -53,10 +57,10 @@ try {
   if ($envContent -match "(?m)^API_PORT=18081\r?$") {
     throw "Le port API occupe n'a pas ete remplace."
   }
-  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.8\r?$") {
+  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.9\r?$") {
     throw "La version applicative attendue est absente."
   }
-  if ($envContent -notmatch "(?m)^KIT_VERSION=v0\.1\.14\r?$") {
+  if ($envContent -notmatch "(?m)^KIT_VERSION=v0\.1\.15\r?$") {
     throw "La version du Client Kit attendue est absente."
   }
   if ($envContent -notmatch "(?m)^OLLAMA_MODEL=llama3\.2:3b\r?$") {
@@ -72,6 +76,24 @@ try {
   & python (Join-Path $testDir "host_terminal_agent\agent.py") --help | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "L'agent terminal autonome ne demarre pas." }
 
+  $agentPath = Join-Path $testDir "host_terminal_agent\agent.py"
+  $agentState = Join-Path $testDir "host-terminal-test-state"
+  $pythonPath = (Get-Command python.exe -ErrorAction Stop).Source
+  $agentProcess = Start-Process `
+    -FilePath $pythonPath `
+    -ArgumentList @(
+      $agentPath,
+      "--jobs-dir", (Join-Path $testDir "host_terminal_jobs"),
+      "--install-dir", $testDir,
+      "--state-dir", $agentState
+    ) `
+    -WindowStyle Hidden `
+    -PassThru
+  . (Join-Path $testDir "client-platform.ps1")
+  if (-not (Test-AiMonitorHostTerminalAgent -InstallDir $testDir -TimeoutSeconds 15)) {
+    throw "Le controle de sante du terminal Windows n'a pas detecte l'agent."
+  }
+
   $envContent = $envContent `
     -replace "(?m)^OLLAMA_MODEL=.*$", "OLLAMA_MODEL=llama3.1" `
     -replace "(?m)^OLLAMA_FALLBACK_MODEL=.*$", "OLLAMA_FALLBACK_MODEL=llama3.1" `
@@ -81,7 +103,7 @@ try {
   & (Join-Path $testDir "update-client.ps1") `
     -InstallDir $testDir `
     -NoStart `
-    -AppVersion "v0.1.8"
+    -AppVersion "v0.1.9"
   $envContent = Get-Content -LiteralPath $envPath -Raw
   if ($envContent -notmatch "(?m)^OLLAMA_MODEL=llama3\.2:3b\r?$" -or
       $envContent -notmatch "(?m)^OLLAMA_FALLBACK_MODEL=llama3\.2:1b\r?$") {
@@ -144,6 +166,10 @@ try {
   }
   Write-Output "WINDOWS_SMOKE_OK"
 } finally {
+  if ($agentProcess -and -not $agentProcess.HasExited) {
+    Stop-Process -Id $agentProcess.Id -Force -ErrorAction SilentlyContinue
+    $agentProcess.WaitForExit(5000) | Out-Null
+  }
   if ($frontendListener) { $frontendListener.Stop() }
   if ($apiListener) { $apiListener.Stop() }
   if (Test-Path -LiteralPath $testDir) {

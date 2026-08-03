@@ -1,0 +1,56 @@
+name: Publier le Client Kit
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag existant a publier (vX.Y.Z)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Valider la version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          test "$(tr -d '\r\n' < VERSION)" = "$RELEASE_TAG"
+
+      - name: Construire les archives stables
+        shell: bash
+        run: |
+          chmod +x scripts/package-release.sh
+          scripts/package-release.sh artifacts
+          unzip -Z1 artifacts/ai-deep-monitor-client-kit.zip |
+            awk -F/ 'NF && $1 != "ai-deep-monitor-client-kit" { exit 1 }'
+          tar -tzf artifacts/ai-deep-monitor-client-kit.tar.gz |
+            awk -F/ 'NF && $1 != "ai-deep-monitor-client-kit" { exit 1 }'
+
+      - name: Creer ou actualiser la release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --title "AI Deep Monitor Client Kit $RELEASE_TAG" --generate-notes
+          fi
+          gh release upload "$RELEASE_TAG" \
+            artifacts/ai-deep-monitor-client-kit.zip \
+            artifacts/ai-deep-monitor-client-kit.tar.gz \
+            artifacts/ai-deep-monitor-client-kit-SHA256.txt \
+            --clobber

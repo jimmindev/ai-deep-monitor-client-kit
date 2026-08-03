@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+case "${1:-}" in
+  is-active) exit 0 ;;
+  status) printf 'mock service active\n'; exit 0 ;;
+  *) exit 0 ;;
+esac

@@ -121,6 +121,17 @@ systemctl daemon-reload
 systemctl enable "${SERVICE_NAME}.service"
 systemctl restart "${SERVICE_NAME}.service"
 
+for _attempt in {1..10}; do
+  systemctl is-active --quiet "${SERVICE_NAME}.service" && break
+  sleep 1
+done
+if ! systemctl is-active --quiet "${SERVICE_NAME}.service"; then
+  printf '\nLe service terminal n a pas demarre.\n' >&2
+  systemctl --no-pager --full status "${SERVICE_NAME}.service" >&2 || true
+  journalctl --no-pager -u "${SERVICE_NAME}.service" -n 60 >&2 || true
+  fail "installation incomplete: le service terminal est inactif."
+fi
+
 printf '\nAgent terminal installé pour %s.\n' "${RUN_USER}"
 printf "Type d'hôte détecté : "
 if [[ -f /etc/nv_tegra_release ]] || grep -Eiq 'jetson|nvidia' /proc/device-tree/model 2>/dev/null; then

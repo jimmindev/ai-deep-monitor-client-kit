@@ -1,5 +1,24 @@
 # Historique des versions du Client Kit
 
+## v0.1.15 - 2026-08-03
+
+### Livre AI Deep Monitor v0.1.9
+
+- Installe `v0.1.9` par defaut avec la composition des cubes dans le chatbot et
+  le guidage simplifie du terminal hote.
+
+### Installation et terminal hote
+
+- Retablit une archive client propre contenue dans un unique dossier
+  `ai-deep-monitor-client-kit`, comme avant la regression de la v0.1.14.
+- Ajoute un lanceur Windows directement ouvrable `AI-Deep-Monitor.cmd` et
+  conserve les menus numerotes Windows, Linux et NVIDIA Jetson.
+- Ajoute l'action unique `Reparer et verifier le terminal hote` dans ces menus.
+- Verifie le demarrage reel du service, la fraicheur du signal signe et la
+  liaison avec la file Docker au lieu d'ignorer silencieusement un echec.
+- Affiche automatiquement l'etat systemd et les derniers journaux sur
+  Linux/Jetson lorsque l'agent ne demarre pas.
+
 ## v0.1.14 - 2026-08-03
 
 ### Mise a jour depuis l'application

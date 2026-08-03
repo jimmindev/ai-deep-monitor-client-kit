@@ -1,12 +1,12 @@
-# AI Deep Monitor - Client Kit v0.1.14
+# AI Deep Monitor - Client Kit v0.1.15
 
 Kit public d'installation, de mise a jour et de maintenance d'AI Deep Monitor.
 Il ne contient pas les sources React ou API de l'application, uniquement
 l'agent terminal local restreint. L'application est livree sous forme d'images
 Docker privees publiees sur GHCR.
 
-La version du kit est `v0.1.14`. La version applicative stable installee par
-defaut est `v0.1.8`.
+La version du kit est `v0.1.15`. La version applicative stable installee par
+defaut est `v0.1.9`.
 
 Le guide pas a pas est disponible dans
 [docs/installation.md](docs/installation.md).
@@ -16,7 +16,8 @@ Le guide pas a pas est disponible dans
 ```text
 ai-deep-monitor-client-kit/
 |-- ai-deep-monitor.sh       # point d'entree Linux et Jetson
-|-- ai-deep-monitor.ps1      # point d'entree Windows
+|-- AI-Deep-Monitor.cmd      # double-clic Windows vers le menu
+|-- ai-deep-monitor.ps1      # point d'entree PowerShell
 |-- deploy/                  # definition Docker Compose
 |-- docs/                    # installation et notes de version
 |-- host_terminal_agent/     # agent local restreint Windows/Linux/Jetson
@@ -28,7 +29,7 @@ ai-deep-monitor-client-kit/
 ```
 
 Pour une utilisation normale, ne lancez que `ai-deep-monitor.sh` ou
-`ai-deep-monitor.ps1`. Les fichiers de `scripts/` sont internes au kit.
+`AI-Deep-Monitor.cmd`. Les fichiers de `scripts/` sont internes au kit.
 
 ## Telechargement
 
@@ -41,9 +42,10 @@ Pour une utilisation normale, ne lancez que `ai-deep-monitor.sh` ou
 - Windows:
   [ai-deep-monitor-client-kit.zip](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest/download/ai-deep-monitor-client-kit.zip)
 
-Les archives de toutes les versions utilisent le meme dossier racine:
-`ai-deep-monitor-client-kit`. Une mise a jour ne cree donc plus un nouveau
-dossier portant le numero de version.
+A partir de la `v0.1.15`, les deux archives utilisent toujours le meme dossier
+racine `ai-deep-monitor-client-kit`. Elles ne dispersent plus leurs fichiers
+dans le dossier courant et une mise a jour ne cree pas de dossier portant le
+numero de version.
 
 Le depot peut aussi etre clone sans authentification:
 
@@ -156,7 +158,8 @@ Le dossier utilisateur par defaut reste le choix le plus simple.
 
 Telecharger et extraire l'archive ZIP depuis la
 [derniere release](https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/latest),
-puis ouvrir PowerShell dans le dossier `ai-deep-monitor-client-kit`:
+puis double-cliquer sur `AI-Deep-Monitor.cmd`. Le menu s'ouvre directement.
+PowerShell reste disponible si les doubles-clics sont bloques:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
@@ -294,7 +297,7 @@ Linux:
 
 ```bash
 ~/ai-deep-monitor/ai-deep-monitor.sh restore \
-  ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.8-DATE.tar.gz
+  ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.9-DATE.tar.gz
 ```
 
 Windows:

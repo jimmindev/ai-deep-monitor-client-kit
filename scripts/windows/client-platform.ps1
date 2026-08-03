@@ -77,16 +77,25 @@ function Sync-AiMonitorHostTerminalAgent {
 }
 
 function Install-AiMonitorHostTerminalAgent {
-  param([Parameter(Mandatory = $true)][string]$InstallDir)
+  param(
+    [Parameter(Mandatory = $true)][string]$InstallDir,
+    [switch]$Required
+  )
+
+  function Stop-AgentInstallation {
+    param([string]$Message)
+    if ($Required) { throw $Message }
+    Write-Warning $Message
+  }
 
   $installer = Join-Path $InstallDir "host_terminal_agent\install_windows_task.ps1"
   if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
-    Write-Warning "Agent terminal hote absent du kit."
+    Stop-AgentInstallation "Agent terminal hote absent du kit."
     return
   }
   if (-not (Get-Command python.exe -ErrorAction SilentlyContinue)) {
     if (-not (Get-Command winget.exe -ErrorAction SilentlyContinue)) {
-      Write-Warning "Python 3 est requis par le terminal hote et winget est indisponible."
+      Stop-AgentInstallation "Python 3 est requis par le terminal hote et winget est indisponible."
       return
     }
     Write-Host "Python 3 est requis par le terminal hote; installation automatique..."
@@ -102,12 +111,48 @@ function Install-AiMonitorHostTerminalAgent {
     $env:Path = "$machinePath;$userPath"
   }
   if (-not (Get-Command python.exe -ErrorAction SilentlyContinue)) {
-    Write-Warning "Python 3 n'est pas disponible; installez-le puis relancez la mise a jour du kit."
+    Stop-AgentInstallation "Python 3 n'est pas disponible; installez-le puis relancez la reparation."
     return
   }
   try {
     & $installer
+    if (-not (Test-AiMonitorHostTerminalAgent -InstallDir $InstallDir -TimeoutSeconds 15)) {
+      throw "l'agent a ete lance mais aucun signal valide n'a ete recu dans les 15 secondes."
+    }
   } catch {
-    Write-Warning "L'application reste utilisable, mais l'agent terminal hote doit etre installe manuellement: $($_.Exception.Message)"
+    Stop-AgentInstallation "Le terminal hote n'est pas operationnel: $($_.Exception.Message)"
   }
+}
+
+function Test-AiMonitorHostTerminalAgent {
+  param(
+    [Parameter(Mandatory = $true)][string]$InstallDir,
+    [ValidateRange(0, 120)][int]$TimeoutSeconds = 0
+  )
+
+  $jobsDir = Join-Path $InstallDir "host_terminal_jobs"
+  $statusPath = Join-Path $jobsDir "status.json"
+  $keyPath = Join-Path $jobsDir ".agent-key"
+  $deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
+
+  do {
+    if ((Test-Path -LiteralPath $statusPath -PathType Leaf) -and
+        (Test-Path -LiteralPath $keyPath -PathType Leaf)) {
+      try {
+        $envelope = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
+        $lastSeen = [double]$envelope.payload.last_seen
+        $age = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - $lastSeen
+        if ($envelope.signature -and $envelope.payload.available -eq $true -and $age -ge 0 -and $age -le 15) {
+          return $true
+        }
+      } catch {
+        # L'agent peut etre en train de remplacer atomiquement le fichier.
+      }
+    }
+    if ([DateTimeOffset]::UtcNow -lt $deadline) {
+      Start-Sleep -Seconds 1
+    }
+  } while ([DateTimeOffset]::UtcNow -lt $deadline)
+
+  return $false
 }

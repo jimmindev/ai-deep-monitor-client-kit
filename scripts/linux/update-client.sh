@@ -38,24 +38,9 @@ sync_host_terminal_agent() {
 }
 
 install_host_terminal_agent() {
-  local installer="${INSTALL_DIR}/host_terminal_agent/install_linux_service.sh"
-  local run_user="${AI_DEEP_TERMINAL_USER:-${SUDO_USER:-${USER:-}}}"
-  [[ -f "$installer" ]] || { warn "Agent terminal hote absent du kit."; return 0; }
-  if [[ -z "$run_user" || "$run_user" == "root" ]]; then
-    run_user="$(logname 2>/dev/null || true)"
-  fi
-  if [[ -z "$run_user" || "$run_user" == "root" ]]; then
-    warn "Agent terminal non mis a jour: definissez AI_DEEP_TERMINAL_USER avec un utilisateur Linux non-root."
-    return 0
-  fi
-  ensure_python3 || return 0
-  local queue_gid
-  queue_gid="$(read_env_value "$ENV_FILE" HOST_TERMINAL_QUEUE_GID)"
-  queue_gid="${queue_gid:-10003}"
-  configure_sudo
-  if ! run_root env HOST_TERMINAL_QUEUE_GID="$queue_gid" bash "$installer" "$run_user"; then
-    warn "L'application est mise a jour, mais l'agent terminal hote doit etre reinstalle manuellement."
-  fi
+  local repair_script="${INSTALL_DIR}/repair-terminal.sh"
+  [[ -x "$repair_script" ]] || die "Outil de reparation du terminal absent: ${repair_script}"
+  "$repair_script" --install-dir "$INSTALL_DIR"
 }
 
 INSTALL_DIR="${HOME}/ai-deep-monitor"
@@ -98,7 +83,7 @@ COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 [[ -f "$ENV_FILE" ]] || die "Installation introuvable: ${ENV_FILE}"
 previous_kit_version="$(read_env_value "$ENV_FILE" KIT_VERSION)"
 
-for file in docker-compose.release.yml client-common.sh client-platform.ps1 ai-deep-monitor.sh ai-deep-monitor.ps1 install-client.sh check-update.sh update-client.sh backup-client.sh backup-maintenance.sh restore-client.sh uninstall-client.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 backup-maintenance.ps1 restore-client.ps1 uninstall-client.ps1 README_CLIENT.md VERSION; do
+for file in docker-compose.release.yml client-common.sh client-platform.ps1 ai-deep-monitor.sh ai-deep-monitor.ps1 AI-Deep-Monitor.cmd install-client.sh check-update.sh update-client.sh backup-client.sh backup-maintenance.sh restore-client.sh uninstall-client.sh repair-terminal.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 backup-maintenance.ps1 restore-client.ps1 uninstall-client.ps1 repair-terminal.ps1 README_CLIENT.md VERSION; do
   source_file="$(kit_source "$file" || true)"
   [[ -n "$source_file" ]] || continue
   if [[ "$source_file" != "${INSTALL_DIR}/${file}" ]]; then
