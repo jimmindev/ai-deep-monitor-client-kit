@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 
-POLICY_VERSION = "2.1"
+POLICY_VERSION = "2.2"
 MAX_COMMAND_BYTES = 4_000
 
 
@@ -112,6 +112,16 @@ _PIPELINE_COMMANDS = {
 _HOST_PATTERN = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9_.:-]{0,251}[A-Za-z0-9])?$")
 _PROPERTY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:,[A-Za-z_][A-Za-z0-9_]*)*$")
 _SERVICE_PATTERN = re.compile(r"^[A-Za-z0-9_.@-]{1,120}$")
+_LS_PATH_PATTERN = re.compile(r"^[A-Za-z0-9_./\\:@+-]{1,512}$")
+_LS_PROTECTED_PATHS = (
+    "/dev",
+    "/proc",
+    "/run",
+    "/sys",
+    "/etc/docker",
+    "/var/lib/containerd",
+    "/var/lib/docker",
+)
 
 
 def policy_summary() -> dict:
@@ -135,6 +145,7 @@ def policy_summary() -> dict:
                 "title": "Linux",
                 "commands": [
                     "uname, uptime, id, hostname, ps (noms de processus sans arguments)",
+                    "ls (noms uniquement, un chemin facultatif, sans option)",
                     "df, free, lsblk, ip, ss, systemctl is-active/is-enabled",
                 ],
             },
@@ -144,7 +155,10 @@ def policy_summary() -> dict:
             },
             {
                 "title": "Stockage",
-                "commands": ["Get-PSDrive -PSProvider FileSystem, Get-Volume"],
+                "commands": [
+                    "ls (noms uniquement, un chemin facultatif, sans option)",
+                    "Get-PSDrive -PSProvider FileSystem, Get-Volume",
+                ],
             },
             {
                 "title": "Réseau",
@@ -342,6 +356,29 @@ def _validate_docker(args: list[str]) -> None:
     )
 
 
+def _validate_ls(args: list[str]) -> None:
+    if len(args) > 1:
+        _deny("filesystem", "ls accepte un seul chemin sans option.")
+    if not args:
+        return
+
+    target = args[0]
+    if target.startswith("-"):
+        _deny("filesystem", "Les options de ls sont interdites : seuls les noms sont affichés.")
+    if not _LS_PATH_PATTERN.fullmatch(target) or "*" in target or "?" in target:
+        _deny("filesystem", "Le chemin demandé à ls n'est pas autorisé.")
+
+    components = [part for part in target.replace("\\", "/").split("/") if part]
+    if ".." in components:
+        _deny("filesystem", "La remontée vers un répertoire parent avec ls est interdite.")
+
+    normalized = "/" + "/".join(components) if target.startswith("/") else target
+    normalized = normalized.rstrip("/") or "/"
+    for protected in _LS_PROTECTED_PATHS:
+        if normalized == protected or normalized.startswith(f"{protected}/"):
+            _deny("filesystem", "Ce répertoire protégé ne peut pas être listé.")
+
+
 def _validate_powershell_segment(segment: str, position: int) -> None:
     words = _tokens(segment)
     if not words:
@@ -353,6 +390,9 @@ def _validate_powershell_segment(segment: str, position: int) -> None:
         return
     if position > 0:
         _deny("scripts", "Seules les commandes de présentation sont autorisées après un pipeline.")
+    if name == "ls":
+        _validate_ls(args)
+        return
     if name in _NO_ARGUMENT_POWERSHELL:
         if args:
             _deny("policy", f"Les options de {words[0]} ne sont pas autorisées.")
@@ -430,6 +470,9 @@ def _validate_posix(command: str) -> None:
     if name == "free" and all(item in {"-h", "-m", "-g"} for item in args):
         return
     if name == "lsblk" and not args:
+        return
+    if name == "ls":
+        _validate_ls(args)
         return
     if name == "ip" and [item.lower() for item in args] in (
         ["addr"], ["address"], ["route"], ["link"],

@@ -42,9 +42,10 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.2.0"
+AGENT_VERSION = "3.3.0"
 MAX_COMMAND_BYTES = 4_000
 MAX_OUTPUT_BYTES = 400_000
+MAX_LISTING_ENTRIES = 5_000
 MAX_TIMEOUT_SECONDS = 20.0
 MAX_JOB_AGE_SECONDS = 30
 STALE_JOB_SECONDS = 300
@@ -223,6 +224,134 @@ def safe_working_directory() -> Path:
     return directory
 
 
+def default_listing_directory() -> Path:
+    home = os.environ.get("HOME") or os.environ.get("USERPROFILE")
+    if home:
+        candidate = Path(home).resolve()
+        if candidate.is_dir():
+            return candidate
+    return safe_working_directory().resolve()
+
+
+def _path_is_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def run_safe_listing(
+    command: str,
+    shell: str,
+    protected_paths: tuple[Path, ...] | None = None,
+) -> dict:
+    """List direct child names without exposing metadata or file contents."""
+    words = command.strip().split()
+    target_text = words[1] if len(words) == 2 else "."
+    target = Path(target_text)
+    if not target.is_absolute():
+        target = default_listing_directory() / target
+
+    try:
+        resolved = target.resolve(strict=True)
+    except (OSError, RuntimeError):
+        return {
+            "ok": False,
+            "stdout": "",
+            "stderr": f"ls: chemin introuvable ou inaccessible : {target_text}\n",
+            "exit_code": 2,
+            "timed_out": False,
+            "truncated": False,
+            "shell": shell,
+        }
+
+    protected = [
+        Path("/dev"),
+        Path("/proc"),
+        Path("/run"),
+        Path("/sys"),
+        Path("/etc/docker"),
+        Path("/var/lib/containerd"),
+        Path("/var/lib/docker"),
+    ]
+    if os.name == "nt":
+        program_data = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData"))
+        protected.extend(
+            (
+                program_data / "Docker",
+                program_data / "DockerDesktop",
+                program_data / "containerd",
+            )
+        )
+    protected.extend(protected_paths or ())
+    for root in protected:
+        try:
+            protected_root = root.resolve(strict=False)
+        except (OSError, RuntimeError):
+            protected_root = root.absolute()
+        if _path_is_within(resolved, protected_root):
+            raise TerminalPolicyViolation(
+                "filesystem",
+                "Ce répertoire protégé ne peut pas être listé.",
+            )
+
+    names: list[str] = []
+    truncated = False
+    try:
+        if resolved.is_dir():
+            with os.scandir(resolved) as entries:
+                for entry in entries:
+                    if entry.name.startswith("."):
+                        continue
+                    try:
+                        attributes = getattr(
+                            entry.stat(follow_symlinks=False),
+                            "st_file_attributes",
+                            0,
+                        )
+                    except OSError:
+                        continue
+                    if attributes & 0x06:  # Windows: hidden or system.
+                        continue
+                    suffix = "/" if entry.is_dir(follow_symlinks=False) else ""
+                    names.append(f"{entry.name}{suffix}")
+                    if len(names) >= MAX_LISTING_ENTRIES:
+                        truncated = True
+                        break
+        else:
+            names.append(resolved.name)
+    except (OSError, PermissionError):
+        return {
+            "ok": False,
+            "stdout": "",
+            "stderr": f"ls: lecture impossible : {target_text}\n",
+            "exit_code": 2,
+            "timed_out": False,
+            "truncated": False,
+            "shell": shell,
+        }
+
+    names.sort(key=str.casefold)
+    output = "\n".join(names)
+    if output:
+        output += "\n"
+    encoded = output.encode("utf-8")
+    if len(encoded) > MAX_OUTPUT_BYTES:
+        output = encoded[:MAX_OUTPUT_BYTES].decode("utf-8", errors="ignore")
+        truncated = True
+
+    return {
+        "ok": True,
+        "stdout": output,
+        "stderr": "Liste tronquée.\n" if truncated else "",
+        "exit_code": 0,
+        "timed_out": False,
+        "truncated": truncated,
+        "shell": shell,
+    }
+
+
 def hardened_execution_command(command: str, host_family: str) -> str:
     words = command.strip().split()
     lowered = [item.lower() for item in words]
@@ -276,6 +405,7 @@ def run_limited(
     command: str,
     timeout: float,
     host_family: str | None = None,
+    protected_paths: tuple[Path, ...] | None = None,
 ) -> dict:
     command = validate_terminal_command(shell, command)
     effective_family = host_family or detect_host_family()
@@ -284,6 +414,8 @@ def run_limited(
             "jetson",
             "Cette commande est disponible uniquement sur un hôte NVIDIA Jetson.",
         )
+    if command.split()[0].lower() == "ls":
+        return run_safe_listing(command, shell, protected_paths)
     execution_command = hardened_execution_command(command, effective_family)
     creationflags = 0
     if os.name == "nt":
@@ -737,7 +869,19 @@ class HostAgent:
                 max(float(payload.get("timeout") or 10.0), 1.0),
                 MAX_TIMEOUT_SECONDS,
             )
-            response = run_limited(shell, command, timeout, self.host_family)
+            response = run_limited(
+                shell,
+                command,
+                timeout,
+                self.host_family,
+                protected_paths=(
+                    self.install_dir,
+                    self.state_dir,
+                    self.base,
+                    Path(__file__).resolve().parent,
+                    POLICY_PATH.parent,
+                ),
+            )
         except TerminalPolicyViolation as exc:
             response = {
                 "ok": False,
