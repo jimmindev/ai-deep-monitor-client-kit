@@ -14,6 +14,12 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Les installations utilisent maintenant AI Deep Monitor `v0.1.14`, qui
+  maintient la compatibilite avec l'agent Jetson signe `3.3.0 / politique 2.2`
+  pendant sa transition vers l'agent `3.4.0 / politique 2.3`.
+- Une mise a jour Docker ne classe donc plus cet agent restreint comme non
+  securise et ne rend plus le terminal indisponible.
+
 - Le téléchargement initial d'Ollama ne bloque plus le démarrage de l'API et
   du frontend sur NVIDIA Jetson ou en cas d'indisponibilité temporaire.
 - Le premier modèle Ollama fonctionnel est conservé ; le modèle de secours
