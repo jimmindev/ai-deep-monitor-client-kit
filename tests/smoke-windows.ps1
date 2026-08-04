@@ -68,7 +68,7 @@ try {
   if ($envContent -match "(?m)^API_PORT=18081\r?$") {
     throw "Le port API occupe n'a pas ete remplace."
   }
-  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.12\r?$") {
+  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.13\r?$") {
     throw "La version applicative attendue est absente."
   }
   if ($envContent -match "(?m)^KIT_VERSION=") {
@@ -83,6 +83,9 @@ try {
   if ($envContent -notmatch "(?m)^HOST_TERMINAL_QUEUE_GID=10003\r?$" -or
       $envContent -notmatch "(?m)^TERMINAL_SESSION_TTL_SECONDS=300\r?$") {
     throw "La configuration du terminal hote est incomplete."
+  }
+  if ($envContent -notmatch "(?m)^TERMINAL_POLICY_ADMIN_PASSWORD=ysitech1234\r?$") {
+    throw "Le mot de passe de gestion des regles terminal est absent."
   }
   & python (Join-Path $testDir "host_terminal_agent\agent.py") --help | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "L'agent terminal autonome ne demarre pas." }

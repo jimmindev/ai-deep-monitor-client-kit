@@ -42,7 +42,7 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.3.0"
+AGENT_VERSION = "3.4.0"
 MAX_COMMAND_BYTES = 4_000
 MAX_OUTPUT_BYTES = 400_000
 MAX_LISTING_ENTRIES = 5_000
@@ -241,17 +241,56 @@ def _path_is_within(path: Path, root: Path) -> bool:
         return False
 
 
+def protected_terminal_paths(extra: tuple[Path, ...] | None = None) -> list[Path]:
+    protected = [
+        Path("/dev"), Path("/proc"), Path("/run"), Path("/sys"),
+        Path("/etc/docker"), Path("/var/lib/containerd"), Path("/var/lib/docker"),
+    ]
+    if os.name == "nt":
+        program_data = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData"))
+        protected.extend((program_data / "Docker", program_data / "DockerDesktop", program_data / "containerd"))
+    protected.extend(extra or ())
+    return protected
+
+
+def resolve_terminal_directory(
+    requested: str | None,
+    *,
+    current: Path | None = None,
+    protected_paths: tuple[Path, ...] | None = None,
+) -> Path:
+    navigation_root = default_listing_directory().resolve(strict=True)
+    target = Path(str(requested or "").strip()) if requested else (current or navigation_root)
+    if not target.is_absolute():
+        target = (current or navigation_root) / target
+    try:
+        resolved = target.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise TerminalPolicyViolation("filesystem", "Ce répertoire est introuvable ou inaccessible.") from exc
+    if not resolved.is_dir() or not _path_is_within(resolved, navigation_root):
+        raise TerminalPolicyViolation("filesystem", "La navigation est limitée au dossier personnel de l'utilisateur du terminal.")
+    for root in protected_terminal_paths(protected_paths):
+        try:
+            protected_root = root.resolve(strict=False)
+        except (OSError, RuntimeError):
+            protected_root = root.absolute()
+        if _path_is_within(resolved, protected_root):
+            raise TerminalPolicyViolation("filesystem", "Ce répertoire protégé n'est pas accessible depuis le terminal.")
+    return resolved
+
+
 def run_safe_listing(
     command: str,
     shell: str,
     protected_paths: tuple[Path, ...] | None = None,
+    working_directory: Path | None = None,
 ) -> dict:
     """List direct child names without exposing metadata or file contents."""
     words = command.strip().split()
     target_text = words[1] if len(words) == 2 else "."
     target = Path(target_text)
     if not target.is_absolute():
-        target = default_listing_directory() / target
+        target = (working_directory or default_listing_directory()) / target
 
     try:
         resolved = target.resolve(strict=True)
@@ -266,26 +305,7 @@ def run_safe_listing(
             "shell": shell,
         }
 
-    protected = [
-        Path("/dev"),
-        Path("/proc"),
-        Path("/run"),
-        Path("/sys"),
-        Path("/etc/docker"),
-        Path("/var/lib/containerd"),
-        Path("/var/lib/docker"),
-    ]
-    if os.name == "nt":
-        program_data = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData"))
-        protected.extend(
-            (
-                program_data / "Docker",
-                program_data / "DockerDesktop",
-                program_data / "containerd",
-            )
-        )
-    protected.extend(protected_paths or ())
-    for root in protected:
+    for root in protected_terminal_paths(protected_paths):
         try:
             protected_root = root.resolve(strict=False)
         except (OSError, RuntimeError):
@@ -349,6 +369,16 @@ def run_safe_listing(
         "timed_out": False,
         "truncated": truncated,
         "shell": shell,
+        "cwd": str(working_directory or default_listing_directory()),
+    }
+
+
+def run_safe_cd(command: str, shell: str, *, working_directory: Path, protected_paths: tuple[Path, ...] | None = None) -> dict:
+    words = command.strip().split()
+    resolved = resolve_terminal_directory(words[1], current=working_directory, protected_paths=protected_paths)
+    return {
+        "ok": True, "stdout": f"{resolved}\n", "stderr": "", "exit_code": 0,
+        "timed_out": False, "truncated": False, "shell": shell, "cwd": str(resolved),
     }
 
 
@@ -406,16 +436,22 @@ def run_limited(
     timeout: float,
     host_family: str | None = None,
     protected_paths: tuple[Path, ...] | None = None,
+    cwd: str | None = None,
+    custom_rules: list[dict] | None = None,
 ) -> dict:
-    command = validate_terminal_command(shell, command)
+    command = validate_terminal_command(shell, command, custom_rules=custom_rules)
     effective_family = host_family or detect_host_family()
+    working_directory = resolve_terminal_directory(cwd, protected_paths=protected_paths)
     if command.lower() in {"jetson-info", "jetson-stats"} and effective_family != "jetson":
         raise TerminalPolicyViolation(
             "jetson",
             "Cette commande est disponible uniquement sur un hôte NVIDIA Jetson.",
         )
-    if command.split()[0].lower() == "ls":
-        return run_safe_listing(command, shell, protected_paths)
+    command_name = command.split()[0].lower()
+    if command_name in {"cd", "set-location"}:
+        return run_safe_cd(command, shell, working_directory=working_directory, protected_paths=protected_paths)
+    if command_name == "ls":
+        return run_safe_listing(command, shell, protected_paths, working_directory)
     execution_command = hardened_execution_command(command, effective_family)
     creationflags = 0
     if os.name == "nt":
@@ -424,7 +460,7 @@ def run_limited(
         )
     process = subprocess.Popen(
         shell_argv(shell, execution_command),
-        cwd=safe_working_directory(),
+        cwd=working_directory,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -486,6 +522,7 @@ def run_limited(
         "timed_out": timed_out,
         "truncated": state["limit_reached"],
         "shell": shell,
+        "cwd": str(working_directory),
     }
 
 
@@ -881,6 +918,8 @@ class HostAgent:
                     Path(__file__).resolve().parent,
                     POLICY_PATH.parent,
                 ),
+                cwd=str(payload.get("cwd") or "")[:1024],
+                custom_rules=(payload.get("custom_rules") if isinstance(payload.get("custom_rules"), list) else []),
             )
         except TerminalPolicyViolation as exc:
             response = {

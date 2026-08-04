@@ -20,12 +20,13 @@ grep -Fq "Mettre a jour l'application et le terminal" "${KIT_DIR}/ai-deep-monito
   --skip-docker-login
 
 ! grep -q '^KIT_VERSION=' "${INSTALL_DIR}/.env"
-grep -Fxq 'APP_VERSION=v0.1.12' "${INSTALL_DIR}/.env"
+grep -Fxq 'APP_VERSION=v0.1.13' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_MODEL=llama3.2:3b' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_FALLBACK_MODEL=llama3.2:1b' "${INSTALL_DIR}/.env"
 grep -Fxq 'HOST_TERMINAL_QUEUE_GID=10003' "${INSTALL_DIR}/.env"
 grep -Fxq 'TERMINAL_SESSION_TTL_SECONDS=300' "${INSTALL_DIR}/.env"
+grep -Fxq 'TERMINAL_POLICY_ADMIN_PASSWORD=ysitech1234' "${INSTALL_DIR}/.env"
 test -x "${INSTALL_DIR}/update-client.sh"
 test -x "${INSTALL_DIR}/backup-maintenance.sh"
 test -x "${INSTALL_DIR}/ai-deep-monitor.sh"

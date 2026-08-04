@@ -254,6 +254,9 @@ if (-not $terminalValues["HOST_TERMINAL_QUEUE_GID"]) {
 if (-not $terminalValues["TERMINAL_SESSION_TTL_SECONDS"]) {
   Write-DotEnvValue -Path $envPath -Key "TERMINAL_SESSION_TTL_SECONDS" -Value "300"
 }
+if (-not $terminalValues["TERMINAL_POLICY_ADMIN_PASSWORD"]) {
+  Write-DotEnvValue -Path $envPath -Key "TERMINAL_POLICY_ADMIN_PASSWORD" -Value "ysitech1234"
+}
 $authRepair = Repair-AuthConfig -Path $envPath
 if ($authRepair.Changed) {
   Write-Host "Configuration d'authentification reparee; les volumes SQL et les comptes existants restent inchanges."

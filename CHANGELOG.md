@@ -14,6 +14,12 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Les installations utilisent AI Deep Monitor `v0.1.13` par défaut et
+  embarquent l'agent hôte `3.4.0` avec la politique terminal `2.3`.
+- Le mot de passe fixe de gestion des règles terminal est ajouté aux nouvelles
+  installations et aux mises à jour sans écraser une valeur personnalisée.
+- `cd`, le répertoire courant persistant et les règles personnalisées signées
+  sont livrés sur Windows, Linux et NVIDIA Jetson.
 - Le terminal hote accepte maintenant `ls` sur Windows, Linux et NVIDIA
   Jetson au travers d'une routine interne qui affiche uniquement les noms.
 - L'agent `3.3.0` et la politique `2.2` bloquent les options, la recursivite,

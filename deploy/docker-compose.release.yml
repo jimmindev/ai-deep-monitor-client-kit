@@ -94,6 +94,7 @@ services:
       SANDBOX_JOBS_DIR: /sandbox/jobs
       HOST_TERMINAL_JOBS_DIR: /host-terminal/jobs
       TERMINAL_SESSION_TTL_SECONDS: "${TERMINAL_SESSION_TTL_SECONDS:-300}"
+      TERMINAL_POLICY_ADMIN_PASSWORD: "${TERMINAL_POLICY_ADMIN_PASSWORD:-ysitech1234}"
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
