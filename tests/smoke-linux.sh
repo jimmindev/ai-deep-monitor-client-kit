@@ -6,6 +6,14 @@ KIT_DIR="${1:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
 INSTALL_DIR="$(mktemp -d -t ai-monitor-kit-test-XXXXXX)"
 trap 'rm -rf -- "$INSTALL_DIR"' EXIT
 
+update_source="${KIT_DIR}/scripts/linux/update-client.sh"
+agent_repair_line="$(grep -n 'if \[\[ "\$SKIP_AGENT_INSTALL" == "false" \]\]' "$update_source" | head -n 1 | cut -d: -f1)"
+same_version_line="$(grep -n 'if \[\[ "\$current_version" == "\$APP_VERSION" \]\]' "$update_source" | head -n 1 | cut -d: -f1)"
+test -n "$agent_repair_line"
+test -n "$same_version_line"
+test "$agent_repair_line" -lt "$same_version_line"
+grep -Fq "Mettre a jour l'application et le terminal" "${KIT_DIR}/ai-deep-monitor.sh"
+
 "${KIT_DIR}/scripts/linux/install-client.sh" \
   --install-dir "$INSTALL_DIR" \
   --no-start \

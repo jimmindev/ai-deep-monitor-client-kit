@@ -208,7 +208,7 @@ if ($Command) {
 
 $menuItems = @(
   @{ Label = "Installer ou reparer"; Command = "install" },
-  @{ Label = "Verifier et installer une mise a jour"; Command = "update" },
+  @{ Label = "Mettre a jour l'application et le terminal"; Command = "update" },
   @{ Label = "Afficher l'etat des services"; Command = "status" },
   @{ Label = "Demarrer l'application"; Command = "start" },
   @{ Label = "Arreter sans supprimer les donnees"; Command = "stop" },
@@ -216,7 +216,7 @@ $menuItems = @(
   @{ Label = "Gerer ou supprimer les sauvegardes"; Command = "backups" },
   @{ Label = "Restaurer une sauvegarde"; Command = "restore" },
   @{ Label = "Afficher les journaux techniques"; Command = "logs" },
-  @{ Label = "Reparer et verifier le terminal hote"; Command = "terminal" },
+  @{ Label = "Diagnostiquer ou reparer uniquement le terminal"; Command = "terminal" },
   @{ Label = "Desinstaller en conservant les donnees"; Command = "uninstall" },
   @{ Label = "TOUT SUPPRIMER"; Command = "purge" },
   @{ Label = "Quitter"; Command = "quit" }

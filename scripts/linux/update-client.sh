@@ -116,6 +116,14 @@ fi
 
 ensure_docker
 write_env_value "$ENV_FILE" DOCKER_PLATFORM "$DOCKER_PLATFORM"
+
+# La version Docker peut deja etre a jour alors que l'agent hote provient
+# encore d'un ancien kit. Reparer l'agent avant tout retour anticipe garantit
+# que l'action normale "Mettre a jour" maintient aussi le terminal.
+if [[ "$SKIP_AGENT_INSTALL" == "false" ]]; then
+  install_host_terminal_agent
+fi
+
 require_command curl
 owner="$(read_env_value "$ENV_FILE" GITHUB_OWNER)"
 owner="${owner:-jimmindev}"
@@ -167,9 +175,6 @@ fi
 unset github_token
 
 project_name="$(project_name_from_dir "$INSTALL_DIR")"
-if [[ "$SKIP_AGENT_INSTALL" == "false" ]]; then
-  install_host_terminal_agent
-fi
 compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
 compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
 if ! compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d; then

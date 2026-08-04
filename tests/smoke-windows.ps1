@@ -6,6 +6,17 @@ $apiListener = $null
 $agentProcess = $null
 
 try {
+  $updateScriptSource = Get-Content -LiteralPath (Join-Path $repositoryRoot "scripts\windows\update-client.ps1") -Raw
+  $agentRepairIndex = $updateScriptSource.IndexOf('Install-AiMonitorHostTerminalAgent -InstallDir $InstallDir -Required')
+  $sameVersionIndex = $updateScriptSource.IndexOf('$refreshImages = $currentVersion -eq $AppVersion')
+  if ($agentRepairIndex -lt 0 -or $sameVersionIndex -lt 0 -or $agentRepairIndex -gt $sameVersionIndex) {
+    throw "L'agent terminal doit etre repare avant le retour application deja a jour."
+  }
+  $launcherSource = Get-Content -LiteralPath (Join-Path $repositoryRoot "ai-deep-monitor.ps1") -Raw
+  if (-not $launcherSource.Contains("Mettre a jour l'application et le terminal")) {
+    throw "Le menu Windows ne precise pas que la mise a jour entretient le terminal."
+  }
+
   if (Test-Path -LiteralPath $testDir) {
     Remove-Item -LiteralPath $testDir -Recurse -Force
   }

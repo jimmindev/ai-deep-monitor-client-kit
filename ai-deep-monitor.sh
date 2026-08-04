@@ -17,7 +17,7 @@ Sans commande, ouvre le menu interactif.
 
 Commandes:
   install       Installer ou reparer l'application
-  update        Rechercher et installer une mise a jour
+  update        Mettre a jour l'application et reparer le terminal
   status        Afficher l'etat des services et les ports
   logs          Afficher les journaux de l'API
   terminal      Installer, reparer et verifier le terminal hote
@@ -233,7 +233,7 @@ menu() {
 
 AI Deep Monitor
 1. Installer ou reparer
-2. Mettre a jour
+2. Mettre a jour l'application et le terminal
 3. Afficher l'etat et les ports
 4. Demarrer
 5. Arreter sans supprimer les donnees
@@ -241,7 +241,7 @@ AI Deep Monitor
 7. Gerer ou supprimer les sauvegardes
 8. Restaurer une sauvegarde
 9. Afficher les journaux techniques
-10. Reparer et verifier le terminal hote
+10. Diagnostiquer ou reparer uniquement le terminal
 11. Desinstaller en conservant les donnees
 12. TOUT SUPPRIMER
 0. Quitter

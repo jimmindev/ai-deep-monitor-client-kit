@@ -281,6 +281,14 @@ $dockerPlatform = if ($NoStart) {
   Get-AiMonitorDockerPlatform
 }
 Write-DotEnvValue -Path $envPath -Key "DOCKER_PLATFORM" -Value $dockerPlatform
+
+# Une application peut deja utiliser la derniere image alors que sa tache
+# terminal execute encore un ancien agent. La maintenance standard doit donc
+# synchroniser et redemarrer l'agent avant le retour "deja a jour".
+if (-not $NoStart -and -not $SkipAgentInstall) {
+  Install-AiMonitorHostTerminalAgent -InstallDir $InstallDir -Required
+}
+
 $currentVersion = $envValues["APP_VERSION"]
 $githubOwner = $envValues["GITHUB_OWNER"]
 if (-not $githubOwner) {
@@ -364,9 +372,6 @@ if ($NoStart) {
   exit 0
 }
 
-if (-not $SkipAgentInstall) {
-  Install-AiMonitorHostTerminalAgent -InstallDir $InstallDir -Required
-}
 if (-not $SkipDockerLogin) {
   if (-not $plainToken) {
     Write-Host "Connexion au registry prive GHCR."
