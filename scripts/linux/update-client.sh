@@ -160,7 +160,7 @@ cp -f "$ENV_FILE" "${ENV_FILE}.before-${APP_VERSION}.bak"
 write_env_value "$ENV_FILE" APP_VERSION "$APP_VERSION"
 
 if [[ "$SKIP_DOCKER_LOGIN" == "false" ]]; then
-  printf '%s' "$github_token" | docker_exec login ghcr.io -u "$github_user" --password-stdin
+  docker_registry_login ghcr.io "$github_user" "$github_token"
   write_env_value "$ENV_FILE" UPDATE_CHECK_USER "$github_user"
   write_env_value "$ENV_FILE" UPDATE_CHECK_TOKEN "$github_token"
 fi

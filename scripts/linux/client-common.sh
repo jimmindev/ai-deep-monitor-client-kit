@@ -160,6 +160,30 @@ docker_exec() {
   "${DOCKER_CMD[@]}" "$@"
 }
 
+docker_registry_login() {
+  local registry="$1"
+  local username="$2"
+  local token="$3"
+  local user_config="${HOME}/.docker"
+
+  [[ -n "$username" && -n "$token" ]] || die "Identifiants GHCR incomplets."
+  mkdir -p "$user_config"
+  chmod 700 "$user_config" 2>/dev/null || true
+
+  # `docker login` does not need access to the daemon. Always authenticate the
+  # non-root user as well, because the protected host agent runs with that
+  # profile even when Compose itself has to use sudo on this machine.
+  printf '%s' "$token" |
+    DOCKER_CONFIG="$user_config" docker login "$registry" -u "$username" --password-stdin
+
+  if [[ "${DOCKER_CMD[*]}" != "docker" ]]; then
+    # Keep the privileged Docker client usable for the current installation
+    # session while the user profile remains the reference for the host agent.
+    printf '%s' "$token" |
+      docker_exec login "$registry" -u "$username" --password-stdin
+  fi
+}
+
 compose_exec() {
   docker_exec compose "$@"
 }

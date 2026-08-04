@@ -276,7 +276,7 @@ if [[ "$SKIP_DOCKER_LOGIN" == "false" ]]; then
   read -r -s github_token
   printf '\n'
   [[ -n "$github_user" && -n "$github_token" ]] || die "Identifiants GHCR incomplets."
-  printf '%s' "$github_token" | docker_exec login ghcr.io -u "$github_user" --password-stdin
+  docker_registry_login ghcr.io "$github_user" "$github_token"
   write_env_value "$ENV_FILE" UPDATE_CHECK_ENABLED true
   write_env_value "$ENV_FILE" UPDATE_CHECK_USER "$github_user"
   write_env_value "$ENV_FILE" UPDATE_CHECK_TOKEN "$github_token"
