@@ -91,5 +91,6 @@ if [[ "${SKIP_COMPOSE_TEST:-false}" != "true" ]]; then
     -f "${KIT_DIR}/deploy/docker-compose.release.yml" \
     --env-file "${INSTALL_DIR}/.env" \
     config --services | grep -Fxq collector
+  "${KIT_DIR}/tests/ollama-init-linux.sh" "${KIT_DIR}"
 fi
 printf 'LINUX_NO_START_OK\n'

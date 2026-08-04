@@ -14,6 +14,11 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Le téléchargement initial d'Ollama ne bloque plus le démarrage de l'API et
+  du frontend sur NVIDIA Jetson ou en cas d'indisponibilité temporaire.
+- Le premier modèle Ollama fonctionnel est conservé ; le modèle de secours
+  n'est tenté qu'après l'échec du modèle principal, avec relance automatique
+  limitée et diagnostic explicite.
 - Les installations utilisent AI Deep Monitor `v0.1.13` par défaut et
   embarquent l'agent hôte `3.4.0` avec la politique terminal `2.3`.
 - Le mot de passe fixe de gestion des règles terminal est ajouté aux nouvelles
