@@ -14,7 +14,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+
+      - name: Tester le kit Linux et Jetson
+        shell: bash
+        run: |
+          chmod +x tests/smoke-linux.sh
+          SKIP_COMPOSE_TEST=true tests/smoke-linux.sh
+
+  validate-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+
+      - name: Tester le kit Windows
+        shell: pwsh
+        run: ./tests/smoke-windows.ps1
+
   release:
+    needs:
+      - validate-linux
+      - validate-windows
     runs-on: ubuntu-latest
     steps:
       - name: Recuperer le depot

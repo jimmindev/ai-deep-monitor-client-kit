@@ -59,7 +59,7 @@ Usage: ./install-client.sh [options]
 
 Options:
   --install-dir CHEMIN       Dossier cible (defaut: ~/ai-deep-monitor)
-  --app-version VERSION      Version applicative (defaut: v0.1.12)
+  --app-version VERSION      Version applicative (defaut: v0.1.13)
   --github-owner NOM         Proprietaire des images GHCR
   --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
@@ -252,6 +252,8 @@ ensure_ollama_config "$ENV_FILE"
   write_env_value "$ENV_FILE" HOST_TERMINAL_QUEUE_GID 10003
 [[ -n "$(read_env_value "$ENV_FILE" TERMINAL_SESSION_TTL_SECONDS)" ]] ||
   write_env_value "$ENV_FILE" TERMINAL_SESSION_TTL_SECONDS 300
+[[ -n "$(read_env_value "$ENV_FILE" TERMINAL_POLICY_ADMIN_PASSWORD)" ]] ||
+  write_env_value "$ENV_FILE" TERMINAL_POLICY_ADMIN_PASSWORD ysitech1234
 if [[ "$AUTH_CONFIG_CHANGED" == "true" && "$existing_env" == "true" ]]; then
   log "Configuration d'authentification reparee; les donnees et comptes existants sont conserves."
 fi

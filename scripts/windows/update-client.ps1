@@ -254,6 +254,9 @@ if (-not $terminalValues["HOST_TERMINAL_QUEUE_GID"]) {
 if (-not $terminalValues["TERMINAL_SESSION_TTL_SECONDS"]) {
   Write-DotEnvValue -Path $envPath -Key "TERMINAL_SESSION_TTL_SECONDS" -Value "300"
 }
+if (-not $terminalValues["TERMINAL_POLICY_ADMIN_PASSWORD"]) {
+  Write-DotEnvValue -Path $envPath -Key "TERMINAL_POLICY_ADMIN_PASSWORD" -Value "ysitech1234"
+}
 $authRepair = Repair-AuthConfig -Path $envPath
 if ($authRepair.Changed) {
   Write-Host "Configuration d'authentification reparee; les volumes SQL et les comptes existants restent inchanges."
@@ -281,6 +284,14 @@ $dockerPlatform = if ($NoStart) {
   Get-AiMonitorDockerPlatform
 }
 Write-DotEnvValue -Path $envPath -Key "DOCKER_PLATFORM" -Value $dockerPlatform
+
+# Une application peut deja utiliser la derniere image alors que sa tache
+# terminal execute encore un ancien agent. La maintenance standard doit donc
+# synchroniser et redemarrer l'agent avant le retour "deja a jour".
+if (-not $NoStart -and -not $SkipAgentInstall) {
+  Install-AiMonitorHostTerminalAgent -InstallDir $InstallDir -Required
+}
+
 $currentVersion = $envValues["APP_VERSION"]
 $githubOwner = $envValues["GITHUB_OWNER"]
 if (-not $githubOwner) {
@@ -364,9 +375,6 @@ if ($NoStart) {
   exit 0
 }
 
-if (-not $SkipAgentInstall) {
-  Install-AiMonitorHostTerminalAgent -InstallDir $InstallDir -Required
-}
 if (-not $SkipDockerLogin) {
   if (-not $plainToken) {
     Write-Host "Connexion au registry prive GHCR."

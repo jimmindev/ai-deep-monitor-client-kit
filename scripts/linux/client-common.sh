@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-export DEFAULT_APP_VERSION="v0.1.12"
+export DEFAULT_APP_VERSION="v0.1.13"
 export DOCKER_PLATFORM=""
 DOCKER_CMD=(docker)
 SUDO_CMD=()

@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 
-POLICY_VERSION = "2.2"
+POLICY_VERSION = "2.3"
 MAX_COMMAND_BYTES = 4_000
 
 
@@ -95,6 +95,7 @@ _NO_ARGUMENT_POWERSHELL = {
     "get-netipconfiguration",
     "get-netroute",
     "get-nettcpconnection",
+    "get-location",
     "get-process",
     "get-service",
     "get-uptime",
@@ -123,6 +124,24 @@ _LS_PROTECTED_PATHS = (
     "/var/lib/docker",
 )
 
+_CUSTOM_POSIX_COMMANDS = {
+    "iostat",
+    "lscpu",
+    "lspci",
+    "lsusb",
+    "mpstat",
+    "nproc",
+    "pwd",
+    "sensors",
+    "vmstat",
+}
+_CUSTOM_POWERSHELL_COMMANDS = {
+    "get-culture",
+    "get-location",
+    "get-timezone",
+    "get-uiculture",
+}
+
 
 def policy_summary() -> dict:
     return {
@@ -145,7 +164,7 @@ def policy_summary() -> dict:
                 "title": "Linux",
                 "commands": [
                     "uname, uptime, id, hostname, ps (noms de processus sans arguments)",
-                    "ls (noms uniquement, un chemin facultatif, sans option)",
+                    "cd, pwd et ls (navigation confinée, noms uniquement)",
                     "df, free, lsblk, ip, ss, systemctl is-active/is-enabled",
                 ],
             },
@@ -220,6 +239,14 @@ def policy_summary() -> dict:
                 "examples": "sudo, runas, élévation UAC, Stop-Process et taskkill",
             },
         ],
+        "customizable_commands": {
+            "posix": sorted(_CUSTOM_POSIX_COMMANDS),
+            "powershell": sorted(_CUSTOM_POWERSHELL_COMMANDS),
+        },
+        "custom_rules_note": (
+            "Les règles personnalisées portent sur une commande exacte. Les protections "
+            "absolues contre les secrets, Docker interne et les modifications système restent actives."
+        ),
     }
 
 
@@ -379,6 +406,57 @@ def _validate_ls(args: list[str]) -> None:
             _deny("filesystem", "Ce répertoire protégé ne peut pas être listé.")
 
 
+def _validate_cd(args: list[str]) -> None:
+    if len(args) != 1:
+        _deny("filesystem", "cd attend exactement un répertoire.")
+    target = args[0]
+    if target.startswith("-") or not _LS_PATH_PATTERN.fullmatch(target):
+        _deny("filesystem", "Le chemin demandé à cd n'est pas autorisé.")
+    if "*" in target or "?" in target:
+        _deny("filesystem", "Les jokers ne sont pas autorisés avec cd.")
+
+
+def _rule_applies(rule: dict, shell: str, command: str, effect: str) -> bool:
+    if not isinstance(rule, dict) or rule.get("enabled") is False:
+        return False
+    if str(rule.get("effect") or "").lower() != effect:
+        return False
+    if str(rule.get("command") or "").strip() != command:
+        return False
+    rule_shell = str(rule.get("shell") or "all").lower()
+    if rule_shell == "all":
+        return True
+    if rule_shell == "posix":
+        return shell in {"bash", "sh"}
+    return rule_shell == shell
+
+
+def _validate_custom_allow(shell: str, command: str) -> None:
+    if "|" in command:
+        _deny("scripts", "Une règle personnalisée ne peut pas autoriser un pipeline.")
+    words = _tokens(command)
+    name = words[0].lower()
+    args = words[1:]
+    if shell in {"bash", "sh"}:
+        if name not in _CUSTOM_POSIX_COMMANDS:
+            _deny("policy", "Cette commande ne fait pas partie des diagnostics personnalisables.")
+        if name in {"lscpu", "lspci", "lsusb", "nproc", "pwd", "sensors"} and args:
+            _deny("policy", f"Les arguments de {words[0]} ne sont pas personnalisables.")
+        if name in {"vmstat", "iostat", "mpstat"}:
+            for value in args:
+                if value.startswith("-"):
+                    if value not in {"-c", "-d", "-h", "-P", "-u", "-x"}:
+                        _deny("policy", f"Option {value} non autorisée pour {words[0]}.")
+                elif not value.isdigit() or not 1 <= int(value) <= 5:
+                    _deny("policy", "Les intervalles et répétitions sont limités de 1 à 5.")
+        return
+    if shell == "powershell":
+        if name not in _CUSTOM_POWERSHELL_COMMANDS or args:
+            _deny("policy", "Cette commande PowerShell personnalisée n'est pas autorisée.")
+        return
+    _deny("shell", "Ce shell n'est pas personnalisable.")
+
+
 def _validate_powershell_segment(segment: str, position: int) -> None:
     words = _tokens(segment)
     if not words:
@@ -392,6 +470,9 @@ def _validate_powershell_segment(segment: str, position: int) -> None:
         _deny("scripts", "Seules les commandes de présentation sont autorisées après un pipeline.")
     if name == "ls":
         _validate_ls(args)
+        return
+    if name in {"cd", "set-location"}:
+        _validate_cd(args)
         return
     if name in _NO_ARGUMENT_POWERSHELL:
         if args:
@@ -463,7 +544,7 @@ def _validate_posix(command: str) -> None:
     args = words[1:]
     if name == "uname" and all(item in {"-a", "-s", "-r", "-m"} for item in args):
         return
-    if name in {"uptime", "id", "hostname"} and not args:
+    if name in {"uptime", "id", "hostname", "pwd"} and not args:
         return
     if name == "df" and all(item in {"-h", "-t", "--total"} for item in args):
         return
@@ -473,6 +554,9 @@ def _validate_posix(command: str) -> None:
         return
     if name == "ls":
         _validate_ls(args)
+        return
+    if name == "cd":
+        _validate_cd(args)
         return
     if name == "ip" and [item.lower() for item in args] in (
         ["addr"], ["address"], ["route"], ["link"],
@@ -496,13 +580,28 @@ def _validate_posix(command: str) -> None:
     _deny("policy", f"La commande {words[0]} n'appartient pas au catalogue de diagnostic autorisé.")
 
 
-def validate_terminal_command(shell: str, command: str) -> str:
+def validate_terminal_command(
+    shell: str,
+    command: str,
+    custom_rules: list[dict] | None = None,
+) -> str:
     normalized = _validate_common(command)
     normalized_shell = str(shell or "").lower()
-    if normalized_shell == "powershell":
-        _validate_powershell(normalized)
-    elif normalized_shell in {"bash", "sh"}:
-        _validate_posix(normalized)
-    else:
-        _deny("shell", "Ce shell n'est pas autorisé par la politique de sécurité.")
+    rules = custom_rules or []
+    if any(_rule_applies(rule, normalized_shell, normalized, "deny") for rule in rules):
+        _deny("custom", "Cette commande est bloquée par une règle personnalisée.")
+    try:
+        if normalized_shell == "powershell":
+            _validate_powershell(normalized)
+        elif normalized_shell in {"bash", "sh"}:
+            _validate_posix(normalized)
+        else:
+            _deny("shell", "Ce shell n'est pas autorisé par la politique de sécurité.")
+    except TerminalPolicyViolation:
+        if not any(
+            _rule_applies(rule, normalized_shell, normalized, "allow")
+            for rule in rules
+        ):
+            raise
+        _validate_custom_allow(normalized_shell, normalized)
     return normalized

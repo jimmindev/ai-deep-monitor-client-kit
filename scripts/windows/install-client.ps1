@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [string]$AppVersion = "v0.1.12",
+  [string]$AppVersion = "v0.1.13",
   [string]$GithubOwner = "jimmindev",
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
@@ -461,6 +461,7 @@ TELEMETRY_RAW_RETENTION_DAYS=7
 TELEMETRY_ROLLUP_RETENTION_DAYS=365
 HOST_TERMINAL_QUEUE_GID=10003
 TERMINAL_SESSION_TTL_SECONDS=300
+TERMINAL_POLICY_ADMIN_PASSWORD=ysitech1234
 
 CORS_ORIGINS=$CorsOrigins
 
@@ -504,6 +505,9 @@ if (-not $terminalValues["HOST_TERMINAL_QUEUE_GID"]) {
 }
 if (-not $terminalValues["TERMINAL_SESSION_TTL_SECONDS"]) {
   Write-DotEnvValue -Path $envTarget -Key "TERMINAL_SESSION_TTL_SECONDS" -Value "300"
+}
+if (-not $terminalValues["TERMINAL_POLICY_ADMIN_PASSWORD"]) {
+  Write-DotEnvValue -Path $envTarget -Key "TERMINAL_POLICY_ADMIN_PASSWORD" -Value "ysitech1234"
 }
 if ($authRepair.BootstrapPassword) {
   $bootstrapAdminPassword = $authRepair.BootstrapPassword

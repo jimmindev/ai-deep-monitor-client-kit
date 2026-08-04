@@ -6,6 +6,17 @@ $apiListener = $null
 $agentProcess = $null
 
 try {
+  $updateScriptSource = Get-Content -LiteralPath (Join-Path $repositoryRoot "scripts\windows\update-client.ps1") -Raw
+  $agentRepairIndex = $updateScriptSource.IndexOf('Install-AiMonitorHostTerminalAgent -InstallDir $InstallDir -Required')
+  $sameVersionIndex = $updateScriptSource.IndexOf('$refreshImages = $currentVersion -eq $AppVersion')
+  if ($agentRepairIndex -lt 0 -or $sameVersionIndex -lt 0 -or $agentRepairIndex -gt $sameVersionIndex) {
+    throw "L'agent terminal doit etre repare avant le retour application deja a jour."
+  }
+  $launcherSource = Get-Content -LiteralPath (Join-Path $repositoryRoot "ai-deep-monitor.ps1") -Raw
+  if (-not $launcherSource.Contains("Mettre a jour l'application et le terminal")) {
+    throw "Le menu Windows ne precise pas que la mise a jour entretient le terminal."
+  }
+
   if (Test-Path -LiteralPath $testDir) {
     Remove-Item -LiteralPath $testDir -Recurse -Force
   }
@@ -57,7 +68,7 @@ try {
   if ($envContent -match "(?m)^API_PORT=18081\r?$") {
     throw "Le port API occupe n'a pas ete remplace."
   }
-  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.12\r?$") {
+  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.13\r?$") {
     throw "La version applicative attendue est absente."
   }
   if ($envContent -match "(?m)^KIT_VERSION=") {
@@ -72,6 +83,9 @@ try {
   if ($envContent -notmatch "(?m)^HOST_TERMINAL_QUEUE_GID=10003\r?$" -or
       $envContent -notmatch "(?m)^TERMINAL_SESSION_TTL_SECONDS=300\r?$") {
     throw "La configuration du terminal hote est incomplete."
+  }
+  if ($envContent -notmatch "(?m)^TERMINAL_POLICY_ADMIN_PASSWORD=ysitech1234\r?$") {
+    throw "Le mot de passe de gestion des regles terminal est absent."
   }
   & python (Join-Path $testDir "host_terminal_agent\agent.py") --help | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "L'agent terminal autonome ne demarre pas." }

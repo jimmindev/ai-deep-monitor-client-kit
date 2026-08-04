@@ -6,18 +6,27 @@ KIT_DIR="${1:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
 INSTALL_DIR="$(mktemp -d -t ai-monitor-kit-test-XXXXXX)"
 trap 'rm -rf -- "$INSTALL_DIR"' EXIT
 
+update_source="${KIT_DIR}/scripts/linux/update-client.sh"
+agent_repair_line="$(grep -n 'if \[\[ "\$SKIP_AGENT_INSTALL" == "false" \]\]' "$update_source" | head -n 1 | cut -d: -f1)"
+same_version_line="$(grep -n 'if \[\[ "\$current_version" == "\$APP_VERSION" \]\]' "$update_source" | head -n 1 | cut -d: -f1)"
+test -n "$agent_repair_line"
+test -n "$same_version_line"
+test "$agent_repair_line" -lt "$same_version_line"
+grep -Fq "Mettre a jour l'application et le terminal" "${KIT_DIR}/ai-deep-monitor.sh"
+
 "${KIT_DIR}/scripts/linux/install-client.sh" \
   --install-dir "$INSTALL_DIR" \
   --no-start \
   --skip-docker-login
 
 ! grep -q '^KIT_VERSION=' "${INSTALL_DIR}/.env"
-grep -Fxq 'APP_VERSION=v0.1.12' "${INSTALL_DIR}/.env"
+grep -Fxq 'APP_VERSION=v0.1.13' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_MODEL=llama3.2:3b' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_FALLBACK_MODEL=llama3.2:1b' "${INSTALL_DIR}/.env"
 grep -Fxq 'HOST_TERMINAL_QUEUE_GID=10003' "${INSTALL_DIR}/.env"
 grep -Fxq 'TERMINAL_SESSION_TTL_SECONDS=300' "${INSTALL_DIR}/.env"
+grep -Fxq 'TERMINAL_POLICY_ADMIN_PASSWORD=ysitech1234' "${INSTALL_DIR}/.env"
 test -x "${INSTALL_DIR}/update-client.sh"
 test -x "${INSTALL_DIR}/backup-maintenance.sh"
 test -x "${INSTALL_DIR}/ai-deep-monitor.sh"
@@ -82,5 +91,6 @@ if [[ "${SKIP_COMPOSE_TEST:-false}" != "true" ]]; then
     -f "${KIT_DIR}/deploy/docker-compose.release.yml" \
     --env-file "${INSTALL_DIR}/.env" \
     config --services | grep -Fxq collector
+  "${KIT_DIR}/tests/ollama-init-linux.sh" "${KIT_DIR}"
 fi
 printf 'LINUX_NO_START_OK\n'
