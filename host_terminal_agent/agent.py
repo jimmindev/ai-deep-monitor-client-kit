@@ -42,7 +42,7 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.1.0"
+AGENT_VERSION = "3.2.0"
 MAX_COMMAND_BYTES = 4_000
 MAX_OUTPUT_BYTES = 400_000
 MAX_TIMEOUT_SECONDS = 20.0
@@ -407,24 +407,29 @@ def run_maintenance_process(
     *,
     cwd: Path,
     timeout: float = MAX_UPDATE_SECONDS,
+    environment_overrides: dict[str, str] | None = None,
+    input_data: bytes | None = None,
 ) -> dict:
     creationflags = 0
     if os.name == "nt":
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(
             subprocess, "CREATE_NEW_PROCESS_GROUP", 0
         )
+    environment = maintenance_environment()
+    if environment_overrides:
+        environment.update(environment_overrides)
     process = subprocess.Popen(
         argv,
         cwd=str(cwd),
-        stdin=subprocess.DEVNULL,
+        stdin=subprocess.PIPE if input_data is not None else subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env=maintenance_environment(),
+        env=environment,
         creationflags=creationflags,
         start_new_session=os.name != "nt",
     )
     try:
-        stdout, stderr = process.communicate(timeout=timeout)
+        stdout, stderr = process.communicate(input=input_data, timeout=timeout)
         timed_out = False
     except subprocess.TimeoutExpired:
         timed_out = True
@@ -851,7 +856,12 @@ class HostAgent:
         )
         return bool(result["ok"] and self.wait_for_api_health(300))
 
-    def compose_command(self, *arguments: str, timeout: float = 600) -> dict:
+    def compose_command(
+        self,
+        *arguments: str,
+        timeout: float = 600,
+        environment_overrides: dict[str, str] | None = None,
+    ) -> dict:
         docker = shutil.which("docker", path=trusted_search_path())
         if not docker:
             return {
@@ -872,7 +882,75 @@ class HostAgent:
             ],
             cwd=self.install_dir,
             timeout=timeout,
+            environment_overrides=environment_overrides,
         )
+
+    def pull_images(self, *, timeout: float = MAX_UPDATE_SECONDS) -> dict:
+        """Pull private images with short-lived credentials scoped to this job."""
+        env_path = self.install_dir / ".env"
+        github_user = read_env_value(env_path, "UPDATE_CHECK_USER")
+        github_token = read_env_value(env_path, "UPDATE_CHECK_TOKEN")
+
+        # Older/public installations may legitimately rely on an existing Docker
+        # credential store. Keep that path working, but make a missing credential
+        # explicit when the private pull is refused.
+        if not github_user or not github_token:
+            result = self.compose_command("pull", timeout=timeout)
+            if not result.get("ok"):
+                prefix = (
+                    "Identifiants GHCR absents de .env "
+                    "(UPDATE_CHECK_USER / UPDATE_CHECK_TOKEN)."
+                )
+                result["output_tail"] = (
+                    prefix + "\n" + str(result.get("output_tail") or "")
+                )
+            return result
+
+        docker = shutil.which("docker", path=trusted_search_path())
+        if not docker:
+            return {
+                "ok": False,
+                "exit_code": 127,
+                "timed_out": False,
+                "output_tail": "Docker est introuvable dans le chemin système autorisé.",
+            }
+
+        # Do not depend on HOME or on the account that originally ran
+        # `docker login`. systemd/S4U agents often have a different profile.
+        # Docker receives the token over stdin and writes only into this private,
+        # disposable configuration directory.
+        with tempfile.TemporaryDirectory(
+            prefix="ghcr-auth-",
+            dir=self.state_dir,
+        ) as docker_config:
+            if os.name != "nt":
+                os.chmod(docker_config, 0o700)
+            auth_environment = {"DOCKER_CONFIG": docker_config}
+            login_result = run_maintenance_process(
+                [
+                    docker,
+                    "login",
+                    "ghcr.io",
+                    "--username",
+                    github_user,
+                    "--password-stdin",
+                ],
+                cwd=self.install_dir,
+                timeout=60,
+                environment_overrides=auth_environment,
+                input_data=(github_token + "\n").encode("utf-8"),
+            )
+            if not login_result.get("ok"):
+                login_result["output_tail"] = (
+                    "Authentification GHCR refusée. "
+                    + str(login_result.get("output_tail") or "")
+                )
+                return login_result
+            return self.compose_command(
+                "pull",
+                timeout=timeout,
+                environment_overrides=auth_environment,
+            )
 
     def wait_for_api_health(self, timeout: float) -> bool:
         docker = shutil.which("docker", path=trusted_search_path())
@@ -1045,7 +1123,7 @@ class HostAgent:
                     result=config_result,
                 )
             if deployment_ok:
-                pull_result = self.compose_command("pull", timeout=MAX_UPDATE_SECONDS)
+                pull_result = self.pull_images(timeout=MAX_UPDATE_SECONDS)
                 deployment_ok = bool(pull_result["ok"])
                 if not deployment_ok:
                     record_update_failure(

@@ -34,6 +34,8 @@ id "${RUN_USER}" >/dev/null 2>&1 || fail "l'utilisateur ${RUN_USER} n'existe pas
 [[ -f "${POLICY_SOURCE}" ]] || fail "terminal_policy.py est introuvable."
 
 RUN_GROUP="$(id -gn "${RUN_USER}")"
+RUN_HOME="$(getent passwd "${RUN_USER}" | cut -d: -f6)"
+[[ -n "${RUN_HOME}" && -d "${RUN_HOME}" ]] || fail "le dossier personnel de ${RUN_USER} est introuvable."
 PYTHON_BIN="$(command -v python3)"
 DOCKER_SOCKET="/var/run/docker.sock"
 [[ -S "${DOCKER_SOCKET}" ]] || fail "le socket Docker ${DOCKER_SOCKET} est introuvable."
@@ -81,6 +83,7 @@ SupplementaryGroups=${QUEUE_GROUP} ${DOCKER_GROUP}
 WorkingDirectory=${STATE_DIR}
 Environment="AI_DEEP_TERMINAL_POLICY_PATH=${INSTALL_DIR}/terminal_policy.py"
 Environment="PYTHONUNBUFFERED=1"
+Environment="HOME=${RUN_HOME}"
 ExecStart="${PYTHON_BIN}" "${INSTALL_DIR}/agent.py" --jobs-dir "${JOBS_DIR}" --install-dir "${PROJECT_ROOT}" --state-dir "${STATE_DIR}"
 Restart=always
 RestartSec=3

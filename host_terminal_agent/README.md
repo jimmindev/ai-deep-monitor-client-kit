@@ -110,3 +110,14 @@ sont jamais montées dans les conteneurs. Elles sont supprimées après une
 installation ou une restauration réussie. Si la restauration automatique échoue,
 la copie est conservée pour permettre une récupération manuelle par
 l'administrateur de la VM.
+
+Pour télécharger les images privées, l'agent réutilise les identifiants
+`UPDATE_CHECK_USER` et `UPDATE_CHECK_TOKEN` de l'installation. Le jeton est envoyé
+à `docker login` uniquement par l'entrée standard, avec un `DOCKER_CONFIG`
+temporaire placé dans l'état privé de l'agent. Ce dossier est supprimé juste après
+le téléchargement et le jeton n'apparaît ni dans la commande, ni dans le statut,
+ni dans les journaux transmis à l'interface.
+
+Après installation d'une nouvelle version de l'agent, il faut relancer une fois
+l'installateur Windows ou Linux ci-dessus. Cette opération conserve la clé de la
+file, la configuration et toutes les données Docker.
