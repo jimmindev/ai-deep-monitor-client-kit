@@ -14,6 +14,11 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Le terminal hote accepte maintenant `ls` sur Windows, Linux et NVIDIA
+  Jetson au travers d'une routine interne qui affiche uniquement les noms.
+- L'agent `3.3.0` et la politique `2.2` bloquent les options, la recursivite,
+  les fichiers caches et les repertoires internes de l'application et Docker.
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.12` par defaut.
 - Lorsqu’une mise à jour échoue, l’agent conserve maintenant l’étape exacte,
   la cause, le code de retour et les dernières lignes techniques utiles même
   après une restauration automatique réussie.
