@@ -20,7 +20,7 @@ grep -Fq "Mettre a jour l'application et le terminal" "${KIT_DIR}/ai-deep-monito
   --skip-docker-login
 
 ! grep -q '^KIT_VERSION=' "${INSTALL_DIR}/.env"
-grep -Fxq 'APP_VERSION=v0.1.14' "${INSTALL_DIR}/.env"
+grep -Fxq 'APP_VERSION=v0.1.15' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_MODEL=llama3.2:3b' "${INSTALL_DIR}/.env"
 grep -Fxq 'OLLAMA_FALLBACK_MODEL=llama3.2:1b' "${INSTALL_DIR}/.env"
