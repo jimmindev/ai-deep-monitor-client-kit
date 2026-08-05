@@ -14,6 +14,15 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Les nouvelles installations et mises a jour utilisent AI Deep Monitor
+  `v0.1.15` et embarquent l'agent hote `3.5.0 / politique 2.4`.
+- Les regles terminal personnalisees sont prioritaires sur le catalogue integre
+  dans les deux sens, tout en conservant les protections absolues.
+- Une regle portant uniquement le nom d'une commande couvre ses variantes avec
+  arguments; les exceptions exactes et propres a l'OS restent prioritaires.
+- Le Plan 2D et le Builder 3D affichent les racks automatiques d'une rangee bord
+  a bord, sans modifier les placements manuels.
+
 - Les installations utilisent maintenant AI Deep Monitor `v0.1.14`, qui
   maintient la compatibilite avec l'agent Jetson signe `3.3.0 / politique 2.2`
   pendant sa transition vers l'agent `3.4.0 / politique 2.3`.

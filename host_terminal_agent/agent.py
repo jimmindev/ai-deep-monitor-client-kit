@@ -42,7 +42,7 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.4.0"
+AGENT_VERSION = "3.5.0"
 MAX_COMMAND_BYTES = 4_000
 MAX_OUTPUT_BYTES = 400_000
 MAX_LISTING_ENTRIES = 5_000

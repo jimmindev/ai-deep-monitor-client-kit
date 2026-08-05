@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 
-POLICY_VERSION = "2.3"
+POLICY_VERSION = "2.4"
 MAX_COMMAND_BYTES = 4_000
 
 
@@ -244,8 +244,10 @@ def policy_summary() -> dict:
             "powershell": sorted(_CUSTOM_POWERSHELL_COMMANDS),
         },
         "custom_rules_note": (
-            "Les règles personnalisées portent sur une commande exacte. Les protections "
-            "absolues contre les secrets, Docker interne et les modifications système restent actives."
+            "Une règle contenant uniquement le nom d'une commande s'applique à toutes ses variantes. "
+            "Une règle avec arguments s'applique à la ligne exacte. Les règles personnalisées "
+            "prennent la priorité sur le catalogue intégré, sans pouvoir contourner les protections "
+            "absolues contre les secrets, Docker interne et les modifications système."
         ),
     }
 
@@ -416,12 +418,8 @@ def _validate_cd(args: list[str]) -> None:
         _deny("filesystem", "Les jokers ne sont pas autorisés avec cd.")
 
 
-def _rule_applies(rule: dict, shell: str, command: str, effect: str) -> bool:
+def _rule_shell_applies(rule: dict, shell: str) -> bool:
     if not isinstance(rule, dict) or rule.get("enabled") is False:
-        return False
-    if str(rule.get("effect") or "").lower() != effect:
-        return False
-    if str(rule.get("command") or "").strip() != command:
         return False
     rule_shell = str(rule.get("shell") or "all").lower()
     if rule_shell == "all":
@@ -429,6 +427,62 @@ def _rule_applies(rule: dict, shell: str, command: str, effect: str) -> bool:
     if rule_shell == "posix":
         return shell in {"bash", "sh"}
     return rule_shell == shell
+
+
+def _rule_match_specificity(rule: dict, shell: str, command: str) -> int:
+    """Return 2 for an exact rule, 1 for a command-family rule, otherwise 0."""
+    if not _rule_shell_applies(rule, shell):
+        return 0
+    rule_command = str(rule.get("command") or "").strip()
+    if not rule_command:
+        return 0
+
+    case_insensitive = shell == "powershell"
+    compared_rule = rule_command.lower() if case_insensitive else rule_command
+    compared_command = command.lower() if case_insensitive else command
+    if compared_rule == compared_command:
+        return 2
+
+    # Une règle sans argument désigne la famille de commande : `cd` couvre
+    # `cd aidp`, tandis que `docker ps` reste une ligne exacte.
+    if len(_tokens(rule_command)) != 1 or "|" in rule_command:
+        return 0
+    command_tokens = _tokens(command)
+    if not command_tokens:
+        return 0
+    compared_name = command_tokens[0].lower() if case_insensitive else command_tokens[0]
+    return 1 if compared_name == compared_rule else 0
+
+
+def resolve_custom_rule(shell: str, command: str, rules: list[dict] | None = None) -> dict | None:
+    """Resolve by command and host specificity, then deny-on-tie."""
+    normalized_shell = str(shell or "").lower()
+    matches: list[tuple[int, int, int, int, dict]] = []
+    for position, rule in enumerate(rules or []):
+        if not isinstance(rule, dict):
+            continue
+        effect = str(rule.get("effect") or "").lower()
+        if effect not in {"allow", "deny"}:
+            continue
+        specificity = _rule_match_specificity(rule, normalized_shell, command)
+        if specificity:
+            shell_specificity = 0 if str(rule.get("shell") or "all").lower() == "all" else 1
+            matches.append((specificity, shell_specificity, 1 if effect == "deny" else 0, position, rule))
+    return max(matches, key=lambda item: item[:4])[4] if matches else None
+
+
+def materialize_custom_rules(
+    shell: str,
+    command: str,
+    rules: list[dict] | None = None,
+) -> list[dict]:
+    """Send the host agent the exact effective rule for this signed job.
+
+    This keeps older compatible agents aligned with the API when a command-family
+    rule such as `cd` is applied to `cd /srv`.
+    """
+    effective = resolve_custom_rule(shell, command, rules)
+    return [{**effective, "command": command}] if effective else []
 
 
 def _validate_custom_allow(shell: str, command: str) -> None:
@@ -588,7 +642,8 @@ def validate_terminal_command(
     normalized = _validate_common(command)
     normalized_shell = str(shell or "").lower()
     rules = custom_rules or []
-    if any(_rule_applies(rule, normalized_shell, normalized, "deny") for rule in rules):
+    effective_rule = resolve_custom_rule(normalized_shell, normalized, rules)
+    if str((effective_rule or {}).get("effect") or "").lower() == "deny":
         _deny("custom", "Cette commande est bloquée par une règle personnalisée.")
     try:
         if normalized_shell == "powershell":
@@ -598,10 +653,7 @@ def validate_terminal_command(
         else:
             _deny("shell", "Ce shell n'est pas autorisé par la politique de sécurité.")
     except TerminalPolicyViolation:
-        if not any(
-            _rule_applies(rule, normalized_shell, normalized, "allow")
-            for rule in rules
-        ):
+        if str((effective_rule or {}).get("effect") or "").lower() != "allow":
             raise
         _validate_custom_allow(normalized_shell, normalized)
     return normalized
