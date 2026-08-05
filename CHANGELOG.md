@@ -14,6 +14,10 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.16` par defaut.
+- Le Client Kit conserve son URL permanente et detecte automatiquement les
+  mises a jour futures sans changer de nom d'archive.
+
 - Les nouvelles installations et mises a jour utilisent AI Deep Monitor
   `v0.1.15` et embarquent l'agent hote `3.5.0 / politique 2.4`.
 - Les regles terminal personnalisees sont prioritaires sur le catalogue integre
