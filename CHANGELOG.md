@@ -14,6 +14,10 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.17` par defaut.
+- Le menu permanent installe SmartState, son integration Dashboard et le
+  gabarit 42U normalise sans changer l'URL ni le nom du kit.
+
 - Les nouvelles installations utilisent AI Deep Monitor `v0.1.16` par defaut.
 - Le Client Kit conserve son URL permanente et detecte automatiquement les
   mises a jour futures sans changer de nom d'archive.
