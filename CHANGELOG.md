@@ -14,6 +14,10 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.18` par defaut.
+- Le kit livre SmartState multi-sources, les cartes Dashboard multi-informations
+  et les correctifs de synchronisation et de placement du Builder 2D/3D.
+
 - Les nouvelles installations utilisent AI Deep Monitor `v0.1.17` par defaut.
 - Le menu permanent installe SmartState, son integration Dashboard et le
   gabarit 42U normalise sans changer l'URL ni le nom du kit.
