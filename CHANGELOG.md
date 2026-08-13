@@ -14,6 +14,10 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.19` par defaut.
+- Le kit livre la navigation SmartState complete : familles et compositions
+  cliquables, fil d'Ariane et remontee vers chaque niveau du Datacenter Builder.
+
 - Les nouvelles installations utilisent AI Deep Monitor `v0.1.18` par defaut.
 - Le kit livre SmartState multi-sources, les cartes Dashboard multi-informations
   et les correctifs de synchronisation et de placement du Builder 2D/3D.

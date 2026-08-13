@@ -68,7 +68,7 @@ try {
   if ($envContent -match "(?m)^API_PORT=18081\r?$") {
     throw "Le port API occupe n'a pas ete remplace."
   }
-  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.18\r?$") {
+  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.19\r?$") {
     throw "La version applicative attendue est absente."
   }
   if ($envContent -match "(?m)^KIT_VERSION=") {
