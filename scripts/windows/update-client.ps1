@@ -182,9 +182,29 @@ function Get-GhcrTags {
     [string]$BearerToken
   )
   $headers = @{ Authorization = "Bearer $BearerToken" }
-  $uri = "https://ghcr.io/v2/${Owner}/${ImageName}/tags/list"
-  $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
-  return @($response.tags)
+  $uri = "https://ghcr.io/v2/${Owner}/${ImageName}/tags/list?n=100"
+  $tags = @()
+  $visited = @{}
+
+  while ($uri) {
+    if ($visited.ContainsKey($uri)) {
+      throw "Boucle de pagination GHCR detectee pour ${ImageName}."
+    }
+    $visited[$uri] = $true
+
+    $response = Invoke-WebRequest -UseBasicParsing -Uri $uri -Headers $headers -Method Get
+    $payload = $response.Content | ConvertFrom-Json
+    $tags += @($payload.tags)
+
+    $currentUri = [uri]$uri
+    $uri = $null
+    $linkHeader = [string]$response.Headers["Link"]
+    if ($linkHeader -match '<([^>]+)>\s*;\s*rel="?next"?') {
+      $uri = ([uri]::new($currentUri, $Matches[1])).AbsoluteUri
+    }
+  }
+
+  return @($tags | Select-Object -Unique)
 }
 
 function Get-LatestStableTag {

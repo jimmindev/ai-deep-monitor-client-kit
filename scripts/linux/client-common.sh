@@ -603,11 +603,45 @@ ghcr_tags() {
   local bearer
   bearer="$(ghcr_bearer_token "$owner" "$image" "$user" "$token")"
   [[ -n "$bearer" ]] || return 1
-  curl -fsS -H "Authorization: Bearer ${bearer}" \
-    "https://ghcr.io/v2/${owner}/${image}/tags/list" |
-    grep -Eo '"v[0-9]+\.[0-9]+\.[0-9]+"' |
-    tr -d '"' |
-    sort -V -u
+
+  local page_url="https://ghcr.io/v2/${owner}/${image}/tags/list?n=100"
+  local temp_dir headers_file body_file seen_file tags_file link_header next_path
+  temp_dir="$(mktemp -d)"
+  headers_file="${temp_dir}/headers"
+  body_file="${temp_dir}/body"
+  seen_file="${temp_dir}/seen"
+  tags_file="${temp_dir}/tags"
+  : >"$seen_file"
+  : >"$tags_file"
+
+  while [[ -n "$page_url" ]]; do
+    if grep -Fqx -- "$page_url" "$seen_file"; then
+      rm -rf -- "$temp_dir"
+      return 1
+    fi
+    printf '%s\n' "$page_url" >>"$seen_file"
+
+    curl -fsS -D "$headers_file" -o "$body_file" \
+      -H "Authorization: Bearer ${bearer}" "$page_url" || {
+        rm -rf -- "$temp_dir"
+        return 1
+      }
+    grep -Eo '"v[0-9]+\.[0-9]+\.[0-9]+"' "$body_file" |
+      tr -d '"' >>"$tags_file" || true
+
+    link_header="$(tr -d '\r' <"$headers_file" | sed -n 's/^[Ll]ink:[[:space:]]*//p' | tail -n 1)"
+    next_path="$(printf '%s' "$link_header" | sed -n 's/.*<\([^>]*\)>;[[:space:]]*rel="next".*/\1/p')"
+    if [[ -z "$next_path" ]]; then
+      page_url=""
+    elif [[ "$next_path" == http://* || "$next_path" == https://* ]]; then
+      page_url="$next_path"
+    else
+      page_url="https://ghcr.io${next_path}"
+    fi
+  done
+
+  sort -V -u "$tags_file"
+  rm -rf -- "$temp_dir"
 }
 
 latest_common_app_version() {
