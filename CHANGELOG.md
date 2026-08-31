@@ -14,6 +14,10 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.21` par defaut.
+- Le mode 3D realiste charge correctement les textures GLB avec la politique de
+  securite de production.
+
 - Les nouvelles installations utilisent AI Deep Monitor `v0.1.20` par defaut.
 - Le kit livre les optimisations de chargement du Dashboard, de SmartState et
   des devices virtuels, ainsi que les historiques cibles pour les courbes.
