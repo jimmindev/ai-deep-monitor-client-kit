@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-export DEFAULT_APP_VERSION="v0.1.21"
+export DEFAULT_APP_VERSION="v0.1.22"
 export DOCKER_PLATFORM=""
 DOCKER_CMD=(docker)
 SUDO_CMD=()
@@ -326,7 +326,7 @@ remove_env_value() {
 
 AUTH_CONFIG_CHANGED=false
 GENERATED_BOOTSTRAP_PASSWORD=""
-OLLAMA_CONFIG_CHANGED=false
+LLAMA_CPP_CONFIG_CHANGED=false
 
 ensure_auth_config() {
   local env_file="$1"
@@ -368,35 +368,36 @@ TELEMETRY_ROLLUP_RETENTION_DAYS=365
 EOF
 }
 
-ensure_ollama_config() {
+ensure_llama_cpp_config() {
   local env_file="$1"
-  local current_model
-  local current_fallback
-  local recommended_model="llama3.2:3b"
-  local architecture
-  local memory_kb
+  local key
+  local value
 
-  architecture="$(uname -m 2>/dev/null || true)"
-  memory_kb="$(awk '/^MemTotal:/ { print $2; exit }' /proc/meminfo 2>/dev/null || true)"
-  if [[ "$architecture" =~ ^(aarch64|arm64)$ ]] &&
-     [[ "$memory_kb" =~ ^[0-9]+$ ]] &&
-     (( memory_kb < 6291456 )); then
-    recommended_model="llama3.2:1b"
-  fi
+  while IFS='=' read -r key value; do
+    if [[ -z "$(read_env_value "$env_file" "$key")" ]]; then
+      write_env_value "$env_file" "$key" "$value"
+      LLAMA_CPP_CONFIG_CHANGED=true
+    fi
+  done <<'EOF'
+LLAMA_CPP_IMAGE=ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42
+LLAMA_CPP_HF_REPO=bartowski/Llama-3.2-3B-Instruct-GGUF:Q4_K_M
+LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M
+LLAMA_CPP_TEMPERATURE=0.2
+LLAMA_CPP_MAX_TOKENS=512
+LLAMA_CPP_TIMEOUT_SECONDS=300
+LLAMA_CPP_CONTEXT_SIZE=8192
+LLAMA_CPP_PARALLEL=2
+LLAMA_CPP_GPU_LAYERS=99
+LLAMA_CPP_ACCELERATOR=cuda
+NVIDIA_VISIBLE_DEVICES=all
+EOF
 
-  current_model="$(read_env_value "$env_file" OLLAMA_MODEL)"
-  if [[ -z "$current_model" || "$current_model" == "llama3.1" ||
-        ( "$recommended_model" == "llama3.2:1b" && "$current_model" == "llama3.2:3b" ) ]]; then
-    write_env_value "$env_file" OLLAMA_MODEL "$recommended_model"
-    OLLAMA_CONFIG_CHANGED=true
-  fi
-
-  current_fallback="$(read_env_value "$env_file" OLLAMA_FALLBACK_MODEL)"
-  if [[ -z "$current_fallback" || "$current_fallback" == "llama3.1" ||
-        "$current_fallback" == "llama3.2:3b" ]]; then
-    write_env_value "$env_file" OLLAMA_FALLBACK_MODEL "llama3.2:1b"
-    OLLAMA_CONFIG_CHANGED=true
-  fi
+  for key in OLLAMA_IMAGE OLLAMA_MODEL OLLAMA_FALLBACK_MODEL OLLAMA_TEMPERATURE OLLAMA_NUM_PREDICT; do
+    if [[ -n "$(read_env_value "$env_file" "$key")" ]]; then
+      remove_env_value "$env_file" "$key"
+      LLAMA_CPP_CONFIG_CHANGED=true
+    fi
+  done
 }
 
 print_bootstrap_credentials() {
@@ -549,7 +550,7 @@ show_startup_diagnostics() {
   compose_exec -p "$project" -f "$compose_file" --env-file "$env_file" ps || true
   warn "Derniers journaux utiles:"
   compose_exec -p "$project" -f "$compose_file" --env-file "$env_file" \
-    logs --tail=120 mysql sandbox ollama ollama-models api collector || true
+    logs --tail=120 mysql sandbox llama-cpp api collector || true
 }
 
 project_name_from_dir() {
@@ -559,7 +560,7 @@ project_name_from_dir() {
 existing_data_volumes() {
   local project="$1"
   local expected
-  expected="${project}_client_(mysql_data|api_data|uploaded_mibs|generated_backups|ollama_data|sandbox_jobs)"
+  expected="${project}_client_(mysql_data|api_data|uploaded_mibs|generated_backups|llama_cpp_cache|ollama_data|sandbox_jobs)"
   docker_exec volume ls --format '{{.Name}}' 2>/dev/null |
     grep -E "^${expected}$" || true
 }

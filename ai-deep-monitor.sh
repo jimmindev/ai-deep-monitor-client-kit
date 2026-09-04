@@ -81,7 +81,7 @@ status_app() {
 logs_app() {
   load_installation
   compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
-    logs --tail=200 api collector mysql sandbox ollama
+    logs --tail=200 api collector mysql sandbox llama-cpp
 }
 
 repair_terminal() {

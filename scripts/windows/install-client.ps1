@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [string]$AppVersion = "v0.1.21",
+  [string]$AppVersion = "v0.1.22",
   [string]$GithubOwner = "jimmindev",
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
@@ -202,7 +202,7 @@ function Show-StartupDiagnostics {
   )
   Write-Warning "Le demarrage Docker a echoue. Etat des services:"
   & docker compose -f $ComposePath --env-file $EnvPath ps -a 2>$null
-  foreach ($service in @("mysql", "sandbox", "ollama", "ollama-models", "api", "collector")) {
+  foreach ($service in @("mysql", "sandbox", "llama-cpp", "api", "collector")) {
     Write-Host ""
     Write-Host "===== $service ====="
     & docker compose -f $ComposePath --env-file $EnvPath logs --tail=100 $service 2>$null
@@ -236,15 +236,16 @@ function Get-ExistingDataVolumes {
       "${ProjectName}_client_api_data",
       "${ProjectName}_client_uploaded_mibs",
       "${ProjectName}_client_generated_backups",
+      "${ProjectName}_client_llama_cpp_cache",
       "${ProjectName}_client_ollama_data",
       "${ProjectName}_client_sandbox_jobs"
     )
     $volumes = @(& docker volume ls --format "{{.Name}}" 2>$null | Where-Object { $_ -in $expectedNames })
-    foreach ($containerName in @("ai-monitor-client-mysql", "ai-monitor-client-api", "ai-monitor-client-ollama")) {
+    foreach ($containerName in @("ai-monitor-client-mysql", "ai-monitor-client-api", "ai-monitor-client-llama-cpp", "ai-monitor-client-ollama")) {
       $containerRows = @(& docker ps -a --filter "name=^/${containerName}$" --format "{{.ID}}" 2>$null)
       if ($containerRows.Count -eq 0) { continue }
       $mounted = @(& docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{println}}{{end}}{{end}}' $containerRows[0] 2>$null)
-      $volumes += $mounted | Where-Object { $_ -and $_ -match "client_(mysql_data|api_data|uploaded_mibs|generated_backups|ollama_data|sandbox_jobs)$" }
+      $volumes += $mounted | Where-Object { $_ -and $_ -match "client_(mysql_data|api_data|uploaded_mibs|generated_backups|llama_cpp_cache|ollama_data|sandbox_jobs)$" }
     }
     return @($volumes | Sort-Object -Unique)
   } catch {
@@ -322,6 +323,61 @@ function Repair-AuthConfig {
   }
 }
 
+function Repair-LlamaCppConfig {
+  param([string]$Path)
+  $values = Read-DotEnv -Path $Path
+  $changed = $false
+  $defaults = [ordered]@{
+    LLAMA_CPP_IMAGE = "ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42"
+    LLAMA_CPP_HF_REPO = "bartowski/Llama-3.2-3B-Instruct-GGUF:Q4_K_M"
+    LLAMA_CPP_MODEL = "Llama-3.2-3B-Instruct-Q4_K_M"
+    LLAMA_CPP_ACCELERATOR = "cuda"
+    LLAMA_CPP_GPU_LAYERS = "99"
+    LLAMA_CPP_CONTEXT_SIZE = "8192"
+    LLAMA_CPP_PARALLEL = "2"
+    LLAMA_CPP_TEMPERATURE = "0.2"
+    LLAMA_CPP_MAX_TOKENS = "512"
+    LLAMA_CPP_TIMEOUT_SECONDS = "300"
+    NVIDIA_VISIBLE_DEVICES = "all"
+  }
+  foreach ($entry in $defaults.GetEnumerator()) {
+    if (-not $values[$entry.Key]) {
+      Write-DotEnvValue -Path $Path -Key $entry.Key -Value $entry.Value
+      $changed = $true
+    }
+  }
+  foreach ($legacyKey in @("OLLAMA_IMAGE", "OLLAMA_MODEL", "OLLAMA_FALLBACK_MODEL", "OLLAMA_TEMPERATURE", "OLLAMA_NUM_PREDICT")) {
+    if ($values.ContainsKey($legacyKey)) {
+      Remove-DotEnvValue -Path $Path -Key $legacyKey
+      $changed = $true
+    }
+  }
+  return $changed
+}
+
+function Assert-LlamaCppGpu {
+  param([string]$EnvPath)
+  if (-not (Get-Command nvidia-smi -ErrorAction SilentlyContinue)) {
+    throw "GPU NVIDIA introuvable. llama.cpp est configure pour CUDA; installez le pilote NVIDIA et le support GPU Docker/WSL2."
+  }
+  nvidia-smi | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Le pilote NVIDIA ne repond pas. llama.cpp ne peut pas demarrer avec CUDA."
+  }
+  $runtimeValues = Read-DotEnv -Path $EnvPath
+  $image = $runtimeValues["LLAMA_CPP_IMAGE"]
+  Write-Host "Verification du GPU depuis le conteneur llama.cpp..."
+  $devices = & docker run --rm --gpus all $image --list-devices 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    $devices | Write-Host
+    throw "Le GPU NVIDIA n'est pas utilisable dans Docker. Verifiez Docker Desktop/WSL2, le NVIDIA Container Toolkit et le pilote."
+  }
+  $devices | Write-Host
+  if (-not ($devices -match "CUDA0:")) {
+    throw "llama.cpp ne voit aucun device CUDA. L'installation est bloquee pour eviter une inference CPU involontaire."
+  }
+}
+
 $installPath = New-Item -ItemType Directory -Force -Path $InstallDir
 $composeSource = Resolve-KitSource "docker-compose.release.yml"
 if (-not $composeSource) {
@@ -345,6 +401,7 @@ $kitFiles = @(
   "restore-client.sh",
   "uninstall-client.sh",
   "repair-terminal.sh",
+  "verify-llama-gpu.sh",
   "install-client.ps1",
   "update-client.ps1",
   "check-update.ps1",
@@ -436,11 +493,17 @@ UPDATE_CHECK_BRANCH=preprod
 UPDATE_CHECK_USER=
 UPDATE_CHECK_TOKEN=
 
-OLLAMA_IMAGE=ollama/ollama:latest
-OLLAMA_MODEL=llama3.2:3b
-OLLAMA_FALLBACK_MODEL=llama3.2:1b
-OLLAMA_TEMPERATURE=0.2
-OLLAMA_NUM_PREDICT=512
+LLAMA_CPP_IMAGE=ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42
+LLAMA_CPP_HF_REPO=bartowski/Llama-3.2-3B-Instruct-GGUF:Q4_K_M
+LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M
+LLAMA_CPP_ACCELERATOR=cuda
+LLAMA_CPP_GPU_LAYERS=99
+LLAMA_CPP_CONTEXT_SIZE=8192
+LLAMA_CPP_PARALLEL=2
+LLAMA_CPP_TEMPERATURE=0.2
+LLAMA_CPP_MAX_TOKENS=512
+LLAMA_CPP_TIMEOUT_SECONDS=300
+NVIDIA_VISIBLE_DEVICES=all
 
 MYSQL_ROOT_PASSWORD=$mysqlRootPassword
 MYSQL_DATABASE=ai_monitor_prod
@@ -473,15 +536,6 @@ API_PORT=$ApiPort
 } else {
   Write-DotEnvValue -Path $envTarget -Key "FRONTEND_PORT" -Value "$FrontendPort"
   Write-DotEnvValue -Path $envTarget -Key "API_PORT" -Value "$ApiPort"
-  $existingValues = Read-DotEnv -Path $envTarget
-  if (-not $existingValues["OLLAMA_MODEL"] -or $existingValues["OLLAMA_MODEL"] -eq "llama3.1") {
-    Write-DotEnvValue -Path $envTarget -Key "OLLAMA_MODEL" -Value "llama3.2:3b"
-  }
-  if (-not $existingValues["OLLAMA_FALLBACK_MODEL"] -or
-      $existingValues["OLLAMA_FALLBACK_MODEL"] -in @("llama3.1", "llama3.2:3b")) {
-    Write-DotEnvValue -Path $envTarget -Key "OLLAMA_FALLBACK_MODEL" -Value "llama3.2:1b"
-    Write-Host "Configuration Ollama actualisee; les donnees existantes sont conservees."
-  }
   $oldDefaultCors = if ($requestedFrontendPort -eq 80) {
     "http://localhost"
   } else {
@@ -499,6 +553,7 @@ API_PORT=$ApiPort
 }
 
 $authRepair = Repair-AuthConfig -Path $envTarget
+$llamaCppConfigChanged = Repair-LlamaCppConfig -Path $envTarget
 $terminalValues = Read-DotEnv -Path $envTarget
 if (-not $terminalValues["HOST_TERMINAL_QUEUE_GID"]) {
   Write-DotEnvValue -Path $envTarget -Key "HOST_TERMINAL_QUEUE_GID" -Value "10003"
@@ -514,6 +569,9 @@ if ($authRepair.BootstrapPassword) {
 }
 if ($authRepair.Changed -and $existingEnv) {
   Write-Host "Configuration d'authentification reparee; les donnees et comptes existants sont conserves."
+}
+if ($llamaCppConfigChanged -and $existingEnv) {
+  Write-Host "Configuration migree vers llama.cpp CUDA; les donnees applicatives sont conservees."
 }
 
 if ($NoStart) {
@@ -546,6 +604,8 @@ if (-not $SkipDockerLogin) {
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($tokenPtr)
   }
 }
+
+Assert-LlamaCppGpu -EnvPath $envTarget
 
 docker compose -f $composeTarget --env-file $envTarget pull
 if ($LASTEXITCODE -ne 0) {

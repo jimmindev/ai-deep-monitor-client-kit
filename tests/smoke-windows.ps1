@@ -49,6 +49,7 @@ try {
     "backup-maintenance.sh",
     "repair-terminal.ps1",
     "repair-terminal.sh",
+    "verify-llama-gpu.sh",
     "AI-Deep-Monitor.cmd",
     "README_CLIENT.md"
   )) {
@@ -68,17 +69,17 @@ try {
   if ($envContent -match "(?m)^API_PORT=18081\r?$") {
     throw "Le port API occupe n'a pas ete remplace."
   }
-  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.21\r?$") {
+  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.22\r?$") {
     throw "La version applicative attendue est absente."
   }
   if ($envContent -match "(?m)^KIT_VERSION=") {
     throw "Le Client Kit ne doit plus ecrire de version dans .env."
   }
-  if ($envContent -notmatch "(?m)^OLLAMA_MODEL=llama3\.2:3b\r?$") {
-    throw "Le modele Ollama principal attendu est absent."
-  }
-  if ($envContent -notmatch "(?m)^OLLAMA_FALLBACK_MODEL=llama3\.2:1b\r?$") {
-    throw "Le modele Ollama de secours attendu est absent."
+  if ($envContent -notmatch "(?m)^LLAMA_CPP_MODEL=Llama-3\.2-3B-Instruct-Q4_K_M\r?$" -or
+      $envContent -notmatch "(?m)^LLAMA_CPP_ACCELERATOR=cuda\r?$" -or
+      $envContent -notmatch "(?m)^LLAMA_CPP_GPU_LAYERS=99\r?$" -or
+      $envContent -notmatch "(?m)^NVIDIA_VISIBLE_DEVICES=all\r?$") {
+    throw "La configuration llama.cpp GPU attendue est absente."
   }
   if ($envContent -notmatch "(?m)^HOST_TERMINAL_QUEUE_GID=10003\r?$" -or
       $envContent -notmatch "(?m)^TERMINAL_SESSION_TTL_SECONDS=300\r?$") {
@@ -108,9 +109,11 @@ try {
     throw "Le controle de sante du terminal Windows n'a pas detecte l'agent."
   }
 
+  $envContent = (($envContent -split "`r?`n") | Where-Object {
+    $_ -notmatch '^(LLAMA_CPP_|NVIDIA_VISIBLE_DEVICES=)'
+  }) -join "`r`n"
+  $envContent += "`r`nOLLAMA_MODEL=llama3.1`r`nOLLAMA_FALLBACK_MODEL=llama3.1"
   $envContent = $envContent `
-    -replace "(?m)^OLLAMA_MODEL=.*$", "OLLAMA_MODEL=llama3.1" `
-    -replace "(?m)^OLLAMA_FALLBACK_MODEL=.*$", "OLLAMA_FALLBACK_MODEL=llama3.1" `
     -replace "(?m)^HOST_TERMINAL_QUEUE_GID=.*$", "HOST_TERMINAL_QUEUE_GID=12003" `
     -replace "(?m)^TERMINAL_SESSION_TTL_SECONDS=.*$", "TERMINAL_SESSION_TTL_SECONDS=420"
   $envContent += "`r`nKIT_VERSION=v0.1.15`r`n"
@@ -123,9 +126,12 @@ try {
   if ($envContent -match "(?m)^KIT_VERSION=") {
     throw "L'ancienne version du Client Kit n'a pas ete retiree pendant la migration."
   }
-  if ($envContent -notmatch "(?m)^OLLAMA_MODEL=llama3\.2:3b\r?$" -or
-      $envContent -notmatch "(?m)^OLLAMA_FALLBACK_MODEL=llama3\.2:1b\r?$") {
-    throw "La migration de l'ancienne configuration Ollama a echoue."
+  if ($envContent -match "(?m)^OLLAMA_" -or
+      $envContent -notmatch "(?m)^LLAMA_CPP_MODEL=Llama-3\.2-3B-Instruct-Q4_K_M\r?$" -or
+      $envContent -notmatch "(?m)^LLAMA_CPP_ACCELERATOR=cuda\r?$" -or
+      $envContent -notmatch "(?m)^LLAMA_CPP_GPU_LAYERS=99\r?$" -or
+      $envContent -notmatch "(?m)^NVIDIA_VISIBLE_DEVICES=all\r?$") {
+    throw "La migration d'Ollama vers llama.cpp GPU a echoue."
   }
   if ($envContent -notmatch "(?m)^HOST_TERMINAL_QUEUE_GID=12003\r?$" -or
       $envContent -notmatch "(?m)^TERMINAL_SESSION_TTL_SECONDS=420\r?$") {
@@ -174,10 +180,18 @@ try {
     -f (Join-Path $repositoryRoot "deploy\docker-compose.release.yml") `
     --env-file $envPath `
     config --format json | ConvertFrom-Json
-  $modelCommand = [string]$composeJson.services."ollama-models".command[0]
-  if ($modelCommand -notmatch 'for model in "\$\$\{OLLAMA_MODEL\}" "\$\$\{OLLAMA_FALLBACK_MODEL\}"' -or
-      $modelCommand -notmatch 'ollama pull "\$\$\{model\}"') {
-    throw "La commande d'initialisation Ollama a ete decoupee par Docker Compose."
+  $llamaService = $composeJson.services."llama-cpp"
+  $llamaCommand = @($llamaService.command)
+  $gpuLayerIndex = [Array]::IndexOf($llamaCommand, "--n-gpu-layers")
+  $flashAttnIndex = [Array]::IndexOf($llamaCommand, "--flash-attn")
+  if (-not $llamaService -or
+      $llamaService.image -notmatch '^ghcr\.io/ggml-org/llama\.cpp:server-cuda@sha256:' -or
+      $gpuLayerIndex -lt 0 -or $llamaCommand[$gpuLayerIndex + 1] -ne "99" -or
+      $flashAttnIndex -lt 0 -or $llamaCommand[$flashAttnIndex + 1] -ne "on") {
+    throw "Le service llama.cpp CUDA n'est pas configure pour le GPU."
+  }
+  if (-not $composeJson.services.api.depends_on."llama-cpp") {
+    throw "L'API ne depend pas du service llama.cpp."
   }
   if (-not $composeJson.services.collector) {
     throw "Le service collector est absent du Compose client."

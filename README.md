@@ -6,7 +6,7 @@ l'agent terminal local restreint. L'application est livree sous forme d'images
 Docker privees publiees sur GHCR.
 
 Le kit suit un canal permanent sans numero de version propre. La version
-applicative stable installee par defaut est `v0.1.21`.
+applicative stable installee par defaut est `v0.1.22`.
 
 Le guide pas a pas est disponible dans
 [docs/installation.md](docs/installation.md).
@@ -76,6 +76,9 @@ Le kit lit la plateforme du moteur Docker et selectionne automatiquement:
 
 Un moteur Docker en mode Windows containers ou une architecture non prise en
 charge est bloque avant le telechargement des images, avec un diagnostic clair.
+Le chatbot utilise llama.cpp avec acceleration CUDA et decharge par defaut
+toutes les couches du modele sur le GPU NVIDIA. Le modele GGUF reste conserve
+dans un volume Docker entre les mises a jour.
 
 Pour une nouvelle installation comme pour une reparation, les ports sont
 valides avant le lancement. Le site utilise `80`, puis `8080`, puis le prochain
@@ -88,7 +91,14 @@ un autre service est remplace et le fichier `.env` est actualise.
 - Acces Internet pendant l'installation
 - Token GitHub autorise a lire les packages prives `ghcr.io`
 - Droits administrateur Windows, ou `root`/`sudo` sous Linux
-- Espace disque suffisant pour MySQL, les images et le modele Ollama
+- GPU NVIDIA, pilote NVIDIA fonctionnel et prise en charge GPU par Docker
+
+Sur Jetson, JetPack fournit le pilote CUDA. Les anciennes generations dont la
+version CUDA n'est pas compatible avec l'image llama.cpp officielle doivent
+definir `LLAMA_CPP_IMAGE` vers une image CUDA ARM64 adaptee a leur JetPack. Le
+controle prealable bloque le demarrage avec un message explicite si Docker ne
+voit pas le GPU, afin d'eviter un basculement silencieux et tres lent sur CPU.
+- Espace disque suffisant pour MySQL, les images et le modele GGUF llama.cpp
 
 Docker est verifie automatiquement. S'il est absent:
 
@@ -267,8 +277,8 @@ C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command backup
 ```
 
 La sauvegarde contient MySQL, les donnees API, les MIB importees et les
-sauvegardes applicatives. Le modele Ollama n'est pas inclus et sera
-retelcharge si necessaire.
+sauvegardes applicatives. Le cache du modele llama.cpp n'est pas inclus et
+sera retelcharge si necessaire.
 
 Les mises a jour normales et les desinstallations completes creent aussi une
 sauvegarde de securite. Ces archives externes sont conservees jusqu'a une
@@ -298,7 +308,7 @@ Linux:
 
 ```bash
 ~/ai-deep-monitor/ai-deep-monitor.sh restore \
-  ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.21-DATE.tar.gz
+  ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.22-DATE.tar.gz
 ```
 
 Windows:
