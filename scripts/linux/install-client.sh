@@ -59,7 +59,7 @@ Usage: ./install-client.sh [options]
 
 Options:
   --install-dir CHEMIN       Dossier cible (defaut: ~/ai-deep-monitor)
-  --app-version VERSION      Version applicative (defaut: v0.1.21)
+  --app-version VERSION      Version applicative (defaut: v0.1.22)
   --github-owner NOM         Proprietaire des images GHCR
   --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
@@ -112,6 +112,7 @@ kit_files=(
   restore-client.sh
   uninstall-client.sh
   repair-terminal.sh
+  verify-llama-gpu.sh
   install-client.ps1
   check-update.ps1
   update-client.ps1
@@ -213,11 +214,17 @@ UPDATE_CHECK_BRANCH=preprod
 UPDATE_CHECK_USER=
 UPDATE_CHECK_TOKEN=
 
-OLLAMA_IMAGE=ollama/ollama:latest
-OLLAMA_MODEL=llama3.2:3b
-OLLAMA_FALLBACK_MODEL=llama3.2:1b
-OLLAMA_TEMPERATURE=0.2
-OLLAMA_NUM_PREDICT=512
+LLAMA_CPP_IMAGE=ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42
+LLAMA_CPP_HF_REPO=bartowski/Llama-3.2-3B-Instruct-GGUF:Q4_K_M
+LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M
+LLAMA_CPP_TEMPERATURE=0.2
+LLAMA_CPP_MAX_TOKENS=512
+LLAMA_CPP_TIMEOUT_SECONDS=300
+LLAMA_CPP_CONTEXT_SIZE=8192
+LLAMA_CPP_PARALLEL=2
+LLAMA_CPP_GPU_LAYERS=99
+LLAMA_CPP_ACCELERATOR=cuda
+NVIDIA_VISIBLE_DEVICES=all
 
 MYSQL_ROOT_PASSWORD=$(new_secret)
 MYSQL_DATABASE=ai_monitor_prod
@@ -247,7 +254,7 @@ EOF
 fi
 
 ensure_auth_config "$ENV_FILE"
-ensure_ollama_config "$ENV_FILE"
+ensure_llama_cpp_config "$ENV_FILE"
 [[ -n "$(read_env_value "$ENV_FILE" HOST_TERMINAL_QUEUE_GID)" ]] ||
   write_env_value "$ENV_FILE" HOST_TERMINAL_QUEUE_GID 10003
 [[ -n "$(read_env_value "$ENV_FILE" TERMINAL_SESSION_TTL_SECONDS)" ]] ||
@@ -257,8 +264,8 @@ ensure_ollama_config "$ENV_FILE"
 if [[ "$AUTH_CONFIG_CHANGED" == "true" && "$existing_env" == "true" ]]; then
   log "Configuration d'authentification reparee; les donnees et comptes existants sont conserves."
 fi
-if [[ "$OLLAMA_CONFIG_CHANGED" == "true" && "$existing_env" == "true" ]]; then
-  log "Configuration Ollama adaptee a cette machine; les donnees existantes sont conservees."
+if [[ "$LLAMA_CPP_CONFIG_CHANGED" == "true" && "$existing_env" == "true" ]]; then
+  log "Configuration migree vers llama.cpp CUDA; les donnees applicatives sont conservees."
 fi
 
 if [[ "$NO_START" == "true" ]]; then
@@ -270,6 +277,8 @@ fi
 install_host_terminal_agent
 compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
 [[ -z "$existing_volumes" ]] || log "Volumes existants reutilises."
+
+"${INSTALL_DIR}/verify-llama-gpu.sh"
 
 if [[ "$SKIP_DOCKER_LOGIN" == "false" ]]; then
   printf 'Utilisateur GitHub: '

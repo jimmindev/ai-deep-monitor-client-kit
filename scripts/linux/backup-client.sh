@@ -87,11 +87,11 @@ cat >"${staging_dir}/manifest.json" <<EOF
   "hostName": "$(hostname)",
   "mysqlSha256": "$(sha256sum "${staging_dir}/mysql.sql" | awk '{print $1}')",
   "includedPaths": [${included_json}],
-  "ollamaIncluded": false
+  "llamaCppCacheIncluded": false
 }
 EOF
 
 tar -C "$staging_dir" -czf "$archive_path" .
 chmod 600 "$archive_path"
 log "Sauvegarde terminee: ${archive_path}"
-log "Le modele Ollama n'est pas inclus et sera retelcharge si necessaire."
+log "Le cache du modele llama.cpp n'est pas inclus et sera retelcharge si necessaire."

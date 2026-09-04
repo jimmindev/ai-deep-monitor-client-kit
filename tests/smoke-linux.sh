@@ -20,10 +20,12 @@ grep -Fq "Mettre a jour l'application et le terminal" "${KIT_DIR}/ai-deep-monito
   --skip-docker-login
 
 ! grep -q '^KIT_VERSION=' "${INSTALL_DIR}/.env"
-grep -Fxq 'APP_VERSION=v0.1.21' "${INSTALL_DIR}/.env"
+grep -Fxq 'APP_VERSION=v0.1.22' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
-grep -Fxq 'OLLAMA_MODEL=llama3.2:3b' "${INSTALL_DIR}/.env"
-grep -Fxq 'OLLAMA_FALLBACK_MODEL=llama3.2:1b' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_ACCELERATOR=cuda' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_GPU_LAYERS=99' "${INSTALL_DIR}/.env"
+grep -Fxq 'NVIDIA_VISIBLE_DEVICES=all' "${INSTALL_DIR}/.env"
 grep -Fxq 'HOST_TERMINAL_QUEUE_GID=10003' "${INSTALL_DIR}/.env"
 grep -Fxq 'TERMINAL_SESSION_TTL_SECONDS=300' "${INSTALL_DIR}/.env"
 grep -Fxq 'TERMINAL_POLICY_ADMIN_PASSWORD=ysitech1234' "${INSTALL_DIR}/.env"
@@ -31,6 +33,7 @@ test -x "${INSTALL_DIR}/update-client.sh"
 test -x "${INSTALL_DIR}/backup-maintenance.sh"
 test -x "${INSTALL_DIR}/ai-deep-monitor.sh"
 test -x "${INSTALL_DIR}/repair-terminal.sh"
+test -x "${INSTALL_DIR}/verify-llama-gpu.sh"
 test -f "${INSTALL_DIR}/repair-terminal.ps1"
 test -f "${INSTALL_DIR}/AI-Deep-Monitor.cmd"
 test -f "${INSTALL_DIR}/docker-compose.release.yml"
@@ -40,8 +43,8 @@ test -f "${INSTALL_DIR}/host_terminal_agent/terminal_policy.py"
 test -x "${INSTALL_DIR}/host_terminal_agent/install_linux_service.sh"
 python3 "${INSTALL_DIR}/host_terminal_agent/agent.py" --help >/dev/null
 
-sed -i 's/^OLLAMA_MODEL=.*/OLLAMA_MODEL=llama3.1/' "${INSTALL_DIR}/.env"
-sed -i 's/^OLLAMA_FALLBACK_MODEL=.*/OLLAMA_FALLBACK_MODEL=llama3.1/' "${INSTALL_DIR}/.env"
+sed -i '/^LLAMA_CPP_/d; /^NVIDIA_VISIBLE_DEVICES=/d' "${INSTALL_DIR}/.env"
+printf 'OLLAMA_MODEL=llama3.1\nOLLAMA_FALLBACK_MODEL=llama3.1\n' >>"${INSTALL_DIR}/.env"
 sed -i 's/^HOST_TERMINAL_QUEUE_GID=.*/HOST_TERMINAL_QUEUE_GID=12003/' "${INSTALL_DIR}/.env"
 sed -i 's/^TERMINAL_SESSION_TTL_SECONDS=.*/TERMINAL_SESSION_TTL_SECONDS=420/' "${INSTALL_DIR}/.env"
 printf 'KIT_VERSION=v0.1.15\n' >>"${INSTALL_DIR}/.env"
@@ -51,8 +54,11 @@ printf 'KIT_VERSION=v0.1.15\n' >>"${INSTALL_DIR}/.env"
   --app-version v0.1.9
 
 ! grep -q '^KIT_VERSION=' "${INSTALL_DIR}/.env"
-grep -Fxq 'OLLAMA_MODEL=llama3.2:3b' "${INSTALL_DIR}/.env"
-grep -Fxq 'OLLAMA_FALLBACK_MODEL=llama3.2:1b' "${INSTALL_DIR}/.env"
+! grep -q '^OLLAMA_' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_ACCELERATOR=cuda' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_GPU_LAYERS=99' "${INSTALL_DIR}/.env"
+grep -Fxq 'NVIDIA_VISIBLE_DEVICES=all' "${INSTALL_DIR}/.env"
 grep -Fxq 'HOST_TERMINAL_QUEUE_GID=12003' "${INSTALL_DIR}/.env"
 grep -Fxq 'TERMINAL_SESSION_TTL_SECONDS=420' "${INSTALL_DIR}/.env"
 
@@ -80,17 +86,24 @@ test ! -e "${BACKUP_DIR}/ai-deep-monitor-middle.tar.gz"
 test -e "${BACKUP_DIR}/ai-deep-monitor-new.tar.gz"
 
 if [[ "${SKIP_COMPOSE_TEST:-false}" != "true" ]]; then
-  compose_command="$(docker compose \
+  docker compose \
     -f "${KIT_DIR}/deploy/docker-compose.release.yml" \
     --env-file "${INSTALL_DIR}/.env" \
     config --format json |
-    python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["ollama-models"]["command"][0])')"
-  grep -Fq 'for model in "$${OLLAMA_MODEL}" "$${OLLAMA_FALLBACK_MODEL}"' <<<"$compose_command"
-  grep -Fq 'ollama pull "$${model}"' <<<"$compose_command"
+    python3 -c '
+import json, sys
+config = json.load(sys.stdin)
+service = config["services"]["llama-cpp"]
+command = service["command"]
+assert "--n-gpu-layers" in command and command[command.index("--n-gpu-layers") + 1] == "99"
+assert "--flash-attn" in command and command[command.index("--flash-attn") + 1] == "on"
+assert service["image"].startswith("ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:")
+assert any(volume.get("target") == "/root/.cache/llama.cpp" for volume in service["volumes"])
+assert "llama-cpp" in config["services"]["api"]["depends_on"]
+'
   docker compose \
     -f "${KIT_DIR}/deploy/docker-compose.release.yml" \
     --env-file "${INSTALL_DIR}/.env" \
     config --services | grep -Fxq collector
-  "${KIT_DIR}/tests/ollama-init-linux.sh" "${KIT_DIR}"
 fi
 printf 'LINUX_NO_START_OK\n'

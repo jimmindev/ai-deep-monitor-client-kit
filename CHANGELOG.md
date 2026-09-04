@@ -14,6 +14,14 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.22` par defaut.
+- Le moteur conversationnel Ollama est remplace par llama.cpp CUDA, avec
+  dechargement prioritaire de toutes les couches compatibles sur le GPU.
+- L'installation et la mise a jour verifient la disponibilite du GPU NVIDIA et
+  du runtime Docker avant de telecharger ou redemarrer les images.
+- Une ancienne configuration Ollama est migree automatiquement vers les
+  variables llama.cpp sans supprimer les volumes historiques des sauvegardes.
+
 - Les nouvelles installations utilisent AI Deep Monitor `v0.1.21` par defaut.
 - Le mode 3D realiste charge correctement les textures GLB avec la politique de
   securite de production.

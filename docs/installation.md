@@ -42,7 +42,8 @@ Le menu reste ouvert apres l'operation ou apres une erreur. Le
 dossier d'installation par defaut est `C:\ai-deep-monitor`.
 
 Docker Desktop est installe avec `winget` s'il est absent. Il doit utiliser le
-mode **Linux containers**.
+mode **Linux containers**. Le pilote NVIDIA et l'acces GPU de Docker doivent
+etre operationnels; l'installateur les verifie avant de telecharger les images.
 
 ## Installation Linux ou NVIDIA Jetson
 
@@ -65,6 +66,9 @@ permet de quitter. Le dossier d'installation par defaut est
 
 Docker Engine et Compose v2 sont installes s'ils sont absents. Le kit choisit
 automatiquement `linux/amd64` sur PC x64 et `linux/arm64` sur NVIDIA Jetson.
+Le chatbot utilise llama.cpp CUDA et conserve le modele GGUF dans son cache.
+Sur un Jetson ancien, adaptez `LLAMA_CPP_IMAGE` a la version CUDA de JetPack;
+le controle prealable indique clairement si le GPU n'est pas visible.
 
 ## Ports
 
@@ -174,7 +178,7 @@ Le choix **3** affiche l'etat des services et le choix **9** leurs journaux.
 Le choix **10** reinstalle le terminal hote et verifie immediatement son signal.
 Sous Linux/Jetson, un echec affiche aussi les dernieres lignes de `systemd`.
 Si l'API ne devient pas saine, l'installateur affiche automatiquement les
-derniers journaux de MySQL, Ollama, de la sandbox et de l'API.
+derniers journaux de MySQL, llama.cpp, de la sandbox et de l'API.
 
 Une erreur `401` sur `/api/auth/refresh` avant connexion est normale sans
 session existante. Une erreur `500` sur `/api/auth/login` ne l'est pas.

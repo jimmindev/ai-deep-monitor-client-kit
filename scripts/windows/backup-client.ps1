@@ -107,14 +107,14 @@ try {
     computerName = $env:COMPUTERNAME
     mysqlSha256 = $dumpHash
     includedPaths = $includedPaths
-    ollamaIncluded = $false
+    llamaCppCacheIncluded = $false
   }
   $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $stagingDir "manifest.json") -Encoding UTF8
 
   Compress-Archive -Path (Join-Path $stagingDir "*") -DestinationPath $archivePath -CompressionLevel Optimal
   Write-Host ""
   Write-Host "Sauvegarde terminee: $archivePath"
-  Write-Host "Le modele Ollama n'est pas inclus et sera retelcharge si necessaire."
+  Write-Host "Le cache du modele llama.cpp n'est pas inclus et sera retelcharge si necessaire."
 } finally {
   if (Test-Path -LiteralPath $stagingDir) {
     Remove-Item -LiteralPath $stagingDir -Recurse -Force
