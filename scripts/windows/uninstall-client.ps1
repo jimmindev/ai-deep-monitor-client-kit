@@ -20,11 +20,14 @@ $composePath = Join-Path $InstallDir "docker-compose.release.yml"
 $envPath = Join-Path $InstallDir ".env"
 if (-not (Test-Path -LiteralPath $composePath)) { throw "Compose introuvable: $composePath" }
 if (-not (Test-Path -LiteralPath $envPath)) { throw ".env introuvable: $envPath" }
+$platformHelpers = Join-Path $PSScriptRoot "client-platform.ps1"
+if (-not (Test-Path -LiteralPath $platformHelpers)) { throw "client-platform.ps1 introuvable." }
+. $platformHelpers
 
 Require-Command "docker"
 docker version | Out-Null
 docker compose version | Out-Null
-$composeArgs = @("compose", "-f", $composePath, "--env-file", $envPath)
+$composeArgs = @("compose") + @(Get-AiMonitorComposeArguments -ComposePath $composePath -EnvPath $envPath)
 & docker @composeArgs config --quiet
 
 if ($Mode -eq "Partial") {

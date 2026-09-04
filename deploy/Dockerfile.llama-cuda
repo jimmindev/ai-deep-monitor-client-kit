@@ -1,0 +1,38 @@
+ARG CUDA_DEVEL_IMAGE=nvidia/cuda:12.6.3-devel-ubuntu24.04
+ARG CUDA_RUNTIME_IMAGE=nvidia/cuda:12.6.3-runtime-ubuntu24.04
+
+FROM ${CUDA_DEVEL_IMAGE} AS build
+ARG LLAMA_CPP_GIT_REF=67a17c17caa95742186f8b1ecadd1b5abd6d5ebb
+ARG CUDA_ARCHITECTURES=87
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      build-essential ca-certificates cmake curl git libcurl4-openssl-dev nodejs npm \
+    && rm -rf /var/lib/apt/lists/*
+RUN git init /src/llama.cpp \
+    && git -C /src/llama.cpp remote add origin https://github.com/ggml-org/llama.cpp.git \
+    && git -C /src/llama.cpp fetch --depth 1 origin "${LLAMA_CPP_GIT_REF}" \
+    && git -C /src/llama.cpp checkout --detach FETCH_HEAD \
+    && test "$(git -C /src/llama.cpp rev-parse HEAD)" = "${LLAMA_CPP_GIT_REF}"
+WORKDIR /src/llama.cpp
+RUN cmake -S . -B build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DGGML_CUDA=ON \
+      -DGGML_NATIVE=OFF \
+      -DGGML_CPU_ALL_VARIANTS=OFF \
+      -DLLAMA_BUILD_SERVER=ON \
+      -DLLAMA_BUILD_TESTS=OFF \
+      -DLLAMA_BUILD_EXAMPLES=OFF \
+      -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCHITECTURES}" \
+    && cmake --build build --config Release --target llama-server -j"$(nproc)"
+
+FROM ${CUDA_RUNTIME_IMAGE}
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /src/llama.cpp/build/bin/llama-server /usr/local/bin/llama-server
+COPY --from=build /src/llama.cpp/build/bin/*.so* /usr/local/lib/
+ENV LD_LIBRARY_PATH=/usr/local/lib
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/llama-server"]

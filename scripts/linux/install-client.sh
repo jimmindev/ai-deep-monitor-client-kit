@@ -52,6 +52,9 @@ CORS_ORIGINS=""
 SKIP_DOCKER_LOGIN=false
 STRICT_PORTS=false
 NO_START=false
+LLAMA_PROFILE=""
+REQUIRE_GPU=false
+REDETECT_LLAMA_RUNTIME=false
 
 usage() {
   cat <<'EOF'
@@ -64,8 +67,11 @@ Options:
   --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
   --cors-origins URLS        Origines CORS separees par des virgules
-  --skip-docker-login        Ne pas se connecter a GHCR
+  --skip-docker-login        Tests uniquement; exige aussi --no-start
   --strict-ports             Echouer si un port demande est occupe
+  --llama-profile PROFIL     auto, cpu, nvidia ou jetson
+  --require-gpu              Echouer au lieu de revenir sur CPU
+  --redetect-llama-runtime   Ignorer le profil materiel memorise
   --no-start                 Preparer les fichiers sans Docker
   -h, --help                 Afficher cette aide
 EOF
@@ -81,11 +87,19 @@ while (($#)); do
     --cors-origins) CORS_ORIGINS="$2"; shift 2 ;;
     --skip-docker-login) SKIP_DOCKER_LOGIN=true; shift ;;
     --strict-ports) STRICT_PORTS=true; shift ;;
+    --llama-profile) LLAMA_PROFILE="${2,,}"; shift 2 ;;
+    --require-gpu) REQUIRE_GPU=true; shift ;;
+    --redetect-llama-runtime) REDETECT_LLAMA_RUNTIME=true; shift ;;
     --no-start) NO_START=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) die "Option inconnue: $1" ;;
   esac
 done
+
+[[ -z "$LLAMA_PROFILE" || "$LLAMA_PROFILE" =~ ^(auto|cpu|nvidia|jetson)$ ]] ||
+  die "Profil llama.cpp invalide: ${LLAMA_PROFILE}"
+[[ "$SKIP_DOCKER_LOGIN" == "false" || "$NO_START" == "true" ]] ||
+  die "--skip-docker-login est reserve a la preparation sans demarrage et exige --no-start. Une installation reelle doit s'authentifier sur GHCR."
 
 [[ "$FRONTEND_PORT" =~ ^[0-9]+$ ]] || die "Port frontend invalide."
 [[ "$API_PORT" =~ ^[0-9]+$ ]] || die "Port API invalide."
@@ -100,6 +114,9 @@ PROJECT_NAME="$(project_name_from_dir "$INSTALL_DIR")"
 
 kit_files=(
   docker-compose.release.yml
+  docker-compose.accel.nvidia.yml
+  docker-compose.accel.jetson.yml
+  Dockerfile.llama-cuda
   client-common.sh
   client-platform.ps1
   ai-deep-monitor.sh
@@ -214,7 +231,9 @@ UPDATE_CHECK_BRANCH=preprod
 UPDATE_CHECK_USER=
 UPDATE_CHECK_TOKEN=
 
-LLAMA_CPP_IMAGE=ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42
+LLAMA_CPP_RUNTIME_PROFILE=auto
+LLAMA_CPP_PROFILE_SOURCE=auto
+LLAMA_CPP_IMAGE=ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31
 LLAMA_CPP_HF_REPO=bartowski/Llama-3.2-3B-Instruct-GGUF:Q4_K_M
 LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M
 LLAMA_CPP_TEMPERATURE=0.2
@@ -222,8 +241,10 @@ LLAMA_CPP_MAX_TOKENS=512
 LLAMA_CPP_TIMEOUT_SECONDS=300
 LLAMA_CPP_CONTEXT_SIZE=8192
 LLAMA_CPP_PARALLEL=2
-LLAMA_CPP_GPU_LAYERS=99
-LLAMA_CPP_ACCELERATOR=cuda
+LLAMA_CPP_GPU_LAYERS=0
+LLAMA_CPP_ACCELERATOR=cpu
+LLAMA_CPP_FLASH_ATTN=off
+LLAMA_CPP_AUTO_BUILD_CUDA=true
 NVIDIA_VISIBLE_DEVICES=all
 
 MYSQL_ROOT_PASSWORD=$(new_secret)
@@ -265,20 +286,24 @@ if [[ "$AUTH_CONFIG_CHANGED" == "true" && "$existing_env" == "true" ]]; then
   log "Configuration d'authentification reparee; les donnees et comptes existants sont conserves."
 fi
 if [[ "$LLAMA_CPP_CONFIG_CHANGED" == "true" && "$existing_env" == "true" ]]; then
-  log "Configuration migree vers llama.cpp CUDA; les donnees applicatives sont conservees."
+  log "Configuration migree vers le runtime llama.cpp adaptatif; les donnees applicatives sont conservees."
 fi
 
 if [[ "$NO_START" == "true" ]]; then
+  if [[ -n "$LLAMA_PROFILE" ]]; then
+    write_env_value "$ENV_FILE" LLAMA_CPP_RUNTIME_PROFILE "$LLAMA_PROFILE"
+    write_env_value "$ENV_FILE" LLAMA_CPP_PROFILE_SOURCE manual
+  fi
   log "Installation preparee sans lancement Docker pour ${DOCKER_PLATFORM}."
   print_bootstrap_credentials
   exit 0
 fi
 
+require_command curl
 install_host_terminal_agent
-compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
+configure_llama_cpp_runtime "$ENV_FILE" "$LLAMA_PROFILE" "$REQUIRE_GPU" "$REDETECT_LLAMA_RUNTIME"
+compose_runtime_exec "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
 [[ -z "$existing_volumes" ]] || log "Volumes existants reutilises."
-
-"${INSTALL_DIR}/verify-llama-gpu.sh"
 
 if [[ "$SKIP_DOCKER_LOGIN" == "false" ]]; then
   printf 'Utilisateur GitHub: '
@@ -287,6 +312,8 @@ if [[ "$SKIP_DOCKER_LOGIN" == "false" ]]; then
   read -r -s github_token
   printf '\n'
   [[ -n "$github_user" && -n "$github_token" ]] || die "Identifiants GHCR incomplets."
+  log "Verification de l'acces aux deux images privees..."
+  validate_private_images_access "$GITHUB_OWNER" "$APP_VERSION" "$github_user" "$github_token"
   docker_registry_login ghcr.io "$github_user" "$github_token"
   write_env_value "$ENV_FILE" UPDATE_CHECK_ENABLED true
   write_env_value "$ENV_FILE" UPDATE_CHECK_USER "$github_user"
@@ -295,8 +322,8 @@ if [[ "$SKIP_DOCKER_LOGIN" == "false" ]]; then
 fi
 
 log "Telechargement des images Docker..."
-compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
-if ! compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d; then
+compose_runtime_pull "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE"
+if ! compose_runtime_exec "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE" up -d; then
   show_startup_diagnostics "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE"
   die "Le stack Docker n'a pas demarre correctement. Le diagnostic ci-dessus indique le service bloque."
 fi

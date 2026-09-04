@@ -22,6 +22,11 @@ Telechargez la derniere archive depuis la page publique:
 Les deux archives utilisent toujours le dossier `ai-deep-monitor-client-kit`.
 Le kit demande un utilisateur GitHub et un token autorise a lire les images
 privees de l'application sur `ghcr.io`.
+Cette saisie est obligatoire pour chaque installation ou reparation lancee
+normalement, meme si Docker possede deja une session en cache. Le token est
+valide sur les images API et frontend avant d'etre conserve. L'option technique
+sans connexion n'est acceptee qu'avec `--no-start`/`-NoStart` pour les tests et
+ne peut pas installer une application utilisable.
 
 ## Installation Windows
 
@@ -42,8 +47,8 @@ Le menu reste ouvert apres l'operation ou apres une erreur. Le
 dossier d'installation par defaut est `C:\ai-deep-monitor`.
 
 Docker Desktop est installe avec `winget` s'il est absent. Il doit utiliser le
-mode **Linux containers**. Le pilote NVIDIA et l'acces GPU de Docker doivent
-etre operationnels; l'installateur les verifie avant de telecharger les images.
+mode **Linux containers**. Un GPU NVIDIA n'est pas obligatoire: l'installateur
+teste CUDA dans Docker et choisit automatiquement le profil `nvidia` ou `cpu`.
 
 ## Installation Linux ou NVIDIA Jetson
 
@@ -66,9 +71,32 @@ permet de quitter. Le dossier d'installation par defaut est
 
 Docker Engine et Compose v2 sont installes s'ils sont absents. Le kit choisit
 automatiquement `linux/amd64` sur PC x64 et `linux/arm64` sur NVIDIA Jetson.
-Le chatbot utilise llama.cpp CUDA et conserve le modele GGUF dans son cache.
-Sur un Jetson ancien, adaptez `LLAMA_CPP_IMAGE` a la version CUDA de JetPack;
-le controle prealable indique clairement si le GPU n'est pas visible.
+Il selectionne ensuite `nvidia`, `jetson` ou `cpu`, valide le runtime dans un
+conteneur et conserve ce profil pendant les mises a jour. Si l'image CUDA
+officielle est incompatible, une image locale peut etre compilee pour la
+version CUDA et l'architecture GPU detectees. En dernier recours, le mode
+automatique utilise le CPU au lieu de bloquer toute l'application.
+
+Forcer un profil ou demander une nouvelle detection:
+
+```bash
+~/ai-deep-monitor/update-client.sh --llama-profile cpu
+~/ai-deep-monitor/update-client.sh --redetect-llama-runtime
+~/ai-deep-monitor/update-client.sh --llama-profile jetson --require-gpu
+```
+
+Sous Windows:
+
+```powershell
+C:\ai-deep-monitor\update-client.ps1 -LlamaProfile cpu
+C:\ai-deep-monitor\update-client.ps1 -RedetectLlamaRuntime
+C:\ai-deep-monitor\update-client.ps1 -LlamaProfile nvidia -RequireGpu
+```
+
+Pour une version CUDA non encore repertoriee, definissez dans `.env`
+`LLAMA_CPP_CUDA_DEVEL_IMAGE` et `LLAMA_CPP_CUDA_RUNTIME_IMAGE` avec deux bases
+`nvidia/cuda` compatibles. `LLAMA_CPP_AUTO_BUILD_CUDA=false` desactive la
+construction locale et force le repli CPU en mode automatique.
 
 ## Ports
 
@@ -187,6 +215,9 @@ session existante. Une erreur `500` sur `/api/auth/login` ne l'est pas.
 
 - Les sources de l'application ne sont pas presentes dans le kit.
 - Les secrets sont generes sur la machine du client.
+- Les images API et frontend refusent les telechargements anonymes.
+- Sous Linux, `.env` reste en mode `600`; sous Windows, ses ACL sont limitees au
+  compte courant, au systeme et aux administrateurs.
 - Une installation existante conserve ses comptes et ses volumes.
 - Ne supprimez jamais `.env` ou les volumes Docker sans sauvegarde validee.
 - Si des volumes SQL existent mais que `.env` a disparu, l'installation

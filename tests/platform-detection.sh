@@ -21,4 +21,11 @@ if resolve_docker_platform linux armv7 >/dev/null 2>&1; then
   exit 1
 fi
 
+[[ "$(llama_cuda_base_images 12.6)" == 'nvidia/cuda:12.6.3-devel-ubuntu24.04|nvidia/cuda:12.6.3-runtime-ubuntu24.04' ]]
+[[ "$(llama_cuda_base_images 11.4)" == 'nvidia/cuda:11.4.3-devel-ubuntu20.04|nvidia/cuda:11.4.3-runtime-ubuntu20.04' ]]
+if llama_cuda_base_images 10.2 >/dev/null 2>&1; then
+  printf 'UNSUPPORTED_CUDA_SHOULD_FAIL\n' >&2
+  exit 1
+fi
+
 printf 'PLATFORM_DETECTION_OK\n'

@@ -14,6 +14,16 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- L'installation reelle impose maintenant l'authentification GHCR, valide le
+  token sur les deux images privees et protege les secrets avec des ACL Windows
+  restrictives.
+- Le runtime llama.cpp est maintenant detecte par machine: NVIDIA CUDA sur
+  Windows/Linux, runtime JetPack sur Jetson, ou CPU sans dependance GPU.
+- Une image CUDA locale est construite automatiquement lorsque l'image
+  officielle ne correspond pas a la version CUDA ou au compute capability.
+- Le profil valide est conserve dans `.env` pendant les mises a jour; une
+  redetection explicite reste disponible pour un changement de materiel.
+
 - Les nouvelles installations utilisent AI Deep Monitor `v0.1.22` par defaut.
 - Le moteur conversationnel Ollama est remplace par llama.cpp CUDA, avec
   dechargement prioritaire de toutes les couches compatibles sur le GPU.

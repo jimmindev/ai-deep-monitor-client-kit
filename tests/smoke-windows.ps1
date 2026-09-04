@@ -6,6 +6,15 @@ $apiListener = $null
 $agentProcess = $null
 
 try {
+  try {
+    & (Join-Path $repositoryRoot "scripts\windows\install-client.ps1") `
+      -InstallDir (Join-Path $testDir "unsafe-login-bypass") `
+      -SkipDockerLogin
+    throw "Le contournement GHCR a ete accepte pour une installation reelle."
+  } catch {
+    if ($_.Exception.Message -notmatch "SkipDockerLogin est reserve") { throw }
+  }
+
   $updateScriptSource = Get-Content -LiteralPath (Join-Path $repositoryRoot "scripts\windows\update-client.ps1") -Raw
   $agentRepairIndex = $updateScriptSource.IndexOf('Install-AiMonitorHostTerminalAgent -InstallDir $InstallDir -Required')
   $sameVersionIndex = $updateScriptSource.IndexOf('$refreshImages = $currentVersion -eq $AppVersion')
@@ -40,6 +49,9 @@ try {
   }
   foreach ($requiredFile in @(
     "docker-compose.release.yml",
+    "docker-compose.accel.nvidia.yml",
+    "docker-compose.accel.jetson.yml",
+    "Dockerfile.llama-cuda",
     "ai-deep-monitor.sh",
     "install-client.ps1",
     "install-client.sh",
@@ -76,10 +88,12 @@ try {
     throw "Le Client Kit ne doit plus ecrire de version dans .env."
   }
   if ($envContent -notmatch "(?m)^LLAMA_CPP_MODEL=Llama-3\.2-3B-Instruct-Q4_K_M\r?$" -or
-      $envContent -notmatch "(?m)^LLAMA_CPP_ACCELERATOR=cuda\r?$" -or
-      $envContent -notmatch "(?m)^LLAMA_CPP_GPU_LAYERS=99\r?$" -or
+      $envContent -notmatch "(?m)^LLAMA_CPP_RUNTIME_PROFILE=auto\r?$" -or
+      $envContent -notmatch "(?m)^LLAMA_CPP_ACCELERATOR=cpu\r?$" -or
+      $envContent -notmatch "(?m)^LLAMA_CPP_GPU_LAYERS=0\r?$" -or
+      $envContent -notmatch "(?m)^LLAMA_CPP_FLASH_ATTN=off\r?$" -or
       $envContent -notmatch "(?m)^NVIDIA_VISIBLE_DEVICES=all\r?$") {
-    throw "La configuration llama.cpp GPU attendue est absente."
+    throw "La configuration llama.cpp adaptative attendue est absente."
   }
   if ($envContent -notmatch "(?m)^HOST_TERMINAL_QUEUE_GID=10003\r?$" -or
       $envContent -notmatch "(?m)^TERMINAL_SESSION_TTL_SECONDS=300\r?$") {
@@ -128,10 +142,11 @@ try {
   }
   if ($envContent -match "(?m)^OLLAMA_" -or
       $envContent -notmatch "(?m)^LLAMA_CPP_MODEL=Llama-3\.2-3B-Instruct-Q4_K_M\r?$" -or
-      $envContent -notmatch "(?m)^LLAMA_CPP_ACCELERATOR=cuda\r?$" -or
-      $envContent -notmatch "(?m)^LLAMA_CPP_GPU_LAYERS=99\r?$" -or
+      $envContent -notmatch "(?m)^LLAMA_CPP_RUNTIME_PROFILE=auto\r?$" -or
+      $envContent -notmatch "(?m)^LLAMA_CPP_ACCELERATOR=cpu\r?$" -or
+      $envContent -notmatch "(?m)^LLAMA_CPP_GPU_LAYERS=0\r?$" -or
       $envContent -notmatch "(?m)^NVIDIA_VISIBLE_DEVICES=all\r?$") {
-    throw "La migration d'Ollama vers llama.cpp GPU a echoue."
+    throw "La migration d'Ollama vers llama.cpp adaptatif a echoue."
   }
   if ($envContent -notmatch "(?m)^HOST_TERMINAL_QUEUE_GID=12003\r?$" -or
       $envContent -notmatch "(?m)^TERMINAL_SESSION_TTL_SECONDS=420\r?$") {
@@ -145,6 +160,15 @@ try {
       $installedBackupScript -notmatch 'generatedBackupsIncluded\s*=\s*\$false' -or
       $installedBackupScript -notmatch 'CompressionLevel Fastest') {
     throw "La sauvegarde Windows imbrique encore les anciennes archives."
+  }
+  foreach ($runtimeAwareScript in @("backup-client.ps1", "restore-client.ps1", "uninstall-client.ps1")) {
+    $runtimeAwareSource = Get-Content -LiteralPath (Join-Path $testDir $runtimeAwareScript) -Raw
+    if ($runtimeAwareSource -notmatch 'Get-AiMonitorComposeArguments') {
+      throw "$runtimeAwareScript ignore le profil llama.cpp memorise."
+    }
+  }
+  if ((Get-Content -LiteralPath $launcherPath -Raw) -notmatch 'docker-compose\.accel\.nvidia\.yml') {
+    throw "Le lanceur Windows ignore l'override NVIDIA lors des commandes start/stop/status."
   }
   $installedAgent = Get-Content -LiteralPath (Join-Path $testDir "host_terminal_agent\agent.py") -Raw
   if ($installedAgent -notmatch 'MAX_UPDATE_SECONDS = 3_600') {
@@ -196,10 +220,19 @@ try {
   $gpuLayerIndex = [Array]::IndexOf($llamaCommand, "--n-gpu-layers")
   $flashAttnIndex = [Array]::IndexOf($llamaCommand, "--flash-attn")
   if (-not $llamaService -or
-      $llamaService.image -notmatch '^ghcr\.io/ggml-org/llama\.cpp:server-cuda@sha256:' -or
-      $gpuLayerIndex -lt 0 -or $llamaCommand[$gpuLayerIndex + 1] -ne "99" -or
-      $flashAttnIndex -lt 0 -or $llamaCommand[$flashAttnIndex + 1] -ne "on") {
-    throw "Le service llama.cpp CUDA n'est pas configure pour le GPU."
+      $llamaService.image -notmatch '^ghcr\.io/ggml-org/llama\.cpp:server@sha256:' -or
+      $gpuLayerIndex -lt 0 -or $llamaCommand[$gpuLayerIndex + 1] -ne "0" -or
+      $flashAttnIndex -lt 0 -or $llamaCommand[$flashAttnIndex + 1] -ne "off" -or
+      $llamaService.gpus) {
+    throw "Le service llama.cpp CPU de base n'est pas configure correctement."
+  }
+  $nvidiaComposeJson = & docker compose `
+    -f (Join-Path $repositoryRoot "deploy\docker-compose.release.yml") `
+    -f (Join-Path $repositoryRoot "deploy\docker-compose.accel.nvidia.yml") `
+    --env-file $envPath `
+    config --format json | ConvertFrom-Json
+  if (-not $nvidiaComposeJson.services."llama-cpp".gpus) {
+    throw "L'override NVIDIA n'expose pas le GPU a llama.cpp."
   }
   if (-not $composeJson.services.api.depends_on."llama-cpp") {
     throw "L'API ne depend pas du service llama.cpp."

@@ -14,6 +14,14 @@ test -n "$same_version_line"
 test "$agent_repair_line" -lt "$same_version_line"
 grep -Fq "Mettre a jour l'application et le terminal" "${KIT_DIR}/ai-deep-monitor.sh"
 
+if "${KIT_DIR}/scripts/linux/install-client.sh" \
+  --install-dir "${INSTALL_DIR}/unsafe-login-bypass" \
+  --skip-docker-login 2>"${INSTALL_DIR}/unsafe-login-bypass.err"; then
+  echo "Le contournement GHCR a ete accepte pour une installation reelle." >&2
+  exit 1
+fi
+grep -Fq -- '--skip-docker-login est reserve' "${INSTALL_DIR}/unsafe-login-bypass.err"
+
 "${KIT_DIR}/scripts/linux/install-client.sh" \
   --install-dir "$INSTALL_DIR" \
   --no-start \
@@ -23,8 +31,10 @@ grep -Fq "Mettre a jour l'application et le terminal" "${KIT_DIR}/ai-deep-monito
 grep -Fxq 'APP_VERSION=v0.1.22' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M' "${INSTALL_DIR}/.env"
-grep -Fxq 'LLAMA_CPP_ACCELERATOR=cuda' "${INSTALL_DIR}/.env"
-grep -Fxq 'LLAMA_CPP_GPU_LAYERS=99' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_RUNTIME_PROFILE=auto' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_ACCELERATOR=cpu' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_GPU_LAYERS=0' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_FLASH_ATTN=off' "${INSTALL_DIR}/.env"
 grep -Fxq 'NVIDIA_VISIBLE_DEVICES=all' "${INSTALL_DIR}/.env"
 grep -Fxq 'HOST_TERMINAL_QUEUE_GID=10003' "${INSTALL_DIR}/.env"
 grep -Fxq 'TERMINAL_SESSION_TTL_SECONDS=300' "${INSTALL_DIR}/.env"
@@ -32,11 +42,18 @@ grep -Fxq 'TERMINAL_POLICY_ADMIN_PASSWORD=ysitech1234' "${INSTALL_DIR}/.env"
 test -x "${INSTALL_DIR}/update-client.sh"
 test -x "${INSTALL_DIR}/backup-maintenance.sh"
 test -x "${INSTALL_DIR}/ai-deep-monitor.sh"
+grep -Fq 'compose_runtime_exec' "${INSTALL_DIR}/ai-deep-monitor.sh"
+grep -Fq 'compose_runtime_exec' "${INSTALL_DIR}/backup-client.sh"
+grep -Fq 'compose_runtime_exec' "${INSTALL_DIR}/restore-client.sh"
+grep -Fq 'compose_runtime_exec' "${INSTALL_DIR}/uninstall-client.sh"
 test -x "${INSTALL_DIR}/repair-terminal.sh"
 test -x "${INSTALL_DIR}/verify-llama-gpu.sh"
 test -f "${INSTALL_DIR}/repair-terminal.ps1"
 test -f "${INSTALL_DIR}/AI-Deep-Monitor.cmd"
 test -f "${INSTALL_DIR}/docker-compose.release.yml"
+test -f "${INSTALL_DIR}/docker-compose.accel.nvidia.yml"
+test -f "${INSTALL_DIR}/docker-compose.accel.jetson.yml"
+test -f "${INSTALL_DIR}/Dockerfile.llama-cuda"
 test -f "${INSTALL_DIR}/client-platform.ps1"
 test -f "${INSTALL_DIR}/host_terminal_agent/agent.py"
 test -f "${INSTALL_DIR}/host_terminal_agent/terminal_policy.py"
@@ -60,8 +77,9 @@ grep -Fq 'gzip -1' "${INSTALL_DIR}/backup-client.sh"
 grep -Fq 'MAX_UPDATE_SECONDS = 3_600' "${INSTALL_DIR}/host_terminal_agent/agent.py"
 ! grep -q '^OLLAMA_' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M' "${INSTALL_DIR}/.env"
-grep -Fxq 'LLAMA_CPP_ACCELERATOR=cuda' "${INSTALL_DIR}/.env"
-grep -Fxq 'LLAMA_CPP_GPU_LAYERS=99' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_RUNTIME_PROFILE=auto' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_ACCELERATOR=cpu' "${INSTALL_DIR}/.env"
+grep -Fxq 'LLAMA_CPP_GPU_LAYERS=0' "${INSTALL_DIR}/.env"
 grep -Fxq 'NVIDIA_VISIBLE_DEVICES=all' "${INSTALL_DIR}/.env"
 grep -Fxq 'HOST_TERMINAL_QUEUE_GID=12003' "${INSTALL_DIR}/.env"
 grep -Fxq 'TERMINAL_SESSION_TTL_SECONDS=420' "${INSTALL_DIR}/.env"
@@ -99,9 +117,10 @@ import json, sys
 config = json.load(sys.stdin)
 service = config["services"]["llama-cpp"]
 command = service["command"]
-assert "--n-gpu-layers" in command and command[command.index("--n-gpu-layers") + 1] == "99"
-assert "--flash-attn" in command and command[command.index("--flash-attn") + 1] == "on"
-assert service["image"].startswith("ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:")
+assert "--n-gpu-layers" in command and command[command.index("--n-gpu-layers") + 1] == "0"
+assert "--flash-attn" in command and command[command.index("--flash-attn") + 1] == "off"
+assert service["image"].startswith("ghcr.io/ggml-org/llama.cpp:server@sha256:")
+assert not service.get("gpus")
 assert any(volume.get("target") == "/root/.cache/llama.cpp" for volume in service["volumes"])
 assert "llama-cpp" in config["services"]["api"]["depends_on"]
 '
@@ -109,5 +128,15 @@ assert "llama-cpp" in config["services"]["api"]["depends_on"]
     -f "${KIT_DIR}/deploy/docker-compose.release.yml" \
     --env-file "${INSTALL_DIR}/.env" \
     config --services | grep -Fxq collector
+  docker compose \
+    -f "${KIT_DIR}/deploy/docker-compose.release.yml" \
+    -f "${KIT_DIR}/deploy/docker-compose.accel.nvidia.yml" \
+    --env-file "${INSTALL_DIR}/.env" \
+    config --format json |
+    python3 -c '
+import json, sys
+service = json.load(sys.stdin)["services"]["llama-cpp"]
+assert service.get("gpus")
+'
 fi
 printf 'LINUX_NO_START_OK\n'

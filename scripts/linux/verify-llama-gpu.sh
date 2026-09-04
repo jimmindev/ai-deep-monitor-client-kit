@@ -1,43 +1,29 @@
-#!/usr/bin/env sh
-set -eu
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-DEFAULT_IMAGE="ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42"
-IMAGE="${LLAMA_CPP_IMAGE:-$DEFAULT_IMAGE}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=client-common.sh
+source "${SCRIPT_DIR}/client-common.sh"
 
-command -v docker >/dev/null 2>&1 || {
-  echo "Docker est requis." >&2
-  exit 1
-}
+ENV_FILE="${1:-${SCRIPT_DIR}/.env}"
+[[ -f "$ENV_FILE" ]] || die "Configuration introuvable: ${ENV_FILE}"
+ensure_docker
 
-docker version >/dev/null
-
-architecture="$(uname -m)"
-case "$architecture" in
-  x86_64|amd64|aarch64|arm64) ;;
+profile="$(read_env_value "$ENV_FILE" LLAMA_CPP_RUNTIME_PROFILE)"
+image="$(read_env_value "$ENV_FILE" LLAMA_CPP_IMAGE)"
+case "$profile" in
+  cpu)
+    log "Verification de l'image llama.cpp CPU (${DOCKER_PLATFORM})..."
+    docker_exec run --rm --platform "$DOCKER_PLATFORM" "$image" --version >/dev/null
+    log 'Runtime llama.cpp CPU valide.'
+    ;;
+  nvidia|jetson)
+    log "Verification de llama.cpp CUDA (${profile}, ${DOCKER_PLATFORM})..."
+    llama_gpu_probe "$profile" "$image" ||
+      die "Le profil ${profile} memorise n'est plus compatible. Relancez update-client avec --redetect-llama-runtime."
+    log 'Runtime llama.cpp CUDA valide.'
+    ;;
   *)
-    echo "Architecture non prise en charge par l'image llama.cpp CUDA: $architecture" >&2
-    exit 1
+    die "Profil llama.cpp non resolu: ${profile:-absent}. Relancez l'installation ou la mise a jour."
     ;;
 esac
-
-if [ -r /proc/device-tree/model ]; then
-  device_model="$(tr -d '\000' </proc/device-tree/model)"
-  case "$device_model" in
-    *Jetson*) echo "Plateforme Jetson detectee: $device_model" ;;
-  esac
-fi
-
-echo "Verification du GPU depuis le conteneur llama.cpp ($architecture)..."
-devices="$(docker run --rm --gpus all "$IMAGE" --list-devices 2>&1)" || {
-  printf '%s\n' "$devices" >&2
-  echo "Le GPU NVIDIA n'est pas utilisable dans Docker. Verifiez le pilote, le NVIDIA Container Toolkit et, sur Jetson, la compatibilite CUDA/JetPack de LLAMA_CPP_IMAGE." >&2
-  exit 1
-}
-printf '%s\n' "$devices"
-
-printf '%s\n' "$devices" | grep -q "CUDA0:" || {
-  echo "llama.cpp ne voit aucun device CUDA. Le demarrage est bloque pour eviter une inference CPU involontaire." >&2
-  exit 1
-}
-
-echo "GPU CUDA valide pour llama.cpp."
