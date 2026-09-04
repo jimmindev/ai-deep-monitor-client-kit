@@ -42,7 +42,7 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.5.1"
+AGENT_VERSION = "3.6.0"
 MAX_COMMAND_BYTES = 4_000
 MAX_OUTPUT_BYTES = 400_000
 MAX_LISTING_ENTRIES = 5_000
@@ -1027,7 +1027,6 @@ class HostAgent:
 
     def rollback_update(self, env_backup: Path) -> bool:
         env_path = self.install_dir / ".env"
-        compose_path = self.install_dir / "docker-compose.release.yml"
         shutil.copy2(env_backup, env_path)
         docker = shutil.which("docker", path=trusted_search_path())
         if not docker:
@@ -1036,10 +1035,7 @@ class HostAgent:
             [
                 docker,
                 "compose",
-                "-f",
-                str(compose_path),
-                "--env-file",
-                str(env_path),
+                *self.compose_file_arguments(),
                 "up",
                 "-d",
             ],
@@ -1047,6 +1043,24 @@ class HostAgent:
             timeout=600,
         )
         return bool(result["ok"] and self.wait_for_api_health(300))
+
+    def compose_file_arguments(self) -> list[str]:
+        env_path = self.install_dir / ".env"
+        arguments = ["-f", str(self.install_dir / "docker-compose.release.yml")]
+        profile = read_env_value(env_path, "LLAMA_CPP_RUNTIME_PROFILE").lower()
+        override_name = {
+            "nvidia": "docker-compose.accel.nvidia.yml",
+            "jetson": "docker-compose.accel.jetson.yml",
+        }.get(profile)
+        if override_name:
+            override_path = self.install_dir / override_name
+            if not override_path.is_file():
+                raise RuntimeError(
+                    f"Override llama.cpp absent pour le profil {profile}: {override_path}"
+                )
+            arguments.extend(["-f", str(override_path)])
+        arguments.extend(["--env-file", str(env_path)])
+        return arguments
 
     def compose_command(
         self,
@@ -1066,10 +1080,7 @@ class HostAgent:
             [
                 docker,
                 "compose",
-                "-f",
-                str(self.install_dir / "docker-compose.release.yml"),
-                "--env-file",
-                str(self.install_dir / ".env"),
+                *self.compose_file_arguments(),
                 *arguments,
             ],
             cwd=self.install_dir,
@@ -1082,12 +1093,16 @@ class HostAgent:
         env_path = self.install_dir / ".env"
         github_user = read_env_value(env_path, "UPDATE_CHECK_USER")
         github_token = read_env_value(env_path, "UPDATE_CHECK_TOKEN")
+        llama_image = read_env_value(env_path, "LLAMA_CPP_IMAGE")
+        pull_arguments = ["pull"]
+        if llama_image.startswith("local/"):
+            pull_arguments.extend(["mysql", "sandbox", "api", "collector", "frontend"])
 
         # Older/public installations may legitimately rely on an existing Docker
         # credential store. Keep that path working, but make a missing credential
         # explicit when the private pull is refused.
         if not github_user or not github_token:
-            result = self.compose_command("pull", timeout=timeout)
+            result = self.compose_command(*pull_arguments, timeout=timeout)
             if not result.get("ok"):
                 prefix = (
                     "Identifiants GHCR absents de .env "
@@ -1139,10 +1154,36 @@ class HostAgent:
                 )
                 return login_result
             return self.compose_command(
-                "pull",
+                *pull_arguments,
                 timeout=timeout,
                 environment_overrides=auth_environment,
             )
+
+    def refresh_client_kit(self, update_prefix: list[str]) -> dict:
+        arguments = list(update_prefix)
+        if os.name == "nt":
+            arguments.extend(
+                [
+                    "-InstallDir",
+                    str(self.install_dir),
+                    "-RefreshKitOnly",
+                    "-SkipAgentInstall",
+                ]
+            )
+        else:
+            arguments.extend(
+                [
+                    "--install-dir",
+                    str(self.install_dir),
+                    "--refresh-kit-only",
+                    "--skip-agent-install",
+                ]
+            )
+        return run_maintenance_process(
+            arguments,
+            cwd=self.install_dir,
+            timeout=300,
+        )
 
     def wait_for_api_health(self, timeout: float) -> bool:
         docker = shutil.which("docker", path=trusted_search_path())
@@ -1262,6 +1303,42 @@ class HostAgent:
             )
             if not backup_script.is_file() or not update_script.is_file():
                 raise RuntimeError("Scripts de maintenance introuvables.")
+
+            self.write_update_status(
+                context,
+                phase="refreshing_client_kit",
+                progress=10,
+                message="Téléchargement et vérification du dernier Client Kit.",
+                backup_created=context["backup_created"],
+            )
+            kit_result = self.refresh_client_kit(update_prefix)
+            if not kit_result["ok"]:
+                kit_reason = failed_step_message(
+                    "L’actualisation du Client Kit a échoué",
+                    kit_result,
+                )
+                record_update_failure(
+                    context,
+                    code="client_kit_update_failed",
+                    step="Actualisation du Client Kit",
+                    reason=kit_reason,
+                    hint=(
+                        "Vérifiez l’accès à GitHub Releases, la somme SHA256 publiée "
+                        "et les droits d’écriture du dossier d’installation."
+                    ),
+                    result=kit_result,
+                )
+                raise UpdateStepError(kit_reason, "client_kit_update_failed")
+
+            # Le Client Kit venant de remplacer les scripts installés, recharge les
+            # chemins et les arguments avant de poursuivre la maintenance.
+            backup_script, update_script, backup_argv, update_prefix = (
+                self.maintenance_commands()
+            )
+            if not backup_script.is_file() or not update_script.is_file():
+                raise RuntimeError(
+                    "Les scripts de maintenance actualisés sont introuvables."
+                )
             if not recovering:
                 self.write_update_status(
                     context,

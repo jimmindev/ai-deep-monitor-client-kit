@@ -220,7 +220,7 @@ if ($Command) {
 
 $menuItems = @(
   @{ Label = "Installer ou reparer"; Command = "install" },
-  @{ Label = "Mettre a jour l'application et le terminal"; Command = "update" },
+  @{ Label = "Mettre a jour l'application, le Client Kit et le terminal"; Command = "update" },
   @{ Label = "Afficher l'etat des services"; Command = "status" },
   @{ Label = "Demarrer l'application"; Command = "start" },
   @{ Label = "Arreter sans supprimer les donnees"; Command = "stop" },

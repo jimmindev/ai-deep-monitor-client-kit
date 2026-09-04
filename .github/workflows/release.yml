@@ -54,7 +54,7 @@ jobs:
           scripts/package-release.sh artifacts
           unzip -Z1 artifacts/ai-deep-monitor-client-kit.zip > /tmp/client-kit-zip.list
           tar -tzf artifacts/ai-deep-monitor-client-kit.tar.gz > /tmp/client-kit-tar.list
-          ! grep -Ehq '(^|/)VERSION$|release-notes' \
+          ! grep -Ehq '(^|/)VERSION$|(^|/)\.env$|release-notes|__pycache__|\.py[co]$' \
             /tmp/client-kit-zip.list /tmp/client-kit-tar.list
           ! grep -Ehv '^ai-deep-monitor-client-kit(/|$)' \
             /tmp/client-kit-zip.list /tmp/client-kit-tar.list | grep -q .

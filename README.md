@@ -45,6 +45,19 @@ Les deux archives utilisent toujours le meme dossier racine
 `ai-deep-monitor-client-kit`. Elles ne dispersent pas leurs fichiers dans le
 dossier courant et une mise a jour ne cree aucun dossier versionne.
 
+L'action **Mettre a jour** actualise maintenant les deux couches du client:
+
+- elle telecharge la release permanente `latest`, verifie sa somme SHA256 et
+  remplace les installateurs, scripts, fichiers Compose, documentation et
+  agent terminal locaux;
+- elle poursuit ensuite avec la sauvegarde et la mise a jour des images Docker
+  de l'application.
+
+Elle peut donc etre relancee meme lorsque l'application est deja a jour pour
+resynchroniser les fichiers d'installation. Les clients possedant encore un
+ancien updater doivent telecharger et extraire une fois la nouvelle archive;
+les actualisations suivantes deviennent automatiques.
+
 Le depot peut aussi etre clone sans authentification:
 
 ```bash

@@ -124,7 +124,8 @@ C:\ai-deep-monitor\ai-deep-monitor.ps1
 Le menu actuel propose:
 
 1. installer ou reparer;
-2. verifier et installer une mise a jour;
+2. verifier et installer une mise a jour de l'application, du Client Kit et du
+   terminal hote;
 3. afficher l'etat des services;
 4. demarrer l'application;
 5. arreter l'application;
@@ -135,6 +136,19 @@ Le menu actuel propose:
 10. reparer et verifier le terminal hote;
 11. desinstaller les conteneurs en conservant les donnees;
 12. tout supprimer.
+
+Avant de modifier les conteneurs, l'action 2 telecharge la release permanente
+`latest`, verifie la somme SHA256 publiee, puis remplace les installateurs,
+scripts Windows/Linux, fichiers Compose, documentation et fichiers de l'agent
+terminal. La sauvegarde et la mise a jour des images applicatives commencent
+ensuite avec ces nouveaux outils. L'action reste donc utile si la version de
+l'application n'a pas change.
+
+Pour la transition, un poste qui possede une ancienne version du Client Kit
+doit telecharger et extraire une seule fois l'archive `latest`, puis lancer
+**Installer ou reparer** ou **Mettre a jour**. A partir de cette version, les
+prochaines mises a jour synchronisent aussi automatiquement les fichiers
+d'installation.
 
 ## Sauvegardes
 

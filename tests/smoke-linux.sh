@@ -4,7 +4,8 @@ set -Eeuo pipefail
 
 KIT_DIR="${1:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
 INSTALL_DIR="$(mktemp -d -t ai-monitor-kit-test-XXXXXX)"
-trap 'rm -rf -- "$INSTALL_DIR"' EXIT
+CLIENT_KIT_RELEASE_DIR="$(mktemp -d -t ai-monitor-kit-release-test-XXXXXX)"
+trap 'rm -rf -- "$INSTALL_DIR" "$CLIENT_KIT_RELEASE_DIR"' EXIT
 
 update_source="${KIT_DIR}/scripts/linux/update-client.sh"
 agent_repair_line="$(grep -n 'if \[\[ "\$SKIP_AGENT_INSTALL" == "false" \]\]' "$update_source" | head -n 1 | cut -d: -f1)"
@@ -12,7 +13,7 @@ same_version_line="$(grep -n 'if \[\[ "\$current_version" == "\$APP_VERSION" \]\
 test -n "$agent_repair_line"
 test -n "$same_version_line"
 test "$agent_repair_line" -lt "$same_version_line"
-grep -Fq "Mettre a jour l'application et le terminal" "${KIT_DIR}/ai-deep-monitor.sh"
+grep -Fq "Mettre a jour l'application, le Client Kit et le terminal" "${KIT_DIR}/ai-deep-monitor.sh"
 
 if "${KIT_DIR}/scripts/linux/install-client.sh" \
   --install-dir "${INSTALL_DIR}/unsafe-login-bypass" \
@@ -60,6 +61,50 @@ test -f "${INSTALL_DIR}/host_terminal_agent/terminal_policy.py"
 test -x "${INSTALL_DIR}/host_terminal_agent/install_linux_service.sh"
 python3 "${INSTALL_DIR}/host_terminal_agent/agent.py" --help >/dev/null
 
+# Simule la release permanente avec un marqueur absent de l'installation,
+# puis verifie que l'ancien updater se remplace et synchronise tout le kit.
+fixture_parent="${CLIENT_KIT_RELEASE_DIR}/package"
+fixture_root="${fixture_parent}/ai-deep-monitor-client-kit"
+mkdir -p "$fixture_root"
+for directory in deploy docs host_terminal_agent scripts; do
+  cp -a "${KIT_DIR}/${directory}" "$fixture_root/"
+done
+for file in AI-Deep-Monitor.cmd ai-deep-monitor.ps1 ai-deep-monitor.sh CHANGELOG.md README.md; do
+  cp -a "${KIT_DIR}/${file}" "$fixture_root/"
+done
+printf '\nCLIENT_KIT_SELF_REFRESH_OK\n' >>"${fixture_root}/docs/installation.md"
+(
+  cd "$fixture_parent"
+  tar -czf "${CLIENT_KIT_RELEASE_DIR}/ai-deep-monitor-client-kit.tar.gz" \
+    ai-deep-monitor-client-kit
+)
+(
+  cd "$CLIENT_KIT_RELEASE_DIR"
+  sha256sum ai-deep-monitor-client-kit.tar.gz >ai-deep-monitor-client-kit-SHA256.txt
+)
+printf 'ANCIEN_CLIENT_KIT\n' >"${INSTALL_DIR}/README_CLIENT.md"
+AI_DEEP_MONITOR_CLIENT_KIT_RELEASE_BASE="$CLIENT_KIT_RELEASE_DIR" \
+  "${INSTALL_DIR}/update-client.sh" \
+  --install-dir "$INSTALL_DIR" \
+  --refresh-kit-only \
+  --skip-agent-install
+grep -Fq 'CLIENT_KIT_SELF_REFRESH_OK' "${INSTALL_DIR}/README_CLIENT.md"
+grep -Fq 'stage_latest_client_kit' "${INSTALL_DIR}/update-client.sh"
+
+printf '%064d  ai-deep-monitor-client-kit.tar.gz\n' 0 \
+  >"${CLIENT_KIT_RELEASE_DIR}/ai-deep-monitor-client-kit-SHA256.txt"
+printf 'FICHIER_A_CONSERVER\n' >"${INSTALL_DIR}/README_CLIENT.md"
+if AI_DEEP_MONITOR_CLIENT_KIT_RELEASE_BASE="$CLIENT_KIT_RELEASE_DIR" \
+  "${INSTALL_DIR}/update-client.sh" \
+  --install-dir "$INSTALL_DIR" \
+  --refresh-kit-only \
+  --skip-agent-install 2>"${INSTALL_DIR}/invalid-kit.err"; then
+  echo "Une archive Client Kit avec une somme invalide a ete acceptee." >&2
+  exit 1
+fi
+grep -Fq 'corrompue' "${INSTALL_DIR}/invalid-kit.err"
+grep -Fxq 'FICHIER_A_CONSERVER' "${INSTALL_DIR}/README_CLIENT.md"
+
 sed -i '/^LLAMA_CPP_/d; /^NVIDIA_VISIBLE_DEVICES=/d' "${INSTALL_DIR}/.env"
 printf 'OLLAMA_MODEL=llama3.1\nOLLAMA_FALLBACK_MODEL=llama3.1\n' >>"${INSTALL_DIR}/.env"
 sed -i 's/^HOST_TERMINAL_QUEUE_GID=.*/HOST_TERMINAL_QUEUE_GID=12003/' "${INSTALL_DIR}/.env"
@@ -67,6 +112,7 @@ sed -i 's/^TERMINAL_SESSION_TTL_SECONDS=.*/TERMINAL_SESSION_TTL_SECONDS=420/' "$
 printf 'KIT_VERSION=v0.1.15\n' >>"${INSTALL_DIR}/.env"
 "${INSTALL_DIR}/update-client.sh" \
   --install-dir "$INSTALL_DIR" \
+  --skip-kit-refresh \
   --no-start \
   --app-version v0.1.9
 
@@ -75,6 +121,8 @@ printf 'KIT_VERSION=v0.1.15\n' >>"${INSTALL_DIR}/.env"
 grep -Fq '"generatedBackupsIncluded": false' "${INSTALL_DIR}/backup-client.sh"
 grep -Fq 'gzip -1' "${INSTALL_DIR}/backup-client.sh"
 grep -Fq 'MAX_UPDATE_SECONDS = 3_600' "${INSTALL_DIR}/host_terminal_agent/agent.py"
+grep -Fq 'def refresh_client_kit' "${INSTALL_DIR}/host_terminal_agent/agent.py"
+grep -Fq 'client_kit_update_failed' "${INSTALL_DIR}/host_terminal_agent/agent.py"
 ! grep -q '^OLLAMA_' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_RUNTIME_PROFILE=auto' "${INSTALL_DIR}/.env"
