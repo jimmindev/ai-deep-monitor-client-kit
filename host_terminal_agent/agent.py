@@ -42,14 +42,14 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.5.0"
+AGENT_VERSION = "3.5.1"
 MAX_COMMAND_BYTES = 4_000
 MAX_OUTPUT_BYTES = 400_000
 MAX_LISTING_ENTRIES = 5_000
 MAX_TIMEOUT_SECONDS = 20.0
 MAX_JOB_AGE_SECONDS = 30
 STALE_JOB_SECONDS = 300
-MAX_UPDATE_SECONDS = 1_800
+MAX_UPDATE_SECONDS = 3_600
 VERSION_PATTERN = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 STOP = False
 
@@ -424,6 +424,15 @@ def terminate_process(process: subprocess.Popen) -> None:
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
     else:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            return
+        try:
+            process.wait(timeout=5)
+            return
+        except subprocess.TimeoutExpired:
+            pass
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except (ProcessLookupError, PermissionError):

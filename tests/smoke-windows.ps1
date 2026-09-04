@@ -142,8 +142,13 @@ try {
 
   $installedBackupScript = Get-Content -LiteralPath (Join-Path $testDir "backup-client.ps1") -Raw
   if ($installedBackupScript -match '/app/generated_backups' -or
-      $installedBackupScript -notmatch 'generatedBackupsIncluded\s*=\s*\$false') {
+      $installedBackupScript -notmatch 'generatedBackupsIncluded\s*=\s*\$false' -or
+      $installedBackupScript -notmatch 'CompressionLevel Fastest') {
     throw "La sauvegarde Windows imbrique encore les anciennes archives."
+  }
+  $installedAgent = Get-Content -LiteralPath (Join-Path $testDir "host_terminal_agent\agent.py") -Raw
+  if ($installedAgent -notmatch 'MAX_UPDATE_SECONDS = 3_600') {
+    throw "Le delai de maintenance Jetson n'a pas ete augmente."
   }
 
   $backupDir = Join-Path $testDir "test-backups"

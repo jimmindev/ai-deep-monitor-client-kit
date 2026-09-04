@@ -111,7 +111,7 @@ try {
   }
   $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $stagingDir "manifest.json") -Encoding UTF8
 
-  Compress-Archive -Path (Join-Path $stagingDir "*") -DestinationPath $archivePath -CompressionLevel Optimal
+  Compress-Archive -Path (Join-Path $stagingDir "*") -DestinationPath $archivePath -CompressionLevel Fastest
   Write-Host ""
   Write-Host "Sauvegarde terminee: $archivePath"
   Write-Host "Le cache du modele llama.cpp n'est pas inclus et sera retelcharge si necessaire."

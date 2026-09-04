@@ -25,6 +25,7 @@ COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 [[ -f "$ENV_FILE" && -f "$COMPOSE_FILE" ]] || die "Installation incomplete dans ${INSTALL_DIR}."
 ensure_docker
 require_command tar
+require_command gzip
 require_command sha256sum
 
 if [[ -z "$DESTINATION_DIR" ]]; then
@@ -44,7 +45,8 @@ version="$(read_env_value "$ENV_FILE" APP_VERSION)"
 version="${version:-unknown}"
 staging_dir="$(mktemp -d -t ai-monitor-backup-XXXXXX)"
 archive_path="${DESTINATION_DIR}/ai-deep-monitor-${version}-${timestamp}.tar.gz"
-trap 'rm -rf -- "$staging_dir"' EXIT
+partial_archive="${archive_path}.partial"
+trap 'rm -rf -- "$staging_dir"; rm -f -- "$partial_archive"' EXIT INT TERM
 
 log "Sauvegarde MySQL..."
 container_dump="/tmp/ai-monitor-${timestamp}.sql"
@@ -91,7 +93,8 @@ cat >"${staging_dir}/manifest.json" <<EOF
 }
 EOF
 
-tar -C "$staging_dir" -czf "$archive_path" .
+tar -C "$staging_dir" -cf - . | gzip -1 >"$partial_archive"
+mv -f -- "$partial_archive" "$archive_path"
 chmod 600 "$archive_path"
 log "Sauvegarde terminee: ${archive_path}"
 log "Le cache du modele llama.cpp n'est pas inclus et sera retelcharge si necessaire."
