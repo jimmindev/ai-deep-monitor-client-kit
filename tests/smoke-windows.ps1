@@ -140,6 +140,12 @@ try {
 
   & $launcherPath -InstallDir $testDir -Command help | Out-Null
 
+  $installedBackupScript = Get-Content -LiteralPath (Join-Path $testDir "backup-client.ps1") -Raw
+  if ($installedBackupScript -match '/app/generated_backups' -or
+      $installedBackupScript -notmatch 'generatedBackupsIncluded\s*=\s*\$false') {
+    throw "La sauvegarde Windows imbrique encore les anciennes archives."
+  }
+
   $backupDir = Join-Path $testDir "test-backups"
   New-Item -ItemType Directory -Path $backupDir | Out-Null
   $oldBackup = New-Item -ItemType File -Path (Join-Path $backupDir "ai-deep-monitor-old.zip")

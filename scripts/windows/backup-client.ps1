@@ -86,8 +86,7 @@ try {
   if ($apiContainer) {
     foreach ($entry in @(
       @{ Source = "/app/data/."; Target = "api-data" },
-      @{ Source = "/app/uploaded_mibs/."; Target = "uploaded-mibs" },
-      @{ Source = "/app/generated_backups/."; Target = "generated-backups" }
+      @{ Source = "/app/uploaded_mibs/."; Target = "uploaded-mibs" }
     )) {
       $target = Join-Path $stagingDir $entry.Target
       New-Item -ItemType Directory -Force -Path $target | Out-Null
@@ -108,6 +107,7 @@ try {
     mysqlSha256 = $dumpHash
     includedPaths = $includedPaths
     llamaCppCacheIncluded = $false
+    generatedBackupsIncluded = $false
   }
   $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $stagingDir "manifest.json") -Encoding UTF8
 
@@ -115,6 +115,7 @@ try {
   Write-Host ""
   Write-Host "Sauvegarde terminee: $archivePath"
   Write-Host "Le cache du modele llama.cpp n'est pas inclus et sera retelcharge si necessaire."
+  Write-Host "Les anciennes archives de sauvegarde ne sont pas imbriquees dans cette sauvegarde."
 } finally {
   if (Test-Path -LiteralPath $stagingDir) {
     Remove-Item -LiteralPath $stagingDir -Recurse -Force
