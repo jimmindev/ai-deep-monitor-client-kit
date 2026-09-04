@@ -76,9 +76,22 @@ Le kit lit la plateforme du moteur Docker et selectionne automatiquement:
 
 Un moteur Docker en mode Windows containers ou une architecture non prise en
 charge est bloque avant le telechargement des images, avec un diagnostic clair.
-Le chatbot utilise llama.cpp avec acceleration CUDA et decharge par defaut
-toutes les couches du modele sur le GPU NVIDIA. Le modele GGUF reste conserve
-dans un volume Docker entre les mises a jour.
+Le runtime du chatbot est ensuite choisi et teste dans Docker:
+
+| Machine detectee | Profil llama.cpp | Comportement |
+| --- | --- | --- |
+| Windows/Linux avec GPU NVIDIA compatible | `nvidia` | CUDA prioritaire, toutes les couches sur le GPU |
+| NVIDIA Jetson | `jetson` | runtime NVIDIA JetPack et image CUDA compatible |
+| Machine sans GPU, ou GPU Docker incompatible | `cpu` | image CPU multiarchitecture, sans exigence NVIDIA |
+
+L'acceleration automatique concerne les GPU NVIDIA/CUDA. Une machine equipee
+uniquement d'un GPU AMD ou Intel utilise actuellement le profil CPU.
+
+Si l'image CUDA officielle ne correspond pas a la version du pilote, le kit
+peut construire une image llama.cpp locale avec la version CUDA et le compute
+capability detectes. Si cette construction n'est pas possible, le mode
+automatique revient proprement sur CPU. Le modele GGUF reste conserve dans un
+volume Docker entre les mises a jour.
 
 Pour une nouvelle installation comme pour une reparation, les ports sont
 valides avant le lancement. Le site utilise `80`, puis `8080`, puis le prochain
@@ -91,14 +104,26 @@ un autre service est remplace et le fichier `.env` est actualise.
 - Acces Internet pendant l'installation
 - Token GitHub autorise a lire les packages prives `ghcr.io`
 - Droits administrateur Windows, ou `root`/`sudo` sous Linux
-- GPU NVIDIA, pilote NVIDIA fonctionnel et prise en charge GPU par Docker
-
-Sur Jetson, JetPack fournit le pilote CUDA. Les anciennes generations dont la
-version CUDA n'est pas compatible avec l'image llama.cpp officielle doivent
-definir `LLAMA_CPP_IMAGE` vers une image CUDA ARM64 adaptee a leur JetPack. Le
-controle prealable bloque le demarrage avec un message explicite si Docker ne
-voit pas le GPU, afin d'eviter un basculement silencieux et tres lent sur CPU.
+- GPU NVIDIA facultatif. Pour CUDA: pilote NVIDIA fonctionnel et prise en
+  charge GPU par Docker Desktop/WSL2 ou NVIDIA Container Toolkit.
 - Espace disque suffisant pour MySQL, les images et le modele GGUF llama.cpp
+
+Sur Jetson, JetPack fournit le pilote CUDA. Le kit detecte Jetson, la version
+CUDA et l'architecture GPU (Nano, TX2, Xavier ou Orin), puis valide l'image
+depuis le conteneur. Les bases CUDA connues de 11.4 a 13.0 sont prises en
+charge; une base personnalisee peut etre definie pour une autre version.
+
+Le profil detecte est enregistre dans `.env` et conserve pendant les mises a
+jour. Pour imposer ou reevaluer un choix:
+
+```bash
+./update-client.sh --llama-profile cpu
+./update-client.sh --redetect-llama-runtime
+./update-client.sh --llama-profile nvidia --require-gpu
+```
+
+Sous Windows, les options equivalentes sont `-LlamaProfile cpu|nvidia|auto`,
+`-RedetectLlamaRuntime` et `-RequireGpu`.
 
 Docker est verifie automatiquement. S'il est absent:
 
@@ -368,7 +393,12 @@ docker compose --env-file .env -f docker-compose.release.yml logs --tail=200
 
 - Les sources applicatives ne sont pas livrees au client.
 - Les images API et frontend restent dans un registre prive.
+- Une installation ou reparation reelle demande toujours un utilisateur GitHub
+  et un token valide. Le mode sans connexion est reserve aux tests `--no-start`.
+- Le token est verifie sur les deux images privees avant tout telechargement.
 - Les secrets sont generes localement et enregistres dans `.env`.
 - Sous Linux, `.env` et les sauvegardes sont proteges avec le mode `600`.
+- Sous Windows, l'acces a `.env` et a sa sauvegarde de mise a jour est limite au
+  compte courant, au systeme et aux administrateurs.
 - Le token GitHub sert uniquement a lire les images et les versions privees.
 - La restauration refuse les archives contenant des chemins dangereux.

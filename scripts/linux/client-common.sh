@@ -188,6 +188,52 @@ compose_exec() {
   docker_exec compose "$@"
 }
 
+llama_compose_override() {
+  local compose_file="$1"
+  local env_file="$2"
+  local profile
+  local install_dir
+  profile="$(read_env_value "$env_file" LLAMA_CPP_RUNTIME_PROFILE)"
+  install_dir="$(dirname "$compose_file")"
+  case "${profile,,}" in
+    nvidia)
+      printf '%s\n' "${install_dir}/docker-compose.accel.nvidia.yml"
+      ;;
+    jetson)
+      printf '%s\n' "${install_dir}/docker-compose.accel.jetson.yml"
+      ;;
+  esac
+}
+
+compose_runtime_exec() {
+  local project="$1"
+  local compose_file="$2"
+  local env_file="$3"
+  local override_file
+  shift 3
+  override_file="$(llama_compose_override "$compose_file" "$env_file")"
+  if [[ -n "$override_file" ]]; then
+    [[ -f "$override_file" ]] || die "Override llama.cpp absent: ${override_file}"
+    compose_exec -p "$project" -f "$compose_file" -f "$override_file" --env-file "$env_file" "$@"
+  else
+    compose_exec -p "$project" -f "$compose_file" --env-file "$env_file" "$@"
+  fi
+}
+
+compose_runtime_pull() {
+  local project="$1"
+  local compose_file="$2"
+  local env_file="$3"
+  local image
+  image="$(read_env_value "$env_file" LLAMA_CPP_IMAGE)"
+  if [[ "$image" == local/* ]]; then
+    compose_runtime_exec "$project" "$compose_file" "$env_file" \
+      pull mysql sandbox api collector frontend
+  else
+    compose_runtime_exec "$project" "$compose_file" "$env_file" pull
+  fi
+}
+
 normalize_docker_arch() {
   case "${1,,}" in
     amd64|x86_64|x64)
@@ -379,7 +425,9 @@ ensure_llama_cpp_config() {
       LLAMA_CPP_CONFIG_CHANGED=true
     fi
   done <<'EOF'
-LLAMA_CPP_IMAGE=ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42
+LLAMA_CPP_RUNTIME_PROFILE=auto
+LLAMA_CPP_PROFILE_SOURCE=auto
+LLAMA_CPP_IMAGE=ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31
 LLAMA_CPP_HF_REPO=bartowski/Llama-3.2-3B-Instruct-GGUF:Q4_K_M
 LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M
 LLAMA_CPP_TEMPERATURE=0.2
@@ -387,8 +435,10 @@ LLAMA_CPP_MAX_TOKENS=512
 LLAMA_CPP_TIMEOUT_SECONDS=300
 LLAMA_CPP_CONTEXT_SIZE=8192
 LLAMA_CPP_PARALLEL=2
-LLAMA_CPP_GPU_LAYERS=99
-LLAMA_CPP_ACCELERATOR=cuda
+LLAMA_CPP_GPU_LAYERS=0
+LLAMA_CPP_ACCELERATOR=cpu
+LLAMA_CPP_FLASH_ATTN=off
+LLAMA_CPP_AUTO_BUILD_CUDA=true
 NVIDIA_VISIBLE_DEVICES=all
 EOF
 
@@ -398,6 +448,245 @@ EOF
       LLAMA_CPP_CONFIG_CHANGED=true
     fi
   done
+}
+
+llama_is_jetson() {
+  [[ -f /etc/nv_tegra_release ]] && return 0
+  if [[ -r /proc/device-tree/model ]]; then
+    tr -d '\000' </proc/device-tree/model 2>/dev/null | grep -qi 'jetson' && return 0
+  fi
+  return 1
+}
+
+llama_cuda_version() {
+  local version=""
+  if [[ -r /usr/local/cuda/version.json ]]; then
+    version="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' /usr/local/cuda/version.json | head -n 1)"
+  fi
+  if [[ -z "$version" ]] && command -v nvcc >/dev/null 2>&1; then
+    version="$(nvcc --version 2>/dev/null | sed -n 's/.*release \([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' | tail -n 1)"
+  fi
+  if [[ -z "$version" ]] && command -v nvidia-smi >/dev/null 2>&1; then
+    version="$(nvidia-smi 2>/dev/null | sed -n 's/.*CUDA Version:[[:space:]]*\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' | head -n 1)"
+  fi
+  printf '%s\n' "$version"
+}
+
+llama_cuda_architecture() {
+  local model=""
+  local compute=""
+  if [[ -r /proc/device-tree/model ]]; then
+    model="$(tr -d '\000' </proc/device-tree/model 2>/dev/null || true)"
+    case "${model,,}" in
+      *orin*) printf '87\n'; return 0 ;;
+      *xavier*) printf '72\n'; return 0 ;;
+      *tx2*) printf '62\n'; return 0 ;;
+      *nano*) printf '53\n'; return 0 ;;
+    esac
+  fi
+  if command -v nvidia-smi >/dev/null 2>&1; then
+    compute="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -n 1 | tr -d '. ')"
+  fi
+  [[ "$compute" =~ ^[0-9]+$ ]] || return 1
+  printf '%s\n' "$compute"
+}
+
+llama_cuda_base_images() {
+  local version="$1"
+  case "$version" in
+    13.0) printf '%s|%s\n' 'nvidia/cuda:13.0.1-devel-ubuntu24.04' 'nvidia/cuda:13.0.1-runtime-ubuntu24.04' ;;
+    12.9) printf '%s|%s\n' 'nvidia/cuda:12.9.1-devel-ubuntu24.04' 'nvidia/cuda:12.9.1-runtime-ubuntu24.04' ;;
+    12.8) printf '%s|%s\n' 'nvidia/cuda:12.8.1-devel-ubuntu24.04' 'nvidia/cuda:12.8.1-runtime-ubuntu24.04' ;;
+    12.6) printf '%s|%s\n' 'nvidia/cuda:12.6.3-devel-ubuntu24.04' 'nvidia/cuda:12.6.3-runtime-ubuntu24.04' ;;
+    12.4) printf '%s|%s\n' 'nvidia/cuda:12.4.1-devel-ubuntu22.04' 'nvidia/cuda:12.4.1-runtime-ubuntu22.04' ;;
+    12.2) printf '%s|%s\n' 'nvidia/cuda:12.2.2-devel-ubuntu22.04' 'nvidia/cuda:12.2.2-runtime-ubuntu22.04' ;;
+    12.1) printf '%s|%s\n' 'nvidia/cuda:12.1.1-devel-ubuntu22.04' 'nvidia/cuda:12.1.1-runtime-ubuntu22.04' ;;
+    11.8) printf '%s|%s\n' 'nvidia/cuda:11.8.0-devel-ubuntu22.04' 'nvidia/cuda:11.8.0-runtime-ubuntu22.04' ;;
+    11.4) printf '%s|%s\n' 'nvidia/cuda:11.4.3-devel-ubuntu20.04' 'nvidia/cuda:11.4.3-runtime-ubuntu20.04' ;;
+    *) return 1 ;;
+  esac
+}
+
+llama_gpu_probe() {
+  local profile="$1"
+  local image="$2"
+  local output=""
+  local -a gpu_args
+  if [[ "$profile" == "jetson" ]]; then
+    gpu_args=(--runtime nvidia -e NVIDIA_VISIBLE_DEVICES=all -e NVIDIA_DRIVER_CAPABILITIES=compute,utility -e NVIDIA_DISABLE_REQUIRE=1)
+  else
+    gpu_args=(--gpus all)
+  fi
+  output="$(docker_exec run --rm "${gpu_args[@]}" "$image" --list-devices 2>&1)" || {
+    warn "$output"
+    return 1
+  }
+  printf '%s\n' "$output"
+  grep -q 'CUDA0:' <<<"$output"
+}
+
+llama_gpu_runtime_available() {
+  local profile="$1"
+  local image="$2"
+  local -a gpu_args
+  if [[ "$profile" == "jetson" ]]; then
+    gpu_args=(--runtime nvidia -e NVIDIA_VISIBLE_DEVICES=all -e NVIDIA_DISABLE_REQUIRE=1)
+  else
+    gpu_args=(--gpus all)
+  fi
+  docker_exec run --rm "${gpu_args[@]}" --entrypoint /bin/true "$image" >/dev/null 2>&1
+}
+
+llama_build_cuda_image() {
+  local env_file="$1"
+  local profile="$2"
+  local install_dir
+  local dockerfile
+  local cuda_version
+  local cuda_arch
+  local configured_devel
+  local configured_runtime
+  local mapped
+  local devel_image
+  local runtime_image
+  local local_image
+  install_dir="$(dirname "$env_file")"
+  dockerfile="${install_dir}/Dockerfile.llama-cuda"
+  [[ -f "$dockerfile" ]] || { warn "Dockerfile CUDA local absent: ${dockerfile}"; return 1; }
+  cuda_version="$(llama_cuda_version)"
+  cuda_arch="$(llama_cuda_architecture || true)"
+  [[ -n "$cuda_version" ]] || { warn 'Version CUDA hote introuvable.'; return 1; }
+  [[ -n "$cuda_arch" ]] || { warn 'Architecture CUDA du GPU introuvable.'; return 1; }
+
+  configured_devel="$(read_env_value "$env_file" LLAMA_CPP_CUDA_DEVEL_IMAGE)"
+  configured_runtime="$(read_env_value "$env_file" LLAMA_CPP_CUDA_RUNTIME_IMAGE)"
+  if [[ -n "$configured_devel" && -n "$configured_runtime" ]]; then
+    devel_image="$configured_devel"
+    runtime_image="$configured_runtime"
+  else
+    mapped="$(llama_cuda_base_images "$cuda_version" || true)"
+    [[ -n "$mapped" ]] || {
+      warn "CUDA ${cuda_version} n'a pas encore de base automatique. Definissez LLAMA_CPP_CUDA_DEVEL_IMAGE et LLAMA_CPP_CUDA_RUNTIME_IMAGE."
+      return 1
+    }
+    IFS='|' read -r devel_image runtime_image <<<"$mapped"
+  fi
+
+  local_image="local/ai-deep-monitor-llama-cpp:cuda-${cuda_version}-sm${cuda_arch}-b10775"
+  log "Construction locale de llama.cpp pour CUDA ${cuda_version}, sm_${cuda_arch}. Cette operation unique peut prendre plusieurs minutes."
+  if ! docker_exec build \
+    --build-arg "CUDA_DEVEL_IMAGE=${devel_image}" \
+    --build-arg "CUDA_RUNTIME_IMAGE=${runtime_image}" \
+    --build-arg "CUDA_ARCHITECTURES=${cuda_arch}" \
+    --build-arg 'LLAMA_CPP_GIT_REF=67a17c17caa95742186f8b1ecadd1b5abd6d5ebb' \
+    -t "$local_image" \
+    -f "$dockerfile" "$install_dir"; then
+    warn "La construction llama.cpp CUDA ${cuda_version} a echoue."
+    return 1
+  fi
+  llama_gpu_probe "$profile" "$local_image" || return 1
+  write_env_value "$env_file" LLAMA_CPP_IMAGE "$local_image"
+  write_env_value "$env_file" LLAMA_CPP_CUDA_VERSION "$cuda_version"
+  write_env_value "$env_file" LLAMA_CPP_CUDA_ARCHITECTURE "$cuda_arch"
+  write_env_value "$env_file" LLAMA_CPP_CUDA_DEVEL_IMAGE "$devel_image"
+  write_env_value "$env_file" LLAMA_CPP_CUDA_RUNTIME_IMAGE "$runtime_image"
+}
+
+llama_set_cpu_profile() {
+  local env_file="$1"
+  write_env_value "$env_file" LLAMA_CPP_RUNTIME_PROFILE cpu
+  write_env_value "$env_file" LLAMA_CPP_IMAGE 'ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31'
+  write_env_value "$env_file" LLAMA_CPP_ACCELERATOR cpu
+  write_env_value "$env_file" LLAMA_CPP_GPU_LAYERS 0
+  write_env_value "$env_file" LLAMA_CPP_FLASH_ATTN off
+}
+
+llama_set_gpu_profile() {
+  local env_file="$1"
+  local profile="$2"
+  local image="$3"
+  write_env_value "$env_file" LLAMA_CPP_RUNTIME_PROFILE "$profile"
+  write_env_value "$env_file" LLAMA_CPP_IMAGE "$image"
+  write_env_value "$env_file" LLAMA_CPP_ACCELERATOR cuda
+  write_env_value "$env_file" LLAMA_CPP_GPU_LAYERS 99
+  write_env_value "$env_file" LLAMA_CPP_FLASH_ATTN on
+  write_env_value "$env_file" NVIDIA_VISIBLE_DEVICES all
+}
+
+configure_llama_cpp_runtime() {
+  local env_file="$1"
+  local requested_profile="${2:-}"
+  local require_gpu="${3:-false}"
+  local redetect="${4:-false}"
+  local profile
+  local source
+  local image
+  local candidate
+  local auto_build
+
+  profile="$(read_env_value "$env_file" LLAMA_CPP_RUNTIME_PROFILE)"
+  source="$(read_env_value "$env_file" LLAMA_CPP_PROFILE_SOURCE)"
+  if [[ -n "$requested_profile" ]]; then
+    profile="${requested_profile,,}"
+    source=manual
+    [[ "$profile" == auto ]] && source=auto
+  fi
+  [[ "$redetect" == true ]] && profile=auto && source=auto
+  case "$profile" in auto|cpu|nvidia|jetson) ;; *) die "Profil llama.cpp invalide: ${profile}" ;; esac
+
+  if [[ "$profile" == cpu ]]; then
+    llama_set_cpu_profile "$env_file"
+    write_env_value "$env_file" LLAMA_CPP_PROFILE_SOURCE "$source"
+    log 'llama.cpp: profil CPU selectionne (aucun GPU Docker requis).'
+    return 0
+  fi
+
+  if [[ "$profile" == auto ]]; then
+    if llama_is_jetson; then
+      profile=jetson
+    elif command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
+      profile=nvidia
+    else
+      if [[ "$require_gpu" == true ]]; then
+        die 'GPU NVIDIA requis mais aucun pilote utilisable n a ete detecte.'
+      fi
+      llama_set_cpu_profile "$env_file"
+      write_env_value "$env_file" LLAMA_CPP_PROFILE_SOURCE auto
+      warn 'Aucun GPU NVIDIA utilisable detecte: llama.cpp fonctionnera sur CPU.'
+      return 0
+    fi
+  fi
+
+  image="$(read_env_value "$env_file" LLAMA_CPP_IMAGE)"
+  candidate="$image"
+  if [[ -z "$candidate" || "$candidate" == *'/llama.cpp:server@'* ]]; then
+    candidate='ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42'
+  fi
+  if llama_gpu_probe "$profile" "$candidate"; then
+    llama_set_gpu_profile "$env_file" "$profile" "$candidate"
+    write_env_value "$env_file" LLAMA_CPP_PROFILE_SOURCE "$source"
+    log "llama.cpp: GPU CUDA valide (${profile})."
+    return 0
+  fi
+
+  auto_build="$(read_env_value "$env_file" LLAMA_CPP_AUTO_BUILD_CUDA)"
+  auto_build="${auto_build:-true}"
+  if [[ "$auto_build" == true ]] &&
+     llama_gpu_runtime_available "$profile" "$candidate" &&
+     llama_build_cuda_image "$env_file" "$profile"; then
+    image="$(read_env_value "$env_file" LLAMA_CPP_IMAGE)"
+    llama_set_gpu_profile "$env_file" "$profile" "$image"
+    write_env_value "$env_file" LLAMA_CPP_PROFILE_SOURCE "$source"
+    log "llama.cpp: image CUDA locale valide (${profile})."
+    return 0
+  fi
+
+  if [[ "$require_gpu" == true || "$source" == manual ]]; then
+    die "Le profil GPU ${profile} a ete demande mais aucune image llama.cpp compatible n'a pu etre validee."
+  fi
+  llama_set_cpu_profile "$env_file"
+  write_env_value "$env_file" LLAMA_CPP_PROFILE_SOURCE auto
+  warn 'CUDA est present mais incompatible avec les images testees: repli controle sur CPU.'
 }
 
 print_bootstrap_credentials() {
@@ -547,9 +836,9 @@ show_startup_diagnostics() {
   local env_file="$3"
 
   warn "Etat des services:"
-  compose_exec -p "$project" -f "$compose_file" --env-file "$env_file" ps || true
+  compose_runtime_exec "$project" "$compose_file" "$env_file" ps || true
   warn "Derniers journaux utiles:"
-  compose_exec -p "$project" -f "$compose_file" --env-file "$env_file" \
+  compose_runtime_exec "$project" "$compose_file" "$env_file" \
     logs --tail=120 mysql sandbox llama-cpp api collector || true
 }
 
@@ -594,6 +883,35 @@ ghcr_bearer_token() {
   curl -fsS -u "${user}:${token}" \
     "https://ghcr.io/token?scope=repository:${owner}/${image}:pull&service=ghcr.io" |
     sed -n 's/.*"token":"\([^"]*\)".*/\1/p'
+}
+
+ghcr_manifest_available() {
+  local owner="$1"
+  local image="$2"
+  local reference="$3"
+  local user="$4"
+  local token="$5"
+  local bearer
+
+  bearer="$(ghcr_bearer_token "$owner" "$image" "$user" "$token")" || return 1
+  [[ -n "$bearer" ]] || return 1
+  curl -fsS -o /dev/null \
+    -H "Authorization: Bearer ${bearer}" \
+    -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
+    "https://ghcr.io/v2/${owner}/${image}/manifests/${reference}"
+}
+
+validate_private_images_access() {
+  local owner="$1"
+  local reference="$2"
+  local user="$3"
+  local token="$4"
+  local image
+
+  for image in ai-deep-monitor-api ai-deep-monitor-frontend; do
+    ghcr_manifest_available "$owner" "$image" "$reference" "$user" "$token" ||
+      die "Le compte ou token fourni ne peut pas lire ${owner}/${image}:${reference}. Utilisez un token limite a read:packages et autorise pour le depot prive."
+  done
 }
 
 ghcr_tags() {

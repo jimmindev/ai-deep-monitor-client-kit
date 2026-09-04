@@ -35,13 +35,25 @@ function Get-ComposeContext {
   if (-not (Test-Path -LiteralPath $compose) -or -not (Test-Path -LiteralPath $envFile)) {
     throw "Installation introuvable dans $InstallDir. Choisis d'abord Installer / reparer."
   }
-  return @{ Compose = $compose; Env = $envFile }
+  $profile = ""
+  foreach ($line in Get-Content -LiteralPath $envFile) {
+    if ($line -match '^LLAMA_CPP_RUNTIME_PROFILE=(.+)$') { $profile = $Matches[1].Trim(); break }
+  }
+  $composeArguments = @("-f", $compose)
+  if ($profile -eq "nvidia") {
+    $composeArguments += @("-f", (Join-Path $InstallDir "docker-compose.accel.nvidia.yml"))
+  } elseif ($profile -eq "jetson") {
+    $composeArguments += @("-f", (Join-Path $InstallDir "docker-compose.accel.jetson.yml"))
+  }
+  $composeArguments += @("--env-file", $envFile)
+  return @{ Compose = $compose; Env = $envFile; Arguments = $composeArguments }
 }
 
 function Invoke-Compose {
   param([string[]]$Arguments)
   $context = Get-ComposeContext
-  & docker compose -f $context.Compose --env-file $context.Env @Arguments
+  $composeArguments = $context.Arguments
+  & docker compose @composeArguments @Arguments
   if ($LASTEXITCODE -ne 0) {
     throw "La commande Docker Compose a echoue."
   }

@@ -50,6 +50,9 @@ SKIP_BACKUP=false
 SKIP_AGENT_INSTALL=false
 NO_START=false
 ASSUME_YES=false
+LLAMA_PROFILE=""
+REQUIRE_GPU=false
+REDETECT_LLAMA_RUNTIME=false
 
 usage() {
   cat <<'EOF'
@@ -59,6 +62,9 @@ Usage: ./update-client.sh [options]
   --skip-docker-login
   --skip-backup
   --skip-agent-install
+  --llama-profile PROFIL
+  --require-gpu
+  --redetect-llama-runtime
   --no-start
   --yes
 EOF
@@ -71,6 +77,9 @@ while (($#)); do
     --skip-docker-login) SKIP_DOCKER_LOGIN=true; shift ;;
     --skip-backup) SKIP_BACKUP=true; shift ;;
     --skip-agent-install) SKIP_AGENT_INSTALL=true; shift ;;
+    --llama-profile) LLAMA_PROFILE="${2,,}"; shift 2 ;;
+    --require-gpu) REQUIRE_GPU=true; shift ;;
+    --redetect-llama-runtime) REDETECT_LLAMA_RUNTIME=true; shift ;;
     --no-start) NO_START=true; shift ;;
     --yes) ASSUME_YES=true; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -78,10 +87,13 @@ while (($#)); do
   esac
 done
 
+[[ -z "$LLAMA_PROFILE" || "$LLAMA_PROFILE" =~ ^(auto|cpu|nvidia|jetson)$ ]] ||
+  die "Profil llama.cpp invalide: ${LLAMA_PROFILE}"
+
 ENV_FILE="${INSTALL_DIR}/.env"
 COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 [[ -f "$ENV_FILE" ]] || die "Installation introuvable: ${ENV_FILE}"
-for file in docker-compose.release.yml client-common.sh client-platform.ps1 ai-deep-monitor.sh ai-deep-monitor.ps1 AI-Deep-Monitor.cmd install-client.sh check-update.sh update-client.sh backup-client.sh backup-maintenance.sh restore-client.sh uninstall-client.sh repair-terminal.sh verify-llama-gpu.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 backup-maintenance.ps1 restore-client.ps1 uninstall-client.ps1 repair-terminal.ps1 README_CLIENT.md; do
+for file in docker-compose.release.yml docker-compose.accel.nvidia.yml docker-compose.accel.jetson.yml Dockerfile.llama-cuda client-common.sh client-platform.ps1 ai-deep-monitor.sh ai-deep-monitor.ps1 AI-Deep-Monitor.cmd install-client.sh check-update.sh update-client.sh backup-client.sh backup-maintenance.sh restore-client.sh uninstall-client.sh repair-terminal.sh verify-llama-gpu.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 backup-maintenance.ps1 restore-client.ps1 uninstall-client.ps1 repair-terminal.ps1 README_CLIENT.md; do
   source_file="$(kit_source "$file" || true)"
   [[ -n "$source_file" ]] || continue
   if [[ "$source_file" != "${INSTALL_DIR}/${file}" ]]; then
@@ -104,13 +116,17 @@ if [[ "$AUTH_CONFIG_CHANGED" == "true" ]]; then
   log "Configuration d'authentification reparee; les volumes SQL et les comptes existants restent inchanges."
 fi
 if [[ "$LLAMA_CPP_CONFIG_CHANGED" == "true" ]]; then
-  log "Configuration migree vers llama.cpp CUDA; les donnees applicatives sont conservees."
+  log "Configuration migree vers le runtime llama.cpp adaptatif; les donnees applicatives sont conservees."
 fi
 
 if [[ "$NO_START" == "true" ]]; then
   detect_host_platform
   write_env_value "$ENV_FILE" DOCKER_PLATFORM "$DOCKER_PLATFORM"
   [[ -z "$APP_VERSION" ]] || write_env_value "$ENV_FILE" APP_VERSION "$APP_VERSION"
+  if [[ -n "$LLAMA_PROFILE" ]]; then
+    write_env_value "$ENV_FILE" LLAMA_CPP_RUNTIME_PROFILE "$LLAMA_PROFILE"
+    write_env_value "$ENV_FILE" LLAMA_CPP_PROFILE_SOURCE manual
+  fi
   log "Fichiers du kit actualises sans lancement Docker pour ${DOCKER_PLATFORM}."
   print_bootstrap_credentials
   exit 0
@@ -146,10 +162,14 @@ fi
 [[ "$APP_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Version applicative invalide: ${APP_VERSION}"
 
 current_version="$(read_env_value "$ENV_FILE" APP_VERSION)"
+current_llama_profile="$(read_env_value "$ENV_FILE" LLAMA_CPP_RUNTIME_PROFILE)"
 refresh_images=false
 if [[ "$current_version" == "$APP_VERSION" ]]; then
   if [[ "$AUTH_CONFIG_CHANGED" == "false" &&
-        "$LLAMA_CPP_CONFIG_CHANGED" == "false" ]]; then
+        "$LLAMA_CPP_CONFIG_CHANGED" == "false" &&
+        "$REDETECT_LLAMA_RUNTIME" == "false" &&
+        "$current_llama_profile" != "auto" &&
+        -z "$LLAMA_PROFILE" ]]; then
     log "L'application est deja en ${APP_VERSION}; les outils de maintenance sont synchronises."
     exit 0
   fi
@@ -177,10 +197,10 @@ fi
 unset github_token
 
 project_name="$(project_name_from_dir "$INSTALL_DIR")"
-compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
-"${INSTALL_DIR}/verify-llama-gpu.sh"
-compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" pull
-if ! compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d; then
+configure_llama_cpp_runtime "$ENV_FILE" "$LLAMA_PROFILE" "$REQUIRE_GPU" "$REDETECT_LLAMA_RUNTIME"
+compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
+compose_runtime_pull "$project_name" "$COMPOSE_FILE" "$ENV_FILE"
+if ! compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" up -d; then
   show_startup_diagnostics "$project_name" "$COMPOSE_FILE" "$ENV_FILE"
   die "Le stack Docker n'a pas redemarre. Le fichier ${ENV_FILE}.before-${APP_VERSION}.bak permet un retour arriere."
 fi

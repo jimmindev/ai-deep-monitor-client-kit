@@ -4,6 +4,9 @@ param(
   [switch]$SkipDockerLogin,
   [switch]$SkipBackup,
   [switch]$SkipAgentInstall,
+  [ValidateSet("", "auto", "cpu", "nvidia")][string]$LlamaProfile = "",
+  [switch]$RequireGpu,
+  [switch]$RedetectLlamaRuntime,
   [switch]$NoStart,
   [switch]$Yes
 )
@@ -154,11 +157,15 @@ function Repair-LlamaCppConfig {
   $values = Read-DotEnv -Path $Path
   $changed = $false
   $defaults = [ordered]@{
-    LLAMA_CPP_IMAGE = "ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42"
+    LLAMA_CPP_RUNTIME_PROFILE = "auto"
+    LLAMA_CPP_PROFILE_SOURCE = "auto"
+    LLAMA_CPP_IMAGE = "ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31"
     LLAMA_CPP_HF_REPO = "bartowski/Llama-3.2-3B-Instruct-GGUF:Q4_K_M"
     LLAMA_CPP_MODEL = "Llama-3.2-3B-Instruct-Q4_K_M"
-    LLAMA_CPP_ACCELERATOR = "cuda"
-    LLAMA_CPP_GPU_LAYERS = "99"
+    LLAMA_CPP_ACCELERATOR = "cpu"
+    LLAMA_CPP_GPU_LAYERS = "0"
+    LLAMA_CPP_FLASH_ATTN = "off"
+    LLAMA_CPP_AUTO_BUILD_CUDA = "true"
     LLAMA_CPP_CONTEXT_SIZE = "8192"
     LLAMA_CPP_PARALLEL = "2"
     LLAMA_CPP_TEMPERATURE = "0.2"
@@ -179,29 +186,6 @@ function Repair-LlamaCppConfig {
     }
   }
   return $changed
-}
-
-function Assert-LlamaCppGpu {
-  param([string]$EnvPath)
-  if (-not (Get-Command nvidia-smi -ErrorAction SilentlyContinue)) {
-    throw "GPU NVIDIA introuvable. llama.cpp est configure pour CUDA; installez le pilote NVIDIA et le support GPU Docker/WSL2."
-  }
-  nvidia-smi | Out-Null
-  if ($LASTEXITCODE -ne 0) {
-    throw "Le pilote NVIDIA ne repond pas. llama.cpp ne peut pas demarrer avec CUDA."
-  }
-  $runtimeValues = Read-DotEnv -Path $EnvPath
-  $image = $runtimeValues["LLAMA_CPP_IMAGE"]
-  Write-Host "Verification du GPU depuis le conteneur llama.cpp..."
-  $devices = & docker run --rm --gpus all $image --list-devices 2>&1
-  if ($LASTEXITCODE -ne 0) {
-    $devices | Write-Host
-    throw "Le GPU NVIDIA n'est pas utilisable dans Docker. Verifiez Docker Desktop/WSL2, le NVIDIA Container Toolkit et le pilote."
-  }
-  $devices | Write-Host
-  if (-not ($devices -match "CUDA0:")) {
-    throw "llama.cpp ne voit aucun device CUDA. La mise a jour est bloquee pour eviter une inference CPU involontaire."
-  }
 }
 
 function Read-PlainToken {
@@ -276,6 +260,9 @@ $envPath = Join-Path $InstallDir ".env"
 
 $kitFiles = @(
   "docker-compose.release.yml",
+  "docker-compose.accel.nvidia.yml",
+  "docker-compose.accel.jetson.yml",
+  "Dockerfile.llama-cuda",
   "client-common.sh",
   "client-platform.ps1",
   "install-client.sh",
@@ -339,7 +326,7 @@ if ($authRepair.Changed) {
 }
 $llamaCppConfigChanged = Repair-LlamaCppConfig -Path $envPath
 if ($llamaCppConfigChanged) {
-  Write-Host "Configuration migree vers llama.cpp CUDA; les donnees applicatives sont conservees."
+  Write-Host "Configuration migree vers le runtime llama.cpp adaptatif; les donnees applicatives sont conservees."
 }
 $dockerPlatform = if ($NoStart) {
   Get-AiMonitorHostPlatform
@@ -404,7 +391,8 @@ if (-not $AppVersion) {
 
 $refreshImages = $currentVersion -eq $AppVersion
 if ($refreshImages) {
-  if (-not $authRepair.Changed -and -not $llamaCppConfigChanged) {
+  $currentLlamaProfile = (Read-DotEnv -Path $envPath)["LLAMA_CPP_RUNTIME_PROFILE"]
+  if (-not $authRepair.Changed -and -not $llamaCppConfigChanged -and -not $RedetectLlamaRuntime -and -not $LlamaProfile -and $currentLlamaProfile -ne "auto") {
     Write-Host "Application deja en $AppVersion; les outils de maintenance sont synchronises."
     exit 0
   }
@@ -428,12 +416,18 @@ if (-not $SkipBackup -and -not $NoStart -and -not $refreshImages) {
 
 $backupPath = Join-Path $InstallDir (".env.backup-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
 Copy-Item -LiteralPath $envPath -Destination $backupPath -Force
+Protect-AiMonitorSensitiveFile -Path $backupPath
 Write-DotEnvValue -Path $envPath -Key "APP_VERSION" -Value $AppVersion
 
 Write-Host "Version cible: $AppVersion"
 Write-Host "Backup .env: $backupPath"
 
 if ($NoStart) {
+  if ($LlamaProfile) {
+    $profileSource = if ($LlamaProfile -eq "auto") { "auto" } else { "manual" }
+    Write-DotEnvValue -Path $envPath -Key "LLAMA_CPP_RUNTIME_PROFILE" -Value $LlamaProfile
+    Write-DotEnvValue -Path $envPath -Key "LLAMA_CPP_PROFILE_SOURCE" -Value $profileSource
+  }
   Write-Host "NoStart actif: version mise a jour sans lancement Docker."
   if ($authRepair.BootstrapPassword) {
     Write-Host "Compte initial (seulement si aucun administrateur n'existe): admin / $($authRepair.BootstrapPassword)"
@@ -448,26 +442,32 @@ if (-not $SkipDockerLogin) {
     $plainToken = Read-PlainToken
   }
   $plainToken | docker login ghcr.io -u $githubUser --password-stdin
+  if ($LASTEXITCODE -ne 0) { throw "La connexion au registre prive GHCR a echoue." }
   Write-DotEnvValue -Path $envPath -Key "UPDATE_CHECK_ENABLED" -Value "true"
   Write-DotEnvValue -Path $envPath -Key "UPDATE_CHECK_USER" -Value $githubUser
   Write-DotEnvValue -Path $envPath -Key "UPDATE_CHECK_TOKEN" -Value $plainToken
+  Protect-AiMonitorSensitiveFile -Path $envPath
 }
 
-Assert-LlamaCppGpu -EnvPath $envPath
-
-docker compose -f $composePath --env-file $envPath pull
-if ($LASTEXITCODE -ne 0) {
-  throw "Impossible de telecharger les images Docker."
-}
-docker compose -f $composePath --env-file $envPath up -d
-if ($LASTEXITCODE -ne 0) {
+Resolve-AiMonitorLlamaRuntime `
+  -EnvPath $envPath `
+  -InstallDir $InstallDir `
+  -RequestedProfile $LlamaProfile `
+  -RequireGpu:$RequireGpu `
+  -Redetect:$RedetectLlamaRuntime
+Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("config", "--quiet")
+Invoke-AiMonitorComposePull -ComposePath $composePath -EnvPath $envPath
+try {
+  Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("up", "-d")
+} catch {
   Write-Warning "Etat des services:"
-  docker compose -f $composePath --env-file $envPath ps
+  $composeArguments = Get-AiMonitorComposeArguments -ComposePath $composePath -EnvPath $envPath
+  & docker compose @composeArguments ps
   Write-Warning "Derniers journaux utiles:"
-  docker compose -f $composePath --env-file $envPath logs --tail=120 mysql sandbox llama-cpp api collector
-  throw "Le stack Docker n'a pas redemarre. Consulte les journaux ci-dessus."
+  & docker compose @composeArguments logs --tail=120 mysql sandbox llama-cpp api collector
+  throw
 }
-docker compose -f $composePath --env-file $envPath ps
+Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("ps")
 
 Write-Host ""
 Write-Host "Mise a jour terminee vers $AppVersion sur $dockerPlatform."

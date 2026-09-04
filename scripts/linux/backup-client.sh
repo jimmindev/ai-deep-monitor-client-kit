@@ -34,9 +34,9 @@ fi
 mkdir -p "$DESTINATION_DIR"
 
 project_name="$(project_name_from_dir "$INSTALL_DIR")"
-compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
-compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d mysql >/dev/null
-mysql_container="$(compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps -q mysql)"
+compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
+compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" up -d mysql >/dev/null
+mysql_container="$(compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" ps -q mysql)"
 [[ -n "$mysql_container" ]] || die "Conteneur MySQL introuvable."
 wait_for_container "$mysql_container" 180 || die "MySQL n'est pas pret."
 
@@ -58,7 +58,7 @@ docker_exec cp "${mysql_container}:${container_dump}" "${staging_dir}/mysql.sql"
 docker_exec exec "$mysql_container" rm -f "$container_dump"
 
 included_paths=()
-api_container="$(compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps -a -q api || true)"
+api_container="$(compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" ps -a -q api || true)"
 if [[ -n "$api_container" ]]; then
   while IFS='|' read -r source target; do
     mkdir -p "${staging_dir}/${target}"

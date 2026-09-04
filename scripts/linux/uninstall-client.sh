@@ -33,7 +33,7 @@ COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 [[ -f "$ENV_FILE" && -f "$COMPOSE_FILE" ]] || die "Installation incomplete dans ${INSTALL_DIR}."
 ensure_docker
 project_name="$(project_name_from_dir "$INSTALL_DIR")"
-compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
+compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
 
 if [[ "$MODE" == "partial" ]]; then
   log "Les conteneurs et le reseau seront supprimes. Volumes, images et fichiers seront conserves."
@@ -47,7 +47,7 @@ if [[ "$MODE" == "full" && "$SKIP_BACKUP" == "false" ]]; then
 fi
 
 if [[ "$MODE" == "partial" ]]; then
-  compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down --remove-orphans
+  compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" down --remove-orphans
   log "Desinstallation partielle terminee."
   exit 0
 fi
@@ -60,7 +60,7 @@ fi
 
 down_args=(down --volumes --remove-orphans)
 [[ "$REMOVE_IMAGES" == "false" ]] || down_args+=(--rmi all)
-compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "${down_args[@]}"
+compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" "${down_args[@]}"
 
 case "$INSTALL_DIR" in
   /|/home|/opt|/usr|"$HOME") die "Suppression refusee pour le chemin sensible ${INSTALL_DIR}." ;;

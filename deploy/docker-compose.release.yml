@@ -88,7 +88,7 @@ services:
       LLAMA_CPP_TEMPERATURE: "${LLAMA_CPP_TEMPERATURE:-0.2}"
       LLAMA_CPP_MAX_TOKENS: "${LLAMA_CPP_MAX_TOKENS:-512}"
       LLAMA_CPP_TIMEOUT_SECONDS: "${LLAMA_CPP_TIMEOUT_SECONDS:-300}"
-      LLAMA_CPP_ACCELERATOR: "${LLAMA_CPP_ACCELERATOR:-cuda}"
+      LLAMA_CPP_ACCELERATOR: "${LLAMA_CPP_ACCELERATOR:-cpu}"
       TELEMETRY_RAW_RETENTION_DAYS: "${TELEMETRY_RAW_RETENTION_DAYS:-7}"
       TELEMETRY_ROLLUP_RETENTION_DAYS: "${TELEMETRY_ROLLUP_RETENTION_DAYS:-365}"
       CHATBOT_DATA_DIR: /app/data
@@ -141,11 +141,10 @@ services:
         condition: service_healthy
 
   llama-cpp:
-    image: "${LLAMA_CPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42}"
+    image: "${LLAMA_CPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31}"
     platform: "${DOCKER_PLATFORM:-linux/amd64}"
     container_name: ai-monitor-client-llama-cpp
     restart: unless-stopped
-    gpus: all
     environment:
       NVIDIA_VISIBLE_DEVICES: "${NVIDIA_VISIBLE_DEVICES:-all}"
       NVIDIA_DRIVER_CAPABILITIES: "compute,utility"
@@ -165,9 +164,9 @@ services:
       - "--parallel"
       - "${LLAMA_CPP_PARALLEL:-2}"
       - "--n-gpu-layers"
-      - "${LLAMA_CPP_GPU_LAYERS:-99}"
+      - "${LLAMA_CPP_GPU_LAYERS:-0}"
       - "--flash-attn"
-      - "on"
+      - "${LLAMA_CPP_FLASH_ATTN:-off}"
       - "--cont-batching"
       - "--metrics"
       - "--jinja"

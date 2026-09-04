@@ -74,13 +74,13 @@ update_app() {
 
 status_app() {
   load_installation
-  compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
+  compose_runtime_exec "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE" ps
   show_access
 }
 
 logs_app() {
   load_installation
-  compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
+  compose_runtime_exec "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE" \
     logs --tail=200 api collector mysql sandbox llama-cpp
 }
 
@@ -147,13 +147,13 @@ restore_app() {
 
 stop_app() {
   load_installation
-  compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" stop
+  compose_runtime_exec "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE" stop
   log "Application arretee. Les donnees sont conservees."
 }
 
 start_app() {
   load_installation
-  compose_exec -p "$PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+  compose_runtime_exec "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE" up -d
   if ! wait_for_container ai-monitor-client-api 300; then
     show_startup_diagnostics "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE"
     die "L'API n'est pas operationnelle."

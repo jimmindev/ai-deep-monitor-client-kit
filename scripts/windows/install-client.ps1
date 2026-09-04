@@ -5,12 +5,17 @@ param(
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
   [string]$CorsOrigins = "",
+  [ValidateSet("", "auto", "cpu", "nvidia")][string]$LlamaProfile = "",
+  [switch]$RequireGpu,
+  [switch]$RedetectLlamaRuntime,
   [switch]$SkipDockerLogin,
   [switch]$StrictPorts,
   [switch]$NoStart
 )
 
 $ErrorActionPreference = "Stop"
+$skipLoginMessage = "-SkipDockerLogin est reserve a la preparation sans demarrage et exige -NoStart. Une installation reelle doit s'authentifier sur GHCR."
+if ($SkipDockerLogin -and -not $NoStart) { throw $skipLoginMessage }
 $kitRoot = $PSScriptRoot
 $repositoryRoot = Join-Path $PSScriptRoot "..\.."
 if (Test-Path -LiteralPath (Join-Path $repositoryRoot "AI-Deep-Monitor.cmd")) {
@@ -201,11 +206,12 @@ function Show-StartupDiagnostics {
     [string]$EnvPath
   )
   Write-Warning "Le demarrage Docker a echoue. Etat des services:"
-  & docker compose -f $ComposePath --env-file $EnvPath ps -a 2>$null
+  $composeArguments = Get-AiMonitorComposeArguments -ComposePath $ComposePath -EnvPath $EnvPath
+  & docker compose @composeArguments ps -a 2>$null
   foreach ($service in @("mysql", "sandbox", "llama-cpp", "api", "collector")) {
     Write-Host ""
     Write-Host "===== $service ====="
-    & docker compose -f $ComposePath --env-file $EnvPath logs --tail=100 $service 2>$null
+    & docker compose @composeArguments logs --tail=100 $service 2>$null
   }
 }
 
@@ -328,11 +334,15 @@ function Repair-LlamaCppConfig {
   $values = Read-DotEnv -Path $Path
   $changed = $false
   $defaults = [ordered]@{
-    LLAMA_CPP_IMAGE = "ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42"
+    LLAMA_CPP_RUNTIME_PROFILE = "auto"
+    LLAMA_CPP_PROFILE_SOURCE = "auto"
+    LLAMA_CPP_IMAGE = "ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31"
     LLAMA_CPP_HF_REPO = "bartowski/Llama-3.2-3B-Instruct-GGUF:Q4_K_M"
     LLAMA_CPP_MODEL = "Llama-3.2-3B-Instruct-Q4_K_M"
-    LLAMA_CPP_ACCELERATOR = "cuda"
-    LLAMA_CPP_GPU_LAYERS = "99"
+    LLAMA_CPP_ACCELERATOR = "cpu"
+    LLAMA_CPP_GPU_LAYERS = "0"
+    LLAMA_CPP_FLASH_ATTN = "off"
+    LLAMA_CPP_AUTO_BUILD_CUDA = "true"
     LLAMA_CPP_CONTEXT_SIZE = "8192"
     LLAMA_CPP_PARALLEL = "2"
     LLAMA_CPP_TEMPERATURE = "0.2"
@@ -355,29 +365,6 @@ function Repair-LlamaCppConfig {
   return $changed
 }
 
-function Assert-LlamaCppGpu {
-  param([string]$EnvPath)
-  if (-not (Get-Command nvidia-smi -ErrorAction SilentlyContinue)) {
-    throw "GPU NVIDIA introuvable. llama.cpp est configure pour CUDA; installez le pilote NVIDIA et le support GPU Docker/WSL2."
-  }
-  nvidia-smi | Out-Null
-  if ($LASTEXITCODE -ne 0) {
-    throw "Le pilote NVIDIA ne repond pas. llama.cpp ne peut pas demarrer avec CUDA."
-  }
-  $runtimeValues = Read-DotEnv -Path $EnvPath
-  $image = $runtimeValues["LLAMA_CPP_IMAGE"]
-  Write-Host "Verification du GPU depuis le conteneur llama.cpp..."
-  $devices = & docker run --rm --gpus all $image --list-devices 2>&1
-  if ($LASTEXITCODE -ne 0) {
-    $devices | Write-Host
-    throw "Le GPU NVIDIA n'est pas utilisable dans Docker. Verifiez Docker Desktop/WSL2, le NVIDIA Container Toolkit et le pilote."
-  }
-  $devices | Write-Host
-  if (-not ($devices -match "CUDA0:")) {
-    throw "llama.cpp ne voit aucun device CUDA. L'installation est bloquee pour eviter une inference CPU involontaire."
-  }
-}
-
 $installPath = New-Item -ItemType Directory -Force -Path $InstallDir
 $composeSource = Resolve-KitSource "docker-compose.release.yml"
 if (-not $composeSource) {
@@ -391,6 +378,9 @@ if (-not $projectName) { $projectName = "ai-deep-monitor" }
 
 $kitFiles = @(
   "docker-compose.release.yml",
+  "docker-compose.accel.nvidia.yml",
+  "docker-compose.accel.jetson.yml",
+  "Dockerfile.llama-cuda",
   "client-common.sh",
   "client-platform.ps1",
   "install-client.sh",
@@ -493,11 +483,15 @@ UPDATE_CHECK_BRANCH=preprod
 UPDATE_CHECK_USER=
 UPDATE_CHECK_TOKEN=
 
-LLAMA_CPP_IMAGE=ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42
+LLAMA_CPP_RUNTIME_PROFILE=auto
+LLAMA_CPP_PROFILE_SOURCE=auto
+LLAMA_CPP_IMAGE=ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31
 LLAMA_CPP_HF_REPO=bartowski/Llama-3.2-3B-Instruct-GGUF:Q4_K_M
 LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M
-LLAMA_CPP_ACCELERATOR=cuda
-LLAMA_CPP_GPU_LAYERS=99
+LLAMA_CPP_ACCELERATOR=cpu
+LLAMA_CPP_GPU_LAYERS=0
+LLAMA_CPP_FLASH_ATTN=off
+LLAMA_CPP_AUTO_BUILD_CUDA=true
 LLAMA_CPP_CONTEXT_SIZE=8192
 LLAMA_CPP_PARALLEL=2
 LLAMA_CPP_TEMPERATURE=0.2
@@ -532,6 +526,7 @@ FRONTEND_PORT=$FrontendPort
 API_PORT=$ApiPort
 "@
   Set-Content -LiteralPath $envTarget -Value $envContent -Encoding UTF8
+  Protect-AiMonitorSensitiveFile -Path $envTarget
   Write-Host "Fichier .env cree avec mots de passe generes: $envTarget"
 } else {
   Write-DotEnvValue -Path $envTarget -Key "FRONTEND_PORT" -Value "$FrontendPort"
@@ -571,10 +566,15 @@ if ($authRepair.Changed -and $existingEnv) {
   Write-Host "Configuration d'authentification reparee; les donnees et comptes existants sont conserves."
 }
 if ($llamaCppConfigChanged -and $existingEnv) {
-  Write-Host "Configuration migree vers llama.cpp CUDA; les donnees applicatives sont conservees."
+  Write-Host "Configuration migree vers le runtime llama.cpp adaptatif; les donnees applicatives sont conservees."
 }
 
 if ($NoStart) {
+  if ($LlamaProfile) {
+    $profileSource = if ($LlamaProfile -eq "auto") { "auto" } else { "manual" }
+    Write-DotEnvValue -Path $envTarget -Key "LLAMA_CPP_RUNTIME_PROFILE" -Value $LlamaProfile
+    Write-DotEnvValue -Path $envTarget -Key "LLAMA_CPP_PROFILE_SOURCE" -Value $profileSource
+  }
   Write-Host "NoStart actif: installation preparee sans lancement Docker pour $dockerPlatform."
   if ($bootstrapAdminPassword) {
     Write-Host "Compte initial (seulement si aucun administrateur n'existe): admin / $bootstrapAdminPassword"
@@ -583,7 +583,13 @@ if ($NoStart) {
 }
 
 Install-AiMonitorHostTerminalAgent -InstallDir $installPath.FullName -Required
-docker compose -f $composeTarget --env-file $envTarget config --quiet
+Resolve-AiMonitorLlamaRuntime `
+  -EnvPath $envTarget `
+  -InstallDir $installPath.FullName `
+  -RequestedProfile $LlamaProfile `
+  -RequireGpu:$RequireGpu `
+  -Redetect:$RedetectLlamaRuntime
+Invoke-AiMonitorCompose -ComposePath $composeTarget -EnvPath $envTarget -CommandArguments @("config", "--quiet")
 
 if ($existingVolumes.Count -gt 0) {
   Write-Host "Volumes existants reutilises: $($existingVolumes -join ', ')"
@@ -596,25 +602,30 @@ if (-not $SkipDockerLogin) {
   $tokenPtr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
   try {
     $plainToken = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($tokenPtr)
+    if (-not $githubUser -or -not $plainToken) { throw "Identifiants GHCR incomplets." }
+    Write-Host "Verification de l'acces aux deux images privees..."
+    Assert-AiMonitorGhcrPrivateImagesAccess `
+      -Owner $GithubOwner `
+      -Reference $AppVersion `
+      -GithubUser $githubUser `
+      -GithubToken $plainToken
     $plainToken | docker login ghcr.io -u $githubUser --password-stdin
+    if ($LASTEXITCODE -ne 0) { throw "La connexion au registre prive GHCR a echoue." }
     Write-DotEnvValue -Path $envTarget -Key "UPDATE_CHECK_ENABLED" -Value "true"
     Write-DotEnvValue -Path $envTarget -Key "UPDATE_CHECK_USER" -Value $githubUser
     Write-DotEnvValue -Path $envTarget -Key "UPDATE_CHECK_TOKEN" -Value $plainToken
+    Protect-AiMonitorSensitiveFile -Path $envTarget
   } finally {
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($tokenPtr)
   }
 }
 
-Assert-LlamaCppGpu -EnvPath $envTarget
-
-docker compose -f $composeTarget --env-file $envTarget pull
-if ($LASTEXITCODE -ne 0) {
-  throw "Impossible de telecharger les images Docker."
-}
-docker compose -f $composeTarget --env-file $envTarget up -d
-if ($LASTEXITCODE -ne 0) {
+Invoke-AiMonitorComposePull -ComposePath $composeTarget -EnvPath $envTarget
+try {
+  Invoke-AiMonitorCompose -ComposePath $composeTarget -EnvPath $envTarget -CommandArguments @("up", "-d")
+} catch {
   Show-StartupDiagnostics -ComposePath $composeTarget -EnvPath $envTarget
-  throw "Le stack Docker n'a pas demarre correctement. Consulte les journaux ci-dessus."
+  throw
 }
 if (-not (Wait-ForHealthyContainer -ContainerName "ai-monitor-client-api")) {
   Show-StartupDiagnostics -ComposePath $composeTarget -EnvPath $envTarget

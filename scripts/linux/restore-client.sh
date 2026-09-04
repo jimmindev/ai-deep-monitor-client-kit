@@ -68,13 +68,13 @@ warn "La restauration remplace la base et les donnees applicatives actuelles."
 confirm "Continuer la restauration ?" "$ASSUME_YES" || die "Restauration annulee."
 
 project_name="$(project_name_from_dir "$INSTALL_DIR")"
-compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
-compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d mysql >/dev/null
-mysql_container="$(compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps -q mysql)"
+compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
+compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" up -d mysql >/dev/null
+mysql_container="$(compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" ps -q mysql)"
 [[ -n "$mysql_container" ]] || die "Conteneur MySQL introuvable."
 wait_for_container "$mysql_container" 180 || die "MySQL n'est pas pret."
 
-compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" stop frontend api >/dev/null 2>&1 || true
+compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" stop frontend api >/dev/null 2>&1 || true
 container_dump="/tmp/ai-monitor-restore-$$.sql"
 docker_exec cp "${staging_dir}/mysql.sql" "${mysql_container}:${container_dump}"
 # shellcheck disable=SC2016
@@ -83,7 +83,7 @@ docker_exec exec "$mysql_container" sh -c \
   sh "$container_dump"
 docker_exec exec "$mysql_container" rm -f "$container_dump"
 
-api_container="$(compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps -a -q api || true)"
+api_container="$(compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" ps -a -q api || true)"
 if [[ -n "$api_container" ]]; then
   docker_exec start "$api_container" >/dev/null
   sleep 2
@@ -109,7 +109,7 @@ fi
 if [[ "$NO_START" == "true" ]]; then
   log "Donnees restaurees. Les services applicatifs restent arretes."
 else
-  compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
-  compose_exec -p "$project_name" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
+  compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" up -d
+  compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" ps
 fi
 log "Restauration terminee."
