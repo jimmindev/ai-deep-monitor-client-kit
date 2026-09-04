@@ -27,6 +27,8 @@ for directory in deploy docs host_terminal_agent scripts; do
   cp -a "${REPOSITORY_ROOT}/${directory}" "$package_root/"
 done
 rm -rf -- "${package_root}/docs/release-notes"
+find "$package_root" -type d -name '__pycache__' -prune -exec rm -rf -- {} +
+find "$package_root" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
 for file in \
   AI-Deep-Monitor.cmd \
   ai-deep-monitor.ps1 \

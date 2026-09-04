@@ -14,6 +14,13 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- La mise a jour integree actualise maintenant le Client Kit `latest` avant
+  l'application: installateurs Windows/Linux, Compose, documentation et agent
+  terminal sont telecharges, controles par SHA256 puis synchronises.
+- L'agent hote `3.6.0` applique la meme sequence lors d'une mise a jour lancee
+  depuis l'interface web et remonte une erreur dediee si le Client Kit ne peut
+  pas etre valide.
+
 - L'installation reelle impose maintenant l'authentification GHCR, valide le
   token sur les deux images privees et protege les secrets avec des ACL Windows
   restrictives.

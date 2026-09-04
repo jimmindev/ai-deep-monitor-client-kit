@@ -5,6 +5,14 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=client-common.sh
 source "${SCRIPT_DIR}/client-common.sh"
 
+CLIENT_KIT_STAGE_DIR=""
+cleanup_client_kit_stage() {
+  if [[ -n "$CLIENT_KIT_STAGE_DIR" && -d "$CLIENT_KIT_STAGE_DIR" ]]; then
+    rm -rf -- "$CLIENT_KIT_STAGE_DIR"
+  fi
+}
+trap cleanup_client_kit_stage EXIT
+
 KIT_ROOT="$SCRIPT_DIR"
 [[ -f "${SCRIPT_DIR}/../../ai-deep-monitor.sh" ]] && KIT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
@@ -43,6 +51,66 @@ install_host_terminal_agent() {
   "$repair_script" --install-dir "$INSTALL_DIR"
 }
 
+stage_latest_client_kit() {
+  local release_base="${AI_DEEP_MONITOR_CLIENT_KIT_RELEASE_BASE:-https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/latest}"
+  local archive_name='ai-deep-monitor-client-kit.tar.gz'
+  local checksum_name='ai-deep-monitor-client-kit-SHA256.txt'
+  local archive_file checksum_file listing_file expected_hash actual_hash entry
+
+  require_command tar
+  require_command sha256sum
+  CLIENT_KIT_STAGE_DIR="$(mktemp -d -t ai-monitor-kit-refresh-XXXXXX)"
+  archive_file="${CLIENT_KIT_STAGE_DIR}/${archive_name}"
+  checksum_file="${CLIENT_KIT_STAGE_DIR}/${checksum_name}"
+  listing_file="${CLIENT_KIT_STAGE_DIR}/archive.list"
+
+  if [[ -d "$release_base" ]]; then
+    cp -f "${release_base}/${archive_name}" "$archive_file"
+    cp -f "${release_base}/${checksum_name}" "$checksum_file"
+  else
+    require_command curl
+    curl -fL --retry 3 --retry-delay 2 -o "$archive_file" "${release_base}/${archive_name}"
+    curl -fL --retry 3 --retry-delay 2 -o "$checksum_file" "${release_base}/${checksum_name}"
+  fi
+
+  expected_hash="$(awk -v file="$archive_name" '$2 == file { print $1; exit }' "$checksum_file")"
+  [[ "$expected_hash" =~ ^[0-9a-fA-F]{64}$ ]] ||
+    die "Somme SHA256 du Client Kit absente ou invalide."
+  actual_hash="$(sha256sum "$archive_file" | awk '{ print $1 }')"
+  [[ "${actual_hash,,}" == "${expected_hash,,}" ]] ||
+    die "L'archive du Client Kit est corrompue ou ne correspond pas a sa somme SHA256."
+
+  tar -tzf "$archive_file" >"$listing_file"
+  while IFS= read -r entry; do
+    case "$entry" in
+      ai-deep-monitor-client-kit|ai-deep-monitor-client-kit/*) ;;
+      *) die "Chemin inattendu dans l'archive du Client Kit: ${entry}" ;;
+    esac
+    case "/${entry}/" in
+      */../*|*/./*) die "Chemin dangereux dans l'archive du Client Kit: ${entry}" ;;
+    esac
+  done <"$listing_file"
+  if tar -tvzf "$archive_file" | awk '$1 ~ /^[lh]/ { found=1 } END { exit !found }'; then
+    die "Les liens symboliques ou physiques sont refuses dans le Client Kit."
+  fi
+
+  tar --no-same-owner --no-same-permissions -xzf "$archive_file" -C "$CLIENT_KIT_STAGE_DIR"
+  CLIENT_KIT_STAGE_ROOT="${CLIENT_KIT_STAGE_DIR}/ai-deep-monitor-client-kit"
+  [[ -x "${CLIENT_KIT_STAGE_ROOT}/scripts/linux/update-client.sh" ]] ||
+    die "Le nouveau script de mise a jour Linux est absent de l'archive."
+}
+
+run_latest_client_kit_updater() {
+  local status=0
+  stage_latest_client_kit
+  log "Client Kit latest telecharge et verifie; reprise avec les nouveaux outils."
+  "${CLIENT_KIT_STAGE_ROOT}/scripts/linux/update-client.sh" \
+    --skip-kit-refresh "${ORIGINAL_ARGS[@]}" || status=$?
+  cleanup_client_kit_stage
+  CLIENT_KIT_STAGE_DIR=""
+  exit "$status"
+}
+
 INSTALL_DIR="${HOME}/ai-deep-monitor"
 APP_VERSION=""
 SKIP_DOCKER_LOGIN=false
@@ -53,6 +121,9 @@ ASSUME_YES=false
 LLAMA_PROFILE=""
 REQUIRE_GPU=false
 REDETECT_LLAMA_RUNTIME=false
+SKIP_KIT_REFRESH=false
+REFRESH_KIT_ONLY=false
+ORIGINAL_ARGS=("$@")
 
 usage() {
   cat <<'EOF'
@@ -62,6 +133,8 @@ Usage: ./update-client.sh [options]
   --skip-docker-login
   --skip-backup
   --skip-agent-install
+  --skip-kit-refresh        Ne pas telecharger le Client Kit (usage interne/tests)
+  --refresh-kit-only        Actualiser uniquement les fichiers d'installation
   --llama-profile PROFIL
   --require-gpu
   --redetect-llama-runtime
@@ -77,6 +150,8 @@ while (($#)); do
     --skip-docker-login) SKIP_DOCKER_LOGIN=true; shift ;;
     --skip-backup) SKIP_BACKUP=true; shift ;;
     --skip-agent-install) SKIP_AGENT_INSTALL=true; shift ;;
+    --skip-kit-refresh) SKIP_KIT_REFRESH=true; shift ;;
+    --refresh-kit-only) REFRESH_KIT_ONLY=true; shift ;;
     --llama-profile) LLAMA_PROFILE="${2,,}"; shift 2 ;;
     --require-gpu) REQUIRE_GPU=true; shift ;;
     --redetect-llama-runtime) REDETECT_LLAMA_RUNTIME=true; shift ;;
@@ -93,6 +168,10 @@ done
 ENV_FILE="${INSTALL_DIR}/.env"
 COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 [[ -f "$ENV_FILE" ]] || die "Installation introuvable: ${ENV_FILE}"
+[[ -f "$COMPOSE_FILE" ]] || die "Installation introuvable: ${COMPOSE_FILE}"
+if [[ "$SKIP_KIT_REFRESH" == "false" ]]; then
+  run_latest_client_kit_updater
+fi
 for file in docker-compose.release.yml docker-compose.accel.nvidia.yml docker-compose.accel.jetson.yml Dockerfile.llama-cuda client-common.sh client-platform.ps1 ai-deep-monitor.sh ai-deep-monitor.ps1 AI-Deep-Monitor.cmd install-client.sh check-update.sh update-client.sh backup-client.sh backup-maintenance.sh restore-client.sh uninstall-client.sh repair-terminal.sh verify-llama-gpu.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 backup-maintenance.ps1 restore-client.ps1 uninstall-client.ps1 repair-terminal.ps1 README_CLIENT.md; do
   source_file="$(kit_source "$file" || true)"
   [[ -n "$source_file" ]] || continue
@@ -103,6 +182,10 @@ done
 rm -f -- "${INSTALL_DIR}/VERSION"
 chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true
 sync_host_terminal_agent
+if [[ "$REFRESH_KIT_ONLY" == "true" ]]; then
+  log "Fichiers d'installation du Client Kit actualises."
+  exit 0
+fi
 remove_env_value "$ENV_FILE" KIT_VERSION
 ensure_auth_config "$ENV_FILE"
 ensure_llama_cpp_config "$ENV_FILE"

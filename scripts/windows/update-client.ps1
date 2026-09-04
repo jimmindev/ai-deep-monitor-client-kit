@@ -4,6 +4,8 @@ param(
   [switch]$SkipDockerLogin,
   [switch]$SkipBackup,
   [switch]$SkipAgentInstall,
+  [switch]$SkipKitRefresh,
+  [switch]$RefreshKitOnly,
   [ValidateSet("", "auto", "cpu", "nvidia")][string]$LlamaProfile = "",
   [switch]$RequireGpu,
   [switch]$RedetectLlamaRuntime,
@@ -35,6 +37,91 @@ function Resolve-KitSource {
     }
   }
   return $null
+}
+
+function Get-LatestClientKitStage {
+  $releaseBase = $env:AI_DEEP_MONITOR_CLIENT_KIT_RELEASE_BASE
+  if (-not $releaseBase) {
+    $releaseBase = "https://github.com/jimmindev/ai-deep-monitor-client-kit/releases/download/latest"
+  }
+  $archiveName = "ai-deep-monitor-client-kit.zip"
+  $checksumName = "ai-deep-monitor-client-kit-SHA256.txt"
+  $stageDir = Join-Path ([IO.Path]::GetTempPath()) ("ai-monitor-kit-refresh-" + [guid]::NewGuid().ToString("N"))
+  $archivePath = Join-Path $stageDir $archiveName
+  $checksumPath = Join-Path $stageDir $checksumName
+  $extractPath = Join-Path $stageDir "extract"
+  New-Item -ItemType Directory -Path $stageDir, $extractPath -Force | Out-Null
+
+  try {
+    if (Test-Path -LiteralPath $releaseBase -PathType Container) {
+      Copy-Item -LiteralPath (Join-Path $releaseBase $archiveName) -Destination $archivePath -Force
+      Copy-Item -LiteralPath (Join-Path $releaseBase $checksumName) -Destination $checksumPath -Force
+    } else {
+      $remoteBase = $releaseBase.TrimEnd("/")
+      Invoke-WebRequest -UseBasicParsing -Uri "$remoteBase/$archiveName" -OutFile $archivePath
+      Invoke-WebRequest -UseBasicParsing -Uri "$remoteBase/$checksumName" -OutFile $checksumPath
+    }
+
+    $checksumContent = Get-Content -LiteralPath $checksumPath -Raw
+    $checksumPattern = "(?m)^([0-9a-fA-F]{64})\s+$([regex]::Escape($archiveName))\s*$"
+    if ($checksumContent -notmatch $checksumPattern) {
+      throw "Somme SHA256 du Client Kit absente ou invalide."
+    }
+    $expectedHash = $Matches[1].ToLowerInvariant()
+    $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualHash -ne $expectedHash) {
+      throw "L'archive du Client Kit est corrompue ou ne correspond pas a sa somme SHA256."
+    }
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [IO.Compression.ZipFile]::OpenRead($archivePath)
+    try {
+      $extractRoot = [IO.Path]::GetFullPath($extractPath).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+      foreach ($entry in $archive.Entries) {
+        $entryName = $entry.FullName.Replace("\", "/")
+        if ($entryName -ne "ai-deep-monitor-client-kit/" -and -not $entryName.StartsWith("ai-deep-monitor-client-kit/", [StringComparison]::Ordinal)) {
+          throw "Chemin inattendu dans l'archive du Client Kit: $entryName"
+        }
+        $entryTarget = [IO.Path]::GetFullPath((Join-Path $extractPath $entryName))
+        if (-not $entryTarget.StartsWith($extractRoot, [StringComparison]::OrdinalIgnoreCase)) {
+          throw "Chemin dangereux dans l'archive du Client Kit: $entryName"
+        }
+        $unixFileType = (($entry.ExternalAttributes -shr 16) -band 0xF000)
+        if ($unixFileType -eq 0xA000) {
+          throw "Les liens symboliques sont refuses dans le Client Kit."
+        }
+      }
+    } finally {
+      $archive.Dispose()
+    }
+
+    Expand-Archive -LiteralPath $archivePath -DestinationPath $extractPath -Force
+    $stageRoot = Join-Path $extractPath "ai-deep-monitor-client-kit"
+    $scriptPath = Join-Path $stageRoot "scripts\windows\update-client.ps1"
+    if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
+      throw "Le nouveau script de mise a jour Windows est absent de l'archive."
+    }
+    return [pscustomobject]@{
+      Directory = $stageDir
+      Root = $stageRoot
+      Script = $scriptPath
+    }
+  } catch {
+    Remove-Item -LiteralPath $stageDir -Recurse -Force -ErrorAction SilentlyContinue
+    throw
+  }
+}
+
+function Invoke-LatestClientKitUpdater {
+  param([hashtable]$ForwardParameters)
+  $stage = Get-LatestClientKitStage
+  try {
+    Write-Host "Client Kit latest telecharge et verifie; reprise avec les nouveaux outils."
+    $ForwardParameters["SkipKitRefresh"] = $true
+    & $stage.Script @ForwardParameters
+  } finally {
+    Remove-Item -LiteralPath $stage.Directory -Recurse -Force -ErrorAction SilentlyContinue
+  }
 }
 
 $platformHelpers = Join-Path $PSScriptRoot "client-platform.ps1"
@@ -257,6 +344,20 @@ function Get-LatestStableTag {
 
 $composePath = Join-Path $InstallDir "docker-compose.release.yml"
 $envPath = Join-Path $InstallDir ".env"
+if (-not (Test-Path -LiteralPath $composePath)) {
+  throw "Compose introuvable: $composePath. Lance d'abord install-client.ps1."
+}
+if (-not (Test-Path -LiteralPath $envPath)) {
+  throw ".env introuvable: $envPath. Lance d'abord install-client.ps1."
+}
+if (-not $SkipKitRefresh) {
+  $forwardParameters = @{}
+  foreach ($entry in $PSBoundParameters.GetEnumerator()) {
+    $forwardParameters[$entry.Key] = $entry.Value
+  }
+  Invoke-LatestClientKitUpdater -ForwardParameters $forwardParameters
+  exit 0
+}
 
 $kitFiles = @(
   "docker-compose.release.yml",
@@ -300,6 +401,10 @@ foreach ($fileName in $kitFiles) {
 }
 Remove-Item -LiteralPath (Join-Path $InstallDir "VERSION") -Force -ErrorAction SilentlyContinue
 Sync-AiMonitorHostTerminalAgent -SourceRoot $kitRoot -InstallDir $InstallDir | Out-Null
+if ($RefreshKitOnly) {
+  Write-Host "Fichiers d'installation du Client Kit actualises."
+  exit 0
+}
 
 if (-not (Test-Path -LiteralPath $composePath)) {
   throw "Compose introuvable: $composePath. Lance d'abord install-client.ps1."

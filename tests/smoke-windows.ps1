@@ -4,6 +4,7 @@ $testDir = Join-Path $repositoryRoot ".tmp-windows-smoke"
 $frontendListener = $null
 $apiListener = $null
 $agentProcess = $null
+$clientKitReleaseDir = Join-Path ([IO.Path]::GetTempPath()) ("ai-monitor-kit-release-test-" + [guid]::NewGuid().ToString("N"))
 
 try {
   try {
@@ -22,8 +23,8 @@ try {
     throw "L'agent terminal doit etre repare avant le retour application deja a jour."
   }
   $launcherSource = Get-Content -LiteralPath (Join-Path $repositoryRoot "ai-deep-monitor.ps1") -Raw
-  if (-not $launcherSource.Contains("Mettre a jour l'application et le terminal")) {
-    throw "Le menu Windows ne precise pas que la mise a jour entretient le terminal."
+  if (-not $launcherSource.Contains("Mettre a jour l'application, le Client Kit et le terminal")) {
+    throw "Le menu Windows ne precise pas que la mise a jour entretient le Client Kit et le terminal."
   }
 
   if (Test-Path -LiteralPath $testDir) {
@@ -105,6 +106,71 @@ try {
   & python (Join-Path $testDir "host_terminal_agent\agent.py") --help | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "L'agent terminal autonome ne demarre pas." }
 
+  # Simule la release permanente et verifie le remplacement effectif des
+  # installateurs, de la documentation et de l'agent sans lancer Docker.
+  $fixtureParent = Join-Path $clientKitReleaseDir "package"
+  $fixtureRoot = Join-Path $fixtureParent "ai-deep-monitor-client-kit"
+  $releaseArchive = Join-Path $clientKitReleaseDir "ai-deep-monitor-client-kit.zip"
+  New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
+  foreach ($directory in @("deploy", "docs", "host_terminal_agent", "scripts")) {
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot $directory) -Destination $fixtureRoot -Recurse -Force
+  }
+  foreach ($file in @("AI-Deep-Monitor.cmd", "ai-deep-monitor.ps1", "ai-deep-monitor.sh", "CHANGELOG.md", "README.md")) {
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot $file) -Destination $fixtureRoot -Force
+  }
+  Add-Content -LiteralPath (Join-Path $fixtureRoot "docs\installation.md") -Value "`nCLIENT_KIT_SELF_REFRESH_OK"
+  Compress-Archive -LiteralPath $fixtureRoot -DestinationPath $releaseArchive -Force
+  $releaseHash = (Get-FileHash -LiteralPath $releaseArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+  Set-Content `
+    -LiteralPath (Join-Path $clientKitReleaseDir "ai-deep-monitor-client-kit-SHA256.txt") `
+    -Value "$releaseHash  ai-deep-monitor-client-kit.zip" `
+    -Encoding ASCII
+  Set-Content -LiteralPath (Join-Path $testDir "README_CLIENT.md") -Value "ANCIEN_CLIENT_KIT" -Encoding ASCII
+  $previousReleaseBase = $env:AI_DEEP_MONITOR_CLIENT_KIT_RELEASE_BASE
+  try {
+    $env:AI_DEEP_MONITOR_CLIENT_KIT_RELEASE_BASE = $clientKitReleaseDir
+    & (Join-Path $testDir "update-client.ps1") `
+      -InstallDir $testDir `
+      -RefreshKitOnly `
+      -SkipAgentInstall
+  } finally {
+    $env:AI_DEEP_MONITOR_CLIENT_KIT_RELEASE_BASE = $previousReleaseBase
+  }
+  $refreshedReadme = Get-Content -LiteralPath (Join-Path $testDir "README_CLIENT.md") -Raw
+  $refreshedUpdater = Get-Content -LiteralPath (Join-Path $testDir "update-client.ps1") -Raw
+  if ($refreshedReadme -notmatch "CLIENT_KIT_SELF_REFRESH_OK" -or
+      $refreshedUpdater -notmatch "Get-LatestClientKitStage") {
+    throw "La mise a jour Windows n'a pas remplace les fichiers du Client Kit."
+  }
+
+  Set-Content `
+    -LiteralPath (Join-Path $clientKitReleaseDir "ai-deep-monitor-client-kit-SHA256.txt") `
+    -Value "$(('0' * 64))  ai-deep-monitor-client-kit.zip" `
+    -Encoding ASCII
+  Set-Content -LiteralPath (Join-Path $testDir "README_CLIENT.md") -Value "FICHIER_A_CONSERVER" -Encoding ASCII
+  $invalidArchiveRejected = $false
+  try {
+    $env:AI_DEEP_MONITOR_CLIENT_KIT_RELEASE_BASE = $clientKitReleaseDir
+    & (Join-Path $testDir "update-client.ps1") `
+      -InstallDir $testDir `
+      -RefreshKitOnly `
+      -SkipAgentInstall
+  } catch {
+    if ($_.Exception.Message -match "corrompue") {
+      $invalidArchiveRejected = $true
+    } else {
+      throw
+    }
+  } finally {
+    $env:AI_DEEP_MONITOR_CLIENT_KIT_RELEASE_BASE = $previousReleaseBase
+  }
+  if (-not $invalidArchiveRejected) {
+    throw "Une archive Client Kit avec une somme invalide a ete acceptee."
+  }
+  if ((Get-Content -LiteralPath (Join-Path $testDir "README_CLIENT.md") -Raw).Trim() -ne "FICHIER_A_CONSERVER") {
+    throw "Une archive Client Kit invalide a modifie l'installation Windows."
+  }
+
   $agentPath = Join-Path $testDir "host_terminal_agent\agent.py"
   $agentState = Join-Path $testDir "host-terminal-test-state"
   $pythonPath = (Get-Command python.exe -ErrorAction Stop).Source
@@ -134,6 +200,7 @@ try {
   Set-Content -LiteralPath $envPath -Value $envContent -Encoding UTF8
   & (Join-Path $testDir "update-client.ps1") `
     -InstallDir $testDir `
+    -SkipKitRefresh `
     -NoStart `
     -AppVersion "v0.1.9"
   $envContent = Get-Content -LiteralPath $envPath -Raw
@@ -173,6 +240,10 @@ try {
   $installedAgent = Get-Content -LiteralPath (Join-Path $testDir "host_terminal_agent\agent.py") -Raw
   if ($installedAgent -notmatch 'MAX_UPDATE_SECONDS = 3_600') {
     throw "Le delai de maintenance Jetson n'a pas ete augmente."
+  }
+  if ($installedAgent -notmatch 'def refresh_client_kit' -or
+      $installedAgent -notmatch 'client_kit_update_failed') {
+    throw "L'agent terminal n'actualise pas le Client Kit avant l'application."
   }
 
   $backupDir = Join-Path $testDir "test-backups"
@@ -250,5 +321,8 @@ try {
   if ($apiListener) { $apiListener.Stop() }
   if (Test-Path -LiteralPath $testDir) {
     Remove-Item -LiteralPath $testDir -Recurse -Force
+  }
+  if (Test-Path -LiteralPath $clientKitReleaseDir) {
+    Remove-Item -LiteralPath $clientKitReleaseDir -Recurse -Force
   }
 }
