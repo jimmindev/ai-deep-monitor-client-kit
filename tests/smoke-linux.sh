@@ -54,6 +54,8 @@ printf 'KIT_VERSION=v0.1.15\n' >>"${INSTALL_DIR}/.env"
   --app-version v0.1.9
 
 ! grep -q '^KIT_VERSION=' "${INSTALL_DIR}/.env"
+! grep -q '/app/generated_backups' "${INSTALL_DIR}/backup-client.sh"
+grep -Fq '"generatedBackupsIncluded": false' "${INSTALL_DIR}/backup-client.sh"
 ! grep -q '^OLLAMA_' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_ACCELERATOR=cuda' "${INSTALL_DIR}/.env"

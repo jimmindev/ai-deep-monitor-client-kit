@@ -66,7 +66,6 @@ if [[ -n "$api_container" ]]; then
   done <<'EOF'
 /app/data|api-data
 /app/uploaded_mibs|uploaded-mibs
-/app/generated_backups|generated-backups
 EOF
 else
   warn "Conteneur API absent: seul MySQL sera sauvegarde."
@@ -87,7 +86,8 @@ cat >"${staging_dir}/manifest.json" <<EOF
   "hostName": "$(hostname)",
   "mysqlSha256": "$(sha256sum "${staging_dir}/mysql.sql" | awk '{print $1}')",
   "includedPaths": [${included_json}],
-  "llamaCppCacheIncluded": false
+  "llamaCppCacheIncluded": false,
+  "generatedBackupsIncluded": false
 }
 EOF
 
@@ -95,3 +95,4 @@ tar -C "$staging_dir" -czf "$archive_path" .
 chmod 600 "$archive_path"
 log "Sauvegarde terminee: ${archive_path}"
 log "Le cache du modele llama.cpp n'est pas inclus et sera retelcharge si necessaire."
+log "Les anciennes archives de sauvegarde ne sont pas imbriquees dans cette sauvegarde."
