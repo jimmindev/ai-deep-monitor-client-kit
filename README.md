@@ -100,11 +100,13 @@ Le runtime du chatbot est ensuite choisi et teste dans Docker:
 L'acceleration automatique concerne les GPU NVIDIA/CUDA. Une machine equipee
 uniquement d'un GPU AMD ou Intel utilise actuellement le profil CPU.
 
-Si l'image CUDA officielle ne correspond pas a la version du pilote, le kit
-peut construire une image llama.cpp locale avec la version CUDA et le compute
-capability detectes. Si cette construction n'est pas possible, le mode
-automatique revient proprement sur CPU. Le modele GGUF reste conserve dans un
-volume Docker entre les mises a jour.
+Sur un PC NVIDIA x64, le kit teste d'abord l'image CUDA officielle. Sur Jetson,
+il ne telecharge pas cette image generique: il construit directement une image
+llama.cpp locale avec la version CUDA de JetPack et le compute capability
+detectes. Une image personnalisee configuree par l'administrateur ou une image
+locale deja construite est toutefois validee et reutilisee. Si la construction
+n'est pas possible, le mode automatique revient proprement sur CPU. Le modele
+GGUF reste conserve dans un volume Docker entre les mises a jour.
 
 Pour une nouvelle installation comme pour une reparation, les ports sont
 valides avant le lancement. Le site utilise `80`, puis `8080`, puis le prochain
@@ -124,7 +126,18 @@ un autre service est remplace et le fichier `.env` est actualise.
 Sur Jetson, JetPack fournit le pilote CUDA. Le kit detecte Jetson, la version
 CUDA et l'architecture GPU (Nano, TX2, Xavier ou Orin), puis valide l'image
 depuis le conteneur. Les bases CUDA connues de 11.4 a 13.0 sont prises en
-charge; une base personnalisee peut etre definie pour une autre version.
+charge; une base personnalisee peut etre definie pour une autre version. La
+compilation utilise quatre taches par defaut afin de rester stable sur les
+machines a memoire partagee. `LLAMA_CPP_CUDA_BUILD_JOBS=2` permet de reduire la
+pression memoire; une valeur superieure peut accelerer une machine suffisamment
+dotee.
+
+Sur le Jetson Orin de validation, une installation neuve avec caches vides a
+pris environ **46 a 48 minutes**: 31 min 59 s pour construire llama.cpp CUDA et
+13 min 58 s pour telecharger les images, initialiser MySQL, telecharger le
+modele et demarrer les services. Une desinstallation complete avec suppression
+des images et du cache reproduit ce cout. Une mise a jour normale reutilise
+l'image CUDA locale et le cache du modele, et reste donc nettement plus courte.
 
 Le profil detecte est enregistre dans `.env` et conserve pendant les mises a
 jour. Pour imposer ou reevaluer un choix:

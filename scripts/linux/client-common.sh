@@ -4,6 +4,8 @@ set -Eeuo pipefail
 
 export DEFAULT_APP_VERSION="v0.1.22"
 export DOCKER_PLATFORM=""
+LLAMA_CPP_DEFAULT_CPU_IMAGE='ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31'
+LLAMA_CPP_DEFAULT_CUDA_IMAGE='ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42'
 DOCKER_CMD=(docker)
 SUDO_CMD=()
 
@@ -507,6 +509,28 @@ llama_cuda_base_images() {
   esac
 }
 
+llama_gpu_probe_candidate() {
+  local profile="$1"
+  local image="${2:-}"
+
+  # L'image CUDA generique est volumineuse et ne correspond pas forcement a
+  # CUDA/JetPack sur ARM64. Sur Jetson, la telecharger avant la construction
+  # locale ajoute plusieurs gigaoctets et peut rester bloquee sans rien valider.
+  # Une image locale deja construite ou une image personnalisee reste testee.
+  if [[ "$profile" == jetson ]]; then
+    case "$image" in
+      ""|*'/llama.cpp:server@'*|*'/llama.cpp:server-cuda@'*)
+        return 1
+        ;;
+    esac
+  fi
+
+  if [[ -z "$image" || "$image" == *'/llama.cpp:server@'* ]]; then
+    image="$LLAMA_CPP_DEFAULT_CUDA_IMAGE"
+  fi
+  printf '%s\n' "$image"
+}
+
 llama_gpu_probe() {
   local profile="$1"
   local image="$2"
@@ -537,6 +561,13 @@ llama_gpu_runtime_available() {
   docker_exec run --rm "${gpu_args[@]}" --entrypoint /bin/true "$image" >/dev/null 2>&1
 }
 
+llama_jetson_runtime_available() {
+  local runtimes
+  llama_is_jetson || return 1
+  runtimes="$(docker_exec info --format '{{json .Runtimes}}' 2>/dev/null || true)"
+  grep -q '"nvidia"' <<<"$runtimes"
+}
+
 llama_build_cuda_image() {
   local env_file="$1"
   local profile="$2"
@@ -550,6 +581,7 @@ llama_build_cuda_image() {
   local devel_image
   local runtime_image
   local local_image
+  local build_jobs
   install_dir="$(dirname "$env_file")"
   dockerfile="${install_dir}/Dockerfile.llama-cuda"
   [[ -f "$dockerfile" ]] || { warn "Dockerfile CUDA local absent: ${dockerfile}"; return 1; }
@@ -573,11 +605,18 @@ llama_build_cuda_image() {
   fi
 
   local_image="local/ai-deep-monitor-llama-cpp:cuda-${cuda_version}-sm${cuda_arch}-b10775"
+  build_jobs="$(read_env_value "$env_file" LLAMA_CPP_CUDA_BUILD_JOBS)"
+  build_jobs="${build_jobs:-4}"
+  [[ "$build_jobs" =~ ^[1-9][0-9]*$ ]] || {
+    warn "LLAMA_CPP_CUDA_BUILD_JOBS invalide: ${build_jobs}."
+    return 1
+  }
   log "Construction locale de llama.cpp pour CUDA ${cuda_version}, sm_${cuda_arch}. Cette operation unique peut prendre plusieurs minutes."
   if ! docker_exec build \
     --build-arg "CUDA_DEVEL_IMAGE=${devel_image}" \
     --build-arg "CUDA_RUNTIME_IMAGE=${runtime_image}" \
     --build-arg "CUDA_ARCHITECTURES=${cuda_arch}" \
+    --build-arg "BUILD_JOBS=${build_jobs}" \
     --build-arg 'LLAMA_CPP_GIT_REF=67a17c17caa95742186f8b1ecadd1b5abd6d5ebb' \
     -t "$local_image" \
     -f "$dockerfile" "$install_dir"; then
@@ -595,7 +634,7 @@ llama_build_cuda_image() {
 llama_set_cpu_profile() {
   local env_file="$1"
   write_env_value "$env_file" LLAMA_CPP_RUNTIME_PROFILE cpu
-  write_env_value "$env_file" LLAMA_CPP_IMAGE 'ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31'
+  write_env_value "$env_file" LLAMA_CPP_IMAGE "$LLAMA_CPP_DEFAULT_CPU_IMAGE"
   write_env_value "$env_file" LLAMA_CPP_ACCELERATOR cpu
   write_env_value "$env_file" LLAMA_CPP_GPU_LAYERS 0
   write_env_value "$env_file" LLAMA_CPP_FLASH_ATTN off
@@ -658,11 +697,8 @@ configure_llama_cpp_runtime() {
   fi
 
   image="$(read_env_value "$env_file" LLAMA_CPP_IMAGE)"
-  candidate="$image"
-  if [[ -z "$candidate" || "$candidate" == *'/llama.cpp:server@'* ]]; then
-    candidate='ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42'
-  fi
-  if llama_gpu_probe "$profile" "$candidate"; then
+  candidate="$(llama_gpu_probe_candidate "$profile" "$image" || true)"
+  if [[ -n "$candidate" ]] && llama_gpu_probe "$profile" "$candidate"; then
     llama_set_gpu_profile "$env_file" "$profile" "$candidate"
     write_env_value "$env_file" LLAMA_CPP_PROFILE_SOURCE "$source"
     log "llama.cpp: GPU CUDA valide (${profile})."
@@ -672,7 +708,8 @@ configure_llama_cpp_runtime() {
   auto_build="$(read_env_value "$env_file" LLAMA_CPP_AUTO_BUILD_CUDA)"
   auto_build="${auto_build:-true}"
   if [[ "$auto_build" == true ]] &&
-     llama_gpu_runtime_available "$profile" "$candidate" &&
+     { { [[ "$profile" == jetson ]] && llama_jetson_runtime_available; } ||
+       { [[ -n "$candidate" ]] && llama_gpu_runtime_available "$profile" "$candidate"; }; } &&
      llama_build_cuda_image "$env_file" "$profile"; then
     image="$(read_env_value "$env_file" LLAMA_CPP_IMAGE)"
     llama_set_gpu_profile "$env_file" "$profile" "$image"

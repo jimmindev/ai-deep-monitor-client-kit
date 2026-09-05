@@ -4,6 +4,7 @@ ARG CUDA_RUNTIME_IMAGE=nvidia/cuda:12.6.3-runtime-ubuntu24.04
 FROM ${CUDA_DEVEL_IMAGE} AS build
 ARG LLAMA_CPP_GIT_REF=67a17c17caa95742186f8b1ecadd1b5abd6d5ebb
 ARG CUDA_ARCHITECTURES=87
+ARG BUILD_JOBS=4
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -24,7 +25,8 @@ RUN cmake -S . -B build \
       -DLLAMA_BUILD_TESTS=OFF \
       -DLLAMA_BUILD_EXAMPLES=OFF \
       -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCHITECTURES}" \
-    && cmake --build build --config Release --target llama-server -j"$(nproc)"
+      -DCMAKE_EXE_LINKER_FLAGS="-Wl,--allow-shlib-undefined" \
+    && cmake --build build --config Release --target llama-server -j"${BUILD_JOBS}"
 
 FROM ${CUDA_RUNTIME_IMAGE}
 ENV DEBIAN_FRONTEND=noninteractive
