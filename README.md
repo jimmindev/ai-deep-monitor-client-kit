@@ -132,12 +132,15 @@ machines a memoire partagee. `LLAMA_CPP_CUDA_BUILD_JOBS=2` permet de reduire la
 pression memoire; une valeur superieure peut accelerer une machine suffisamment
 dotee.
 
-Sur le Jetson Orin de validation, une installation neuve avec caches vides a
-pris environ **46 a 48 minutes**: 31 min 59 s pour construire llama.cpp CUDA et
-13 min 58 s pour telecharger les images, initialiser MySQL, telecharger le
-modele et demarrer les services. Une desinstallation complete avec suppression
-des images et du cache reproduit ce cout. Une mise a jour normale reutilise
-l'image CUDA locale et le cache du modele, et reste donc nettement plus courte.
+Sur le Jetson Orin de validation, une installation integralement neuve (aucune
+image, aucun volume et aucun cache Docker) a pris environ **73 minutes**. Le
+detail observe est de 19 min 31 s pour recuperer et extraire la base CUDA,
+5 min 30 s pour ses dependances, 30 min 57 s pour compiler llama.cpp, puis
+environ 17 minutes pour finaliser les images, initialiser MySQL, telecharger et
+charger le modele et demarrer les services. Le debit Internet et surtout les
+performances du stockage peuvent faire varier fortement ce resultat. Une mise
+a jour normale reutilise l'image CUDA locale et le cache du modele, et reste
+donc nettement plus courte.
 
 Le profil detecte est enregistre dans `.env` et conserve pendant les mises a
 jour. Pour imposer ou reevaluer un choix:

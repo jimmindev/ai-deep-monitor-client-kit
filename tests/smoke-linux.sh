@@ -171,6 +171,12 @@ assert service["image"].startswith("ghcr.io/ggml-org/llama.cpp:server@sha256:")
 assert not service.get("gpus")
 assert any(volume.get("target") == "/root/.cache/llama.cpp" for volume in service["volumes"])
 assert "llama-cpp" in config["services"]["api"]["depends_on"]
+mysql_health = config["services"]["mysql"]["healthcheck"]["test"]
+assert "--protocol=tcp" in mysql_health[1]
+assert "127.0.0.1" in mysql_health[1]
+api_command = " ".join(config["services"]["api"]["command"])
+assert "until alembic upgrade head" in api_command
+assert "DB_INIT_RETRIES" in api_command
 '
   docker compose \
     -f "${KIT_DIR}/deploy/docker-compose.release.yml" \

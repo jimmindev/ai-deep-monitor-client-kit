@@ -14,6 +14,9 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Le premier demarrage sur une base MySQL vierge attend maintenant le serveur
+  TCP definitif; les migrations API retentent aussi les coupures transitoires
+  au lieu de rendre le service unhealthy.
 - Sur NVIDIA Jetson, la detection ne telecharge plus l'image CUDA generique
   avant la construction locale: le kit utilise directement CUDA/JetPack et le
   compute capability detectes sur la machine.

@@ -308,6 +308,16 @@ try {
   if (-not $composeJson.services.api.depends_on."llama-cpp") {
     throw "L'API ne depend pas du service llama.cpp."
   }
+  $mysqlHealthCommand = [string]$composeJson.services.mysql.healthcheck.test[1]
+  if ($mysqlHealthCommand -notmatch '--protocol=tcp' -or
+      $mysqlHealthCommand -notmatch '127\.0\.0\.1') {
+    throw "Le healthcheck MySQL peut encore valider le serveur temporaire via son socket."
+  }
+  $apiCommand = (@($composeJson.services.api.command) -join ' ')
+  if ($apiCommand -notmatch 'until alembic upgrade head' -or
+      $apiCommand -notmatch 'DB_INIT_RETRIES') {
+    throw "Le demarrage de l'API ne retente pas les migrations transitoires."
+  }
   if (-not $composeJson.services.collector) {
     throw "Le service collector est absent du Compose client."
   }

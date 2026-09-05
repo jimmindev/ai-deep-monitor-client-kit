@@ -15,7 +15,10 @@ services:
     volumes:
       - client_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      # Le serveur temporaire utilise pendant l'initialisation le socket local
+      # avec le reseau coupe. Forcer TCP evite de declarer MySQL pret avant son
+      # redemarrage definitif sur le port 3306.
+      test: ["CMD-SHELL", "mysqladmin ping --protocol=tcp -h 127.0.0.1 -P 3306 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
       interval: 10s
       timeout: 5s
       retries: 30
@@ -55,6 +58,23 @@ services:
     platform: "${DOCKER_PLATFORM:-linux/amd64}"
     container_name: ai-monitor-client-api
     restart: unless-stopped
+    # Une base fraiche peut encore redemarrer entre le premier controle et la
+    # migration. La migration est donc repetee sur les erreurs transitoires.
+    command:
+      - "sh"
+      - "-c"
+      - >-
+        attempt=1;
+        until alembic upgrade head; do
+          if [ "$${attempt}" -ge "$${DB_INIT_RETRIES}" ]; then
+            echo "Database migration failed after $${attempt} attempts" >&2;
+            exit 1;
+          fi;
+          echo "Database not ready; retrying migration ($${attempt}/$${DB_INIT_RETRIES})" >&2;
+          attempt=$$((attempt + 1));
+          sleep "$${DB_INIT_RETRY_DELAY}";
+        done;
+        exec uvicorn app.main:app --host 0.0.0.0 --port 8000
     environment:
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"

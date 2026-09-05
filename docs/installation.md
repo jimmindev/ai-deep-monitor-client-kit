@@ -118,17 +118,22 @@ Pour imposer CUDA et refuser tout repli CPU:
 ```
 
 Prevoir au minimum 20 Go libres pour les images, le cache de construction et le
-modele. Sur le Jetson Orin de validation, caches vides, le temps mesure a ete:
+modele. Sur le Jetson Orin de validation, apres suppression des images, des
+volumes et du cache de construction, le temps mesure a ete:
 
 | Etape | Temps mesure |
 | --- | ---: |
-| Construction locale llama.cpp CUDA | 31 min 59 s |
-| Images applicatives, modele, MySQL et demarrage | 13 min 58 s |
-| Installation propre avec le correctif | environ 46 a 48 min |
+| Telechargement et extraction de la base CUDA | 19 min 31 s |
+| Dependances de l'image de construction | 5 min 30 s |
+| Compilation locale llama.cpp CUDA | 30 min 57 s |
+| Finalisation, images applicatives, modele, MySQL et demarrage | environ 17 min |
+| Installation integralement neuve | environ 73 min |
 
 Une desinstallation complete avec suppression des images et du cache impose de
 reconstruire llama.cpp. Une mise a jour normale conserve l'image locale et le
-volume du modele: elle ne doit donc pas reprendre ces 46 a 48 minutes.
+volume du modele: elle ne doit donc pas reprendre ces 73 minutes. Pendant la
+premiere initialisation, le controle de sante MySQL attend le serveur TCP
+definitif et l'API retente les migrations en cas de courte coupure de la base.
 
 Pendant la construction, la ligne attendue contient `Construction locale de
 llama.cpp`. Le kit ne doit plus commencer par telecharger l'image generique
