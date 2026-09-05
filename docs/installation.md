@@ -72,10 +72,12 @@ permet de quitter. Le dossier d'installation par defaut est
 Docker Engine et Compose v2 sont installes s'ils sont absents. Le kit choisit
 automatiquement `linux/amd64` sur PC x64 et `linux/arm64` sur NVIDIA Jetson.
 Il selectionne ensuite `nvidia`, `jetson` ou `cpu`, valide le runtime dans un
-conteneur et conserve ce profil pendant les mises a jour. Si l'image CUDA
-officielle est incompatible, une image locale peut etre compilee pour la
-version CUDA et l'architecture GPU detectees. En dernier recours, le mode
-automatique utilise le CPU au lieu de bloquer toute l'application.
+conteneur et conserve ce profil pendant les mises a jour. Sur un PC NVIDIA, il
+teste l'image CUDA officielle. Sur Jetson, il evite cette image generique et
+compile directement une image locale pour la version CUDA de JetPack et
+l'architecture GPU detectees. Une image personnalisee ou locale deja presente
+est testee et reutilisee. En dernier recours, le mode automatique utilise le CPU
+au lieu de bloquer toute l'application.
 
 Forcer un profil ou demander une nouvelle detection:
 
@@ -97,6 +99,54 @@ Pour une version CUDA non encore repertoriee, definissez dans `.env`
 `LLAMA_CPP_CUDA_DEVEL_IMAGE` et `LLAMA_CPP_CUDA_RUNTIME_IMAGE` avec deux bases
 `nvidia/cuda` compatibles. `LLAMA_CPP_AUTO_BUILD_CUDA=false` desactive la
 construction locale et force le repli CPU en mode automatique.
+
+### Premiere installation Jetson
+
+La construction locale de llama.cpp est volontairement effectuee une seule
+fois. Elle utilise quatre taches par defaut pour limiter la consommation de RAM
+partagee. Sur une petite machine, ajoutez cette ligne dans
+`~/ai-deep-monitor/.env` avant de relancer l'installation:
+
+```env
+LLAMA_CPP_CUDA_BUILD_JOBS=2
+```
+
+Pour imposer CUDA et refuser tout repli CPU:
+
+```bash
+~/ai-deep-monitor/install-client.sh --llama-profile jetson --require-gpu
+```
+
+Prevoir au minimum 20 Go libres pour les images, le cache de construction et le
+modele. Sur le Jetson Orin de validation, apres suppression des images, des
+volumes et du cache de construction, le temps mesure a ete:
+
+| Etape | Temps mesure |
+| --- | ---: |
+| Telechargement et extraction de la base CUDA | 19 min 31 s |
+| Dependances de l'image de construction | 5 min 30 s |
+| Compilation locale llama.cpp CUDA | 30 min 57 s |
+| Finalisation, images applicatives, modele, MySQL et demarrage | environ 17 min |
+| Installation integralement neuve | environ 73 min |
+
+Une desinstallation complete avec suppression des images et du cache impose de
+reconstruire llama.cpp. Une mise a jour normale conserve l'image locale et le
+volume du modele: elle ne doit donc pas reprendre ces 73 minutes. Pendant la
+premiere initialisation, le controle de sante MySQL attend le serveur TCP
+definitif et l'API retente les migrations en cas de courte coupure de la base.
+
+Pendant la construction, la ligne attendue contient `Construction locale de
+llama.cpp`. Le kit ne doit plus commencer par telecharger l'image generique
+`server-cuda`. Apres le demarrage:
+
+```bash
+~/ai-deep-monitor/verify-llama-gpu.sh
+docker ps --filter name=ai-monitor-client
+curl -fsS http://127.0.0.1:8000/health
+```
+
+La verification doit afficher un device `CUDA0` et les services API, MySQL,
+llama.cpp et sandbox doivent etre `healthy`.
 
 ## Ports
 

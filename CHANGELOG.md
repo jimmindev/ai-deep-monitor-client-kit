@@ -14,6 +14,19 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- Le premier demarrage sur une base MySQL vierge attend maintenant le serveur
+  TCP definitif; les migrations API retentent aussi les coupures transitoires
+  au lieu de rendre le service unhealthy.
+- Sur NVIDIA Jetson, la detection ne telecharge plus l'image CUDA generique
+  avant la construction locale: le kit utilise directement CUDA/JetPack et le
+  compute capability detectes sur la machine.
+- La construction ARM64 de llama.cpp autorise les bibliotheques CUDA fournies
+  au runtime par JetPack et limite par defaut la compilation a quatre taches,
+  ce qui corrige l'echec final d'edition de liens observe sur Jetson Orin.
+- Le nombre de taches peut etre ajuste avec `LLAMA_CPP_CUDA_BUILD_JOBS`; les
+  images personnalisees et les images locales deja construites restent testees
+  et reutilisees.
+
 - La mise a jour integree actualise maintenant le Client Kit `latest` avant
   l'application: installateurs Windows/Linux, Compose, documentation et agent
   terminal sont telecharges, controles par SHA256 puis synchronises.
