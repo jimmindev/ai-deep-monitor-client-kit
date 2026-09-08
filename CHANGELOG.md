@@ -14,6 +14,10 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- L'installation Windows/Linux cible maintenant AI Deep Monitor `v0.1.23`.
+  Les mises a jour conservent les donnees et le profil CPU/GPU detecte, tout
+  en actualisant les fichiers du Client Kit et l'agent terminal.
+
 - Le premier demarrage sur une base MySQL vierge attend maintenant le serveur
   TCP definitif; les migrations API retentent aussi les coupures transitoires
   au lieu de rendre le service unhealthy.
