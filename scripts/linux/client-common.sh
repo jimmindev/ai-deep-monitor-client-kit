@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-export DEFAULT_APP_VERSION="v0.1.23"
+export DEFAULT_APP_VERSION="v0.1.24"
 export DOCKER_PLATFORM=""
 LLAMA_CPP_DEFAULT_CPU_IMAGE='ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31'
 LLAMA_CPP_DEFAULT_CUDA_IMAGE='ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42'
