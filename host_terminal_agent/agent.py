@@ -42,7 +42,9 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.6.1"
+AGENT_VERSION = "3.6.2"
+MAX_DATABASE_MIGRATION_SECONDS = 6 * 60 * 60
+MIGRATION_STATUS_INTERVAL_SECONDS = 30
 MAX_COMMAND_BYTES = 4_000
 MAX_OUTPUT_BYTES = 400_000
 MAX_LISTING_ENTRIES = 5_000
@@ -1126,6 +1128,44 @@ class HostAgent:
             environment_overrides=environment_overrides,
         )
 
+    def migrate_database(self, job_id: str, context: dict | None = None) -> dict:
+        # Keep old APIs from expiring a legitimate long-running schema update.
+        stopped = threading.Event()
+        started_at = time.monotonic()
+
+        def report_progress():
+            while not stopped.wait(MIGRATION_STATUS_INTERVAL_SECONDS):
+                minutes = int((time.monotonic() - started_at) / 60)
+                self.write_update_status(
+                    context, phase="downloading", progress=60,
+                    message=f"Préparation de la base de données ({minutes} min).",
+                    backup_created=True,
+                )
+
+        reporter = threading.Thread(target=report_progress, daemon=True) if context else None
+        if reporter:
+            reporter.start()
+        try:
+            # Stop only this job's container on timeout, never customer volumes.
+            container_name = "ai-monitor-schema-" + job_id
+            result = self.compose_command(
+                "run", "--rm", "--no-deps", "--name", container_name,
+                "api", "alembic", "upgrade", "head",
+                timeout=MAX_DATABASE_MIGRATION_SECONDS,
+            )
+            if result.get("timed_out"):
+                docker = shutil.which("docker", path=trusted_search_path())
+                cleanup = run_maintenance_process(
+                    [docker, "rm", "--force", container_name],
+                    cwd=self.install_dir, timeout=120,
+                ) if docker else {"ok": False}
+                result["migration_cleanup_failed"] = not cleanup["ok"]
+            return result
+        finally:
+            stopped.set()
+            if reporter:
+                reporter.join()
+
     def pull_images(self, *, timeout: float = MAX_UPDATE_SECONDS) -> dict:
         """Pull private images with short-lived credentials scoped to this job."""
         env_path = self.install_dir / ".env"
@@ -1441,6 +1481,7 @@ class HostAgent:
                         hint="Vérifiez Internet, l’accès à GHCR, le token GitHub et l’espace disque disponible.",
                         result=pull_result,
                     )
+            migration_result = {}
             if deployment_ok:
                 # Run schema preparation independently of API healthchecks. On
                 # small hosts a large index can outlast Docker's startup window.
@@ -1451,10 +1492,7 @@ class HostAgent:
                     message="Préparation de la base de données avec la nouvelle version.",
                     backup_created=True,
                 )
-                migration_result = self.compose_command(
-                    "run", "--rm", "--no-deps", "api", "alembic", "upgrade", "head",
-                    timeout=MAX_UPDATE_SECONDS,
-                )
+                migration_result = self.migrate_database(job_id, context)
                 deployment_ok = bool(migration_result["ok"])
                 if not deployment_ok:
                     record_update_failure(
@@ -1514,6 +1552,16 @@ class HostAgent:
                         hint="Consultez le journal technique ci-dessous pour identifier l’erreur de démarrage de l’API.",
                         result=logs_result,
                     )
+
+            if not deployment_ok and migration_result.get("migration_cleanup_failed"):
+                # Do not start another schema writer while cleanup is uncertain.
+                keep_env_backup = True
+                self.write_update_status(
+                    context, phase="failed", progress=100,
+                    message="Le conteneur de migration n’a pas pu être arrêté. Intervention requise avant toute reprise.",
+                    error_code="database_migration_cleanup_failed", backup_created=True,
+                )
+                return
 
             if not deployment_ok:
                 failure_step = context.get("failure_step") or "Étape de déploiement inconnue"

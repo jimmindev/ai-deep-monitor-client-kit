@@ -567,6 +567,15 @@ Resolve-AiMonitorLlamaRuntime `
   -Redetect:$RedetectLlamaRuntime
 Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("config", "--quiet")
 Invoke-AiMonitorComposePull -ComposePath $composePath -EnvPath $envPath
+Write-Host "Preparation de la base de donnees; les grandes bases peuvent demander plusieurs minutes."
+try {
+  Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("up", "-d", "--wait", "--wait-timeout", "300", "mysql")
+  Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("run", "--rm", "--no-deps", "api", "alembic", "upgrade", "head")
+} catch {
+  # Overwrite the existing file's contents while retaining its protected ACL.
+  [IO.File]::WriteAllBytes($envPath, [IO.File]::ReadAllBytes($backupPath))
+  throw "La migration a echoue. La version precedente est conservee; aucun service applicatif n'a ete redemarre. $($_.Exception.Message)"
+}
 try {
   Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("up", "-d")
 } catch {

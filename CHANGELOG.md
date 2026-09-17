@@ -12,6 +12,15 @@ Le kit prend en charge Windows, Linux x64 et NVIDIA Jetson ARM64. Il fournit le
 menu interactif, les sauvegardes/restaurations et l'agent de terminal hote
 restreint sans embarquer les sources privees de l'application.
 
+## Application v0.1.26
+
+- Reprise des migrations MySQL interrompues, sans doublon d’index.
+- Migration préalable au redémarrage dans les outils Windows et Linux.
+- Agent 3.6.2 : délai de migration distinct de six heures, conteneur dédié et
+  nettoyage après dépassement ; intervention demandée si le nettoyage échoue.
+- Tests d’exécution des scripts sur succès et erreur de migration, obligatoires
+  avant publication des archives.
+
 ## Application v0.1.25
 
 - Images 0.1.25 et workers de sauvegarde, découverte et notification.
@@ -133,3 +142,5 @@ restreint sans embarquer les sources privees de l'application.
   echec sous Linux et NVIDIA Jetson sans relacher le confinement systemd.
 - Les erreurs de maintenance remontent un diagnostic court et expurge des
   mots de passe, tokens et autres secrets.
+
+Le suivi de migration est rafraîchi toutes les 30 secondes pour éviter une expiration pendant une opération SQL longue.

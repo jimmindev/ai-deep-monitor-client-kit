@@ -121,3 +121,11 @@ ni dans les journaux transmis à l'interface.
 Après installation d'une nouvelle version de l'agent, il faut relancer une fois
 l'installateur Windows ou Linux ci-dessus. Cette opération conserve la clé de la
 file, la configuration et toutes les données Docker.
+
+L’agent 3.6.2 prépare les migrations Alembic avant de redémarrer les services.
+Cette étape utilise un conteneur indépendant des contrôles de santé de l’API
+et dispose de six heures. Si ce délai est dépassé, seul le conteneur dédié à
+ce travail est arrêté et supprimé ; les volumes restent conservés. Si le
+nettoyage échoue, aucun retour arrière ou nouveau démarrage n’est tenté et
+le statut signé demande une intervention. Une migration longue peut rester
+plusieurs minutes dans l’étape de préparation de la base sans erreur.
