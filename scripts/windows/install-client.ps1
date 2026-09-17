@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [string]$AppVersion = "v0.1.24",
+  [string]$AppVersion = "v0.1.25",
   [string]$GithubOwner = "jimmindev",
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
@@ -378,6 +378,10 @@ if (-not $projectName) { $projectName = "ai-deep-monitor" }
 
 $kitFiles = @(
   "docker-compose.release.yml",
+  "docker-compose.dhcp.yml",
+  "dhcp/Dockerfile",
+  "dhcp/bootstrap.sh",
+  "dhcp/README.md",
   "docker-compose.accel.nvidia.yml",
   "docker-compose.accel.jetson.yml",
   "Dockerfile.llama-cuda",
@@ -410,6 +414,7 @@ foreach ($fileName in $kitFiles) {
   if ($source) {
     $target = Join-Path $installPath.FullName $fileName
     if ((Resolve-Path -LiteralPath $source).Path -ne $target) {
+      New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
       Copy-Item -LiteralPath $source -Destination $target -Force
     }
   }

@@ -361,6 +361,10 @@ if (-not $SkipKitRefresh) {
 
 $kitFiles = @(
   "docker-compose.release.yml",
+  "docker-compose.dhcp.yml",
+  "dhcp/Dockerfile",
+  "dhcp/bootstrap.sh",
+  "dhcp/README.md",
   "docker-compose.accel.nvidia.yml",
   "docker-compose.accel.jetson.yml",
   "Dockerfile.llama-cuda",
@@ -396,6 +400,7 @@ foreach ($fileName in $kitFiles) {
   $targetPath = $target
   if (Test-Path -LiteralPath $target) { $targetPath = (Resolve-Path -LiteralPath $target).Path }
   if ($sourcePath -ne $targetPath) {
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
     Copy-Item -LiteralPath $source -Destination $target -Force
   }
 }

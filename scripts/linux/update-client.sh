@@ -172,10 +172,12 @@ COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 if [[ "$SKIP_KIT_REFRESH" == "false" ]]; then
   run_latest_client_kit_updater
 fi
-for file in docker-compose.release.yml docker-compose.accel.nvidia.yml docker-compose.accel.jetson.yml Dockerfile.llama-cuda client-common.sh client-platform.ps1 ai-deep-monitor.sh ai-deep-monitor.ps1 AI-Deep-Monitor.cmd install-client.sh check-update.sh update-client.sh backup-client.sh backup-maintenance.sh restore-client.sh uninstall-client.sh repair-terminal.sh verify-llama-gpu.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 backup-maintenance.ps1 restore-client.ps1 uninstall-client.ps1 repair-terminal.ps1 README_CLIENT.md; do
+for file in docker-compose.release.yml docker-compose.dhcp.yml dhcp/Dockerfile dhcp/bootstrap.sh dhcp/README.md docker-compose.accel.nvidia.yml docker-compose.accel.jetson.yml Dockerfile.llama-cuda client-common.sh client-platform.ps1 ai-deep-monitor.sh ai-deep-monitor.ps1 AI-Deep-Monitor.cmd install-client.sh check-update.sh update-client.sh backup-client.sh backup-maintenance.sh restore-client.sh uninstall-client.sh repair-terminal.sh verify-llama-gpu.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 backup-maintenance.ps1 restore-client.ps1 uninstall-client.ps1 repair-terminal.ps1 README_CLIENT.md; do
   source_file="$(kit_source "$file" || true)"
   [[ -n "$source_file" ]] || continue
   if [[ "$source_file" != "${INSTALL_DIR}/${file}" ]]; then
+    mkdir -p "$(dirname "${INSTALL_DIR}/${file}")"
+    mkdir -p "$(dirname "${INSTALL_DIR}/${file}")"
     cp -f "$source_file" "${INSTALL_DIR}/${file}"
   fi
 done
