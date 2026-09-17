@@ -20,6 +20,10 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Correctifs du canal permanent
 
+- L’agent 3.6.1 prépare les migrations de base de données avant de redémarrer
+  l’API, pour éviter qu’un contrôle de santé interrompe la création d’index
+  sur les grandes bases. Une erreur de migration bloque le déploiement.
+
 - L'installation Windows/Linux cible maintenant AI Deep Monitor `v0.1.24`.
   Cette publication conserve les données et le profil matériel pendant la
   mise à jour, puis vérifie les services et la version exposée par l'API.

@@ -25,6 +25,7 @@ jobs:
         run: |
           chmod +x tests/smoke-linux.sh
           SKIP_COMPOSE_TEST=true tests/smoke-linux.sh
+          python3 -m unittest discover -s tests -p test_host_update_migrations.py
 
   validate-windows:
     runs-on: windows-latest
@@ -34,7 +35,9 @@ jobs:
 
       - name: Tester le kit Windows
         shell: pwsh
-        run: ./tests/smoke-windows.ps1
+        run: |
+          ./tests/smoke-windows.ps1
+          python -m unittest discover -s tests -p test_host_update_migrations.py
 
   release:
     needs:

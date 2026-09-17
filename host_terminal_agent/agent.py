@@ -42,7 +42,7 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.6.0"
+AGENT_VERSION = "3.6.1"
 MAX_COMMAND_BYTES = 4_000
 MAX_OUTPUT_BYTES = 400_000
 MAX_LISTING_ENTRIES = 5_000
@@ -1440,6 +1440,30 @@ class HostAgent:
                         reason=failed_step_message("Le téléchargement des images a échoué", pull_result),
                         hint="Vérifiez Internet, l’accès à GHCR, le token GitHub et l’espace disque disponible.",
                         result=pull_result,
+                    )
+            if deployment_ok:
+                # Run schema preparation independently of API healthchecks. On
+                # small hosts a large index can outlast Docker's startup window.
+                self.write_update_status(
+                    context,
+                    phase="downloading",
+                    progress=60,
+                    message="Préparation de la base de données avec la nouvelle version.",
+                    backup_created=True,
+                )
+                migration_result = self.compose_command(
+                    "run", "--rm", "--no-deps", "api", "alembic", "upgrade", "head",
+                    timeout=MAX_UPDATE_SECONDS,
+                )
+                deployment_ok = bool(migration_result["ok"])
+                if not deployment_ok:
+                    record_update_failure(
+                        context,
+                        code="database_migration_failed",
+                        step="Migration de la base de données",
+                        reason=failed_step_message("La migration a échoué", migration_result),
+                        hint="Consultez le journal de migration avant de reprendre la maintenance.",
+                        result=migration_result,
                     )
             if deployment_ok:
                 self.write_update_status(
