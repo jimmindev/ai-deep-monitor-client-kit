@@ -50,3 +50,6 @@ try {
   Remove-Item -LiteralPath $resolvedWorkspace -Recurse -Force
   Remove-Variable UpdateOrderCalls, UpdateOrderMigrationExit -Scope Global -ErrorAction SilentlyContinue
 }
+
+# The intentionally failed Docker call must not become the CI process result.
+$global:LASTEXITCODE = 0
