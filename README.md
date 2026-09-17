@@ -58,6 +58,13 @@ resynchroniser les fichiers d'installation. Les clients possedant encore un
 ancien updater doivent telecharger et extraire une fois la nouvelle archive;
 les actualisations suivantes deviennent automatiques.
 
+Pour le premier passage vers **v0.1.26**, utilisez **Mettre a jour** dans
+le menu du dernier kit telecharge. Cette action installe l'agent **3.6.2**
+avant de preparer la base, puis redemarre l'application. Un ancien agent deja
+en execution ne se remplace pas par une simple actualisation des images
+Docker depuis l'application. Les mises a jour suivantes depuis l'application
+utilisent alors le nouveau suivi de migration.
+
 Le depot peut aussi etre clone sans authentification:
 
 ```bash
