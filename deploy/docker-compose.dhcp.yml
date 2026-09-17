@@ -1,0 +1,27 @@
+services:
+  dhcp-server:
+    image: "ai-deep-monitor-dhcp:local"
+    build:
+      context: ./dhcp
+    restart: unless-stopped
+    profiles: ["dhcp"]
+    network_mode: host
+    user: "0:1000"
+    cap_drop: ["ALL"]
+    cap_add: ["NET_RAW", "NET_BIND_SERVICE"]
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777,noexec,nosuid,nodev
+      - /run/kea:size=8m,mode=0750,uid=0,gid=1000,noexec,nosuid,nodev
+    volumes:
+      - dhcp_config:/etc/kea
+      - dhcp_control:/dhcp/control
+      - dhcp_leases:/var/lib/kea
+      - ./dhcp/bootstrap.sh:/usr/local/bin/ai-monitor-dhcp-bootstrap:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/ai-monitor-dhcp-bootstrap"]
+
+volumes:
+  dhcp_config:
+  dhcp_control:
+  dhcp_leases:

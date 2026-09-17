@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mysql:8.0
+    image: mysql:8.0.46@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
     platform: "${DOCKER_PLATFORM:-linux/amd64}"
     container_name: ai-monitor-client-mysql
     restart: unless-stopped
@@ -81,6 +81,10 @@ services:
       MYSQL_DATABASE: "${MYSQL_DATABASE}"
       MYSQL_USER: "${MYSQL_USER}"
       MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
+      LICENSE_PUBLIC_KEYS: "${LICENSE_PUBLIC_KEYS:-{}}"
+      LICENSE_VALIDATION_URL: "${LICENSE_VALIDATION_URL:-}"
+      BACKUP_KEY_FILE: /app/backup-secrets/master.key
+      APPLICATION_SECRETS_KEY_DIR: /app/backup-secrets/application-secrets
       AUTH_SECRET_KEY: "${AUTH_SECRET_KEY}"
       AUTH_BOOTSTRAP_USERNAME: "${AUTH_BOOTSTRAP_USERNAME:-admin}"
       AUTH_BOOTSTRAP_PASSWORD: "${AUTH_BOOTSTRAP_PASSWORD:-}"
@@ -122,6 +126,9 @@ services:
       - client_api_data:/app/data
       - client_uploaded_mibs:/app/uploaded_mibs
       - client_generated_backups:/app/generated_backups
+      - client_backup_secrets:/app/backup-secrets
+      - dhcp_config:/dhcp/config
+      - dhcp_control:/dhcp/control
       - client_sandbox_jobs:/sandbox/jobs
       - ./host_terminal_jobs:/host-terminal/jobs
     group_add:
@@ -154,11 +161,95 @@ services:
       MYSQL_USER: "${MYSQL_USER}"
       MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
       PYTHONPATH: /app
+      APPLICATION_SECRETS_KEY_DIR: /app/backup-secrets/application-secrets
       PHYSICAL_COLLECTOR_TICK_SECONDS: "${PHYSICAL_COLLECTOR_TICK_SECONDS:-5}"
       PHYSICAL_COLLECTOR_RETRY_SECONDS: "${PHYSICAL_COLLECTOR_RETRY_SECONDS:-5}"
     depends_on:
       api:
         condition: service_healthy
+
+    volumes:
+      - client_backup_secrets:/app/backup-secrets
+
+  backup-scheduler:
+    restart: unless-stopped
+    command:
+    - python
+    - backup_scheduler.py
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: '3306'
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      PYTHONPATH: /app
+      BACKUP_KEY_FILE: /app/backup-secrets/master.key
+      BACKUP_SCHEDULER_TIMEZONE: ${BACKUP_SCHEDULER_TIMEZONE:-Europe/Paris}
+      BACKUP_SCHEDULER_TICK_SECONDS: ${BACKUP_SCHEDULER_TICK_SECONDS:-30}
+      BACKUP_SCHEDULER_FAILURE_ALERT_THRESHOLD: ${BACKUP_SCHEDULER_FAILURE_ALERT_THRESHOLD:-3}
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - backup_scheduler.py
+      - --healthcheck
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+    image: ghcr.io/${GITHUB_OWNER:-jimmindev}/ai-deep-monitor-api:${APP_VERSION:-latest}
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
+    container_name: ai-monitor-client-backup-scheduler
+    volumes:
+    - client_backup_secrets:/app/backup-secrets
+    - client_generated_backups:/app/generated_backups
+  discovery-worker:
+    restart: unless-stopped
+    command:
+    - python
+    - discovery_worker.py
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: '3306'
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      PYTHONPATH: /app
+      APPLICATION_SECRETS_KEY_DIR: /app/backup-secrets/application-secrets
+      DISCOVERY_WORKER_TICK_SECONDS: ${DISCOVERY_WORKER_TICK_SECONDS:-2}
+    depends_on:
+      api:
+        condition: service_healthy
+    image: ghcr.io/${GITHUB_OWNER:-jimmindev}/ai-deep-monitor-api:${APP_VERSION:-latest}
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
+    container_name: ai-monitor-client-discovery-worker
+    volumes:
+    - client_backup_secrets:/app/backup-secrets
+  notification-worker:
+    restart: unless-stopped
+    command:
+    - python
+    - notification_worker.py
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: '3306'
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      PYTHONPATH: /app
+      APPLICATION_SECRETS_KEY_DIR: /app/backup-secrets/application-secrets
+      NOTIFICATION_WORKER_TICK_SECONDS: ${NOTIFICATION_WORKER_TICK_SECONDS:-3}
+    depends_on:
+      api:
+        condition: service_healthy
+    image: ghcr.io/${GITHUB_OWNER:-jimmindev}/ai-deep-monitor-api:${APP_VERSION:-latest}
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
+    container_name: ai-monitor-client-notification-worker
+    volumes:
+    - client_backup_secrets:/app/backup-secrets
 
   llama-cpp:
     image: "${LLAMA_CPP_IMAGE:-ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31}"
@@ -213,6 +304,9 @@ services:
         condition: service_healthy
 
 volumes:
+  client_backup_secrets:
+  dhcp_config:
+  dhcp_control:
   client_mysql_data:
   client_api_data:
   client_uploaded_mibs:

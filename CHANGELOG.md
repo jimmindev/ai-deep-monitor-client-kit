@@ -12,6 +12,12 @@ Le kit prend en charge Windows, Linux x64 et NVIDIA Jetson ARM64. Il fournit le
 menu interactif, les sauvegardes/restaurations et l'agent de terminal hote
 restreint sans embarquer les sources privees de l'application.
 
+## Application v0.1.25
+
+- Images 0.1.25 et workers de sauvegarde, découverte et notification.
+- Licences cumulées, secrets de sauvegarde persistants et inventaire des interfaces hôte.
+- Profil DHCP Linux facultatif, sans activation automatique.
+
 ## Correctifs du canal permanent
 
 - L'installation Windows/Linux cible maintenant AI Deep Monitor `v0.1.24`.

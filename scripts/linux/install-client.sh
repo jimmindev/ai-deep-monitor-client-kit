@@ -62,7 +62,7 @@ Usage: ./install-client.sh [options]
 
 Options:
   --install-dir CHEMIN       Dossier cible (defaut: ~/ai-deep-monitor)
-  --app-version VERSION      Version applicative (defaut: v0.1.24)
+  --app-version VERSION      Version applicative (defaut: v0.1.25)
   --github-owner NOM         Proprietaire des images GHCR
   --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
@@ -114,6 +114,10 @@ PROJECT_NAME="$(project_name_from_dir "$INSTALL_DIR")"
 
 kit_files=(
   docker-compose.release.yml
+  docker-compose.dhcp.yml
+  dhcp/Dockerfile
+  dhcp/bootstrap.sh
+  dhcp/README.md
   docker-compose.accel.nvidia.yml
   docker-compose.accel.jetson.yml
   Dockerfile.llama-cuda
@@ -146,6 +150,7 @@ for file in "${kit_files[@]}"; do
   source_file="$(kit_source "$file" || true)"
   [[ -n "$source_file" ]] || continue
   if [[ "$(cd "$(dirname "$source_file")" && pwd)/$(basename "$source_file")" != "${INSTALL_DIR}/${file}" ]]; then
+    mkdir -p "$(dirname "${INSTALL_DIR}/${file}")"
     cp -f "$source_file" "${INSTALL_DIR}/${file}"
   fi
 done

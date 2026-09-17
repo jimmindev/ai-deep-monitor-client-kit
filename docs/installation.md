@@ -286,3 +286,14 @@ session existante. Une erreur `500` sur `/api/auth/login` ne l'est pas.
 - Ne supprimez jamais `.env` ou les volumes Docker sans sauvegarde validee.
 - Si des volumes SQL existent mais que `.env` a disparu, l'installation
   s'arrete pour ne pas rendre la base inaccessible.
+
+## DHCP Linux facultatif
+
+Configurez le service dans Réseau et date / heure, puis activez le profil sur un hôte Linux dédié. Vérifiez le réseau avant de lancer un serveur DHCP.
+
+```bash
+cd /opt/ai-deep-monitor
+docker compose --env-file .env -f docker-compose.release.yml -f docker-compose.dhcp.yml --profile dhcp up -d --build dhcp-server
+```
+
+Les configurations et baux utilisent des volumes persistants. Le profil est préparé par le kit et reste désactivé par défaut.

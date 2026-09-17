@@ -60,6 +60,40 @@ class UpdateStepError(RuntimeError):
         self.error_code = error_code
 
 
+def collect_network_interfaces() -> dict:
+    """Read-only host inventory; never changes adapter configuration."""
+    try:
+        if os.name == "nt":
+            script = r"""
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
+$ErrorActionPreference = 'Stop'
+$routes = @(Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object @{Expression={$_.RouteMetric + (Get-NetIPInterface -InterfaceIndex $_.InterfaceIndex -AddressFamily IPv4).InterfaceMetric}})
+$primary = if ($routes.Count) { $routes[0].InterfaceIndex } else { -1 }
+$result = @(Get-NetAdapter -IncludeHidden | ForEach-Object {
+ $adapter = $_
+ $gateways = @(Get-NetRoute -InterfaceIndex $adapter.ifIndex -ErrorAction SilentlyContinue | Where-Object {$_.DestinationPrefix -in @('0.0.0.0/0', '::/0')} | Select-Object -ExpandProperty NextHop)
+ $dns = @(Get-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ServerAddresses)
+ $addresses = @(Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -ErrorAction SilentlyContinue | Where-Object {$_.AddressState -ne 'Invalid'} | ForEach-Object { "$($_.IPAddress)/$($_.PrefixLength)" })
+ [PSCustomObject]@{ id = [string]$adapter.InterfaceGuid; physical = [bool]$adapter.HardwareInterface; name = $adapter.Name; description = $adapter.InterfaceDescription; mac = $adapter.MacAddress; status = [string]$adapter.Status; addresses = $addresses; gateway = @($gateways); dns = @($dns | Select-Object -Unique); primary = ($adapter.ifIndex -eq $primary); speed = [string]$adapter.LinkSpeed }
+})
+ConvertTo-Json -InputObject $result -Depth 5 -Compress
+"""
+            run = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=20, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            interfaces = json.loads(run.stdout.lstrip("\ufeff"))
+        else:
+            def ip_json(*args):
+                return json.loads(subprocess.run(["ip", "-j", *args], capture_output=True, text=True, timeout=5, check=True).stdout)
+            links = ip_json("address", "show")
+            routes = sorted(ip_json("route", "show", "default"), key=lambda route: route.get("metric", 0))
+            primary = routes[0].get("dev") if routes else None
+            dns = [line.split()[1] for line in Path("/etc/resolv.conf").read_text().splitlines() if line.startswith("nameserver ")]
+            interfaces = [{"physical": Path("/sys/class/net", link["ifname"], "device").exists(), "id": link["ifname"], "name": link["ifname"], "description": link.get("link_type", ""), "mac": link.get("address", ""), "status": link.get("operstate", "UNKNOWN"), "addresses": [f"{a['local']}/{a['prefixlen']}" for a in link.get("addr_info", [])], "gateway": [r["gateway"] for r in routes if r.get("dev") == link["ifname"] and r.get("gateway")], "dns": dns if link["ifname"] == primary else [], "primary": link["ifname"] == primary, "speed": ""} for link in links]
+        return {"interfaces": sorted(interfaces, key=lambda item: (not item["primary"], item["name"])), "collected_at": time.time(), "error": None}
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return {"interfaces": [], "collected_at": time.time(), "error": "Détection réseau indisponible sur cet hôte."}
+
+
 def canonical(payload: dict) -> bytes:
     return json.dumps(
         payload,
@@ -779,6 +813,9 @@ class HostAgent:
 
     def status_payload(self) -> dict:
         update = self.update_capability()
+        if time.monotonic() - getattr(self, "_network_checked", -120) >= 60:
+            self._network_inventory = collect_network_interfaces()
+            self._network_checked = time.monotonic()
         return {
             "available": True,
             "target": "host",
@@ -787,6 +824,7 @@ class HostAgent:
             "policy_version": POLICY_VERSION,
             "restricted": True,
             "hostname": socket.gethostname(),
+            "network": self._network_inventory,
             "host_family": self.host_family,
             "platform": platform_label(self.host_family),
             "shells": self.shells,
