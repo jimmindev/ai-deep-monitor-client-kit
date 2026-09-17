@@ -39,6 +39,7 @@ jobs:
         run: |
           ./tests/smoke-windows.ps1
           python -m unittest discover -s tests -p test_host_update_migrations.py
+          if ($LASTEXITCODE -ne 0) { throw "Host update agent tests failed." }
           ./tests/update-order-windows.ps1
 
   release:
