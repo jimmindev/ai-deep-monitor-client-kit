@@ -142,3 +142,5 @@ restreint sans embarquer les sources privees de l'application.
   echec sous Linux et NVIDIA Jetson sans relacher le confinement systemd.
 - Les erreurs de maintenance remontent un diagnostic court et expurge des
   mots de passe, tokens et autres secrets.
+
+Le suivi de migration est rafraîchi toutes les 30 secondes pour éviter une expiration pendant une opération SQL longue.

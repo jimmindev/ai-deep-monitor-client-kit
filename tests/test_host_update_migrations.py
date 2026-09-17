@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import time
+import threading
 import unittest
 from unittest.mock import patch
 import uuid
@@ -67,6 +68,34 @@ class UpdateMigrationTest(unittest.TestCase):
                         self.assertEqual(compose.call_args.kwargs["timeout"], 6 * 60 * 60)
                         self.assertEqual(cleanup.call_args.args[0], ["/test/docker","rm","--force","ai-monitor-schema-test-timeout"])
                         self.assertEqual(result["migration_cleanup_failed"], not cleanup_ok)
+                    finally:
+                        host.release_lock()
+
+    def test_long_migration_keeps_progress_current_and_stops_reporter(self):
+        for raises in [False, True]:
+            with self.subTest(raises=raises), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                install = root / "install"
+                install.mkdir()
+                refreshed = threading.Event()
+                def migrate(*args, **kw):
+                    self.assertTrue(refreshed.wait(2))
+                    if raises:
+                        raise RuntimeError("migration failed")
+                    return {"ok":True}
+                with patch.object(agent.shutil, "which", return_value="/test/docker"), patch.object(agent, "MIGRATION_STATUS_INTERVAL_SECONDS", 0.01):
+                    host = agent.HostAgent(root / "jobs", install_dir=install, state_dir=root / "state")
+                    try:
+                        with patch.object(host, "write_update_status", side_effect=lambda *a, **kw: refreshed.set()) as report, patch.object(host, "compose_command", side_effect=migrate):
+                            if raises:
+                                with self.assertRaises(RuntimeError):
+                                    host.migrate_database("heartbeat", {"id":"heartbeat"})
+                            else:
+                                self.assertTrue(host.migrate_database("heartbeat", {"id":"heartbeat"})["ok"])
+                            self.assertEqual(report.call_args.kwargs["progress"], 60)
+                            before = report.call_count
+                            time.sleep(0.04)
+                            self.assertEqual(report.call_count, before)
                     finally:
                         host.release_lock()
 
