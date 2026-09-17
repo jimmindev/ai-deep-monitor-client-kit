@@ -23,7 +23,7 @@ class UpdateMigrationTest(unittest.TestCase):
             calls = []
             def run(argv, **kwargs):
                 calls.append(argv)
-                is_migration = argv[-7:] == ["run", "--rm", "--no-deps", "api", "alembic", "upgrade", "head"]
+                is_migration = argv[-4:] == ["api", "alembic", "upgrade", "head"]
                 ok = migration_ok or not is_migration
                 return {"ok": ok, "exit_code": 0 if ok else 1, "timed_out": False, "output_tail": "migration refused" if not ok else ""}
             with patch.object(agent.shutil, "which", side_effect=lambda name, **kw: "/test/" + name), patch.object(agent, "run_maintenance_process", side_effect=run):
@@ -52,6 +52,23 @@ class UpdateMigrationTest(unittest.TestCase):
         self.scenario(True)
     def test_failed_schema_preparation_prevents_candidate_restart(self):
         self.scenario(False)
+
+    def test_migration_timeout_cleans_only_its_container(self):
+        for cleanup_ok in [True, False]:
+            with self.subTest(cleanup_ok=cleanup_ok), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                install = root / "install"
+                install.mkdir()
+                with patch.object(agent.shutil, "which", return_value="/test/docker"):
+                    host = agent.HostAgent(root / "jobs", install_dir=install, state_dir=root / "state")
+                    try:
+                        with patch.object(host, "compose_command", return_value={"ok":False,"timed_out":True}) as compose, patch.object(agent, "run_maintenance_process", return_value={"ok":cleanup_ok}) as cleanup:
+                            result = host.migrate_database("test-timeout")
+                        self.assertEqual(compose.call_args.kwargs["timeout"], 6 * 60 * 60)
+                        self.assertEqual(cleanup.call_args.args[0], ["/test/docker","rm","--force","ai-monitor-schema-test-timeout"])
+                        self.assertEqual(result["migration_cleanup_failed"], not cleanup_ok)
+                    finally:
+                        host.release_lock()
 
 if __name__ == "__main__":
     unittest.main()

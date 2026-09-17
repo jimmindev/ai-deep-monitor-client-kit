@@ -285,6 +285,12 @@ project_name="$(project_name_from_dir "$INSTALL_DIR")"
 configure_llama_cpp_runtime "$ENV_FILE" "$LLAMA_PROFILE" "$REQUIRE_GPU" "$REDETECT_LLAMA_RUNTIME"
 compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
 compose_runtime_pull "$project_name" "$COMPOSE_FILE" "$ENV_FILE"
+log "Preparation de la base de donnees; les grandes bases peuvent demander plusieurs minutes."
+if ! compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" up -d --wait --wait-timeout 300 mysql ||
+   ! compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" run --rm --no-deps api alembic upgrade head; then
+  cp -f "${ENV_FILE}.before-${APP_VERSION}.bak" "$ENV_FILE"
+  die "La migration a echoue. La version precedente est conservee; aucun service applicatif n'a ete redemarre."
+fi
 if ! compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" up -d; then
   show_startup_diagnostics "$project_name" "$COMPOSE_FILE" "$ENV_FILE"
   die "Le stack Docker n'a pas redemarre. Le fichier ${ENV_FILE}.before-${APP_VERSION}.bak permet un retour arriere."
