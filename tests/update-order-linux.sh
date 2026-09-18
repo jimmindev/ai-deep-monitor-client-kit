@@ -38,4 +38,10 @@ else:
     assert 'APP_VERSION=v0.1.99' not in Path(env).read_text()
 print('LINUX_UPDATE_ORDER_OK migration_exit='+result)
 PY
+  if [[ "$result" == "0" ]]; then
+    PATH="$workspace/bin:$PATH" "$kit/scripts/linux/update-client.sh" --install-dir "$install" --app-version v0.1.99 --yes --skip-backup --skip-agent-install --skip-docker-login --skip-kit-refresh > "$workspace/output-repeat" 2>&1 || { cat "$workspace/output-repeat"; exit 1; }
+    [[ "$(grep -c 'run --rm --no-deps api alembic upgrade head' "$UPDATE_ORDER_LOG")" == "2" ]]
+    [[ "$(grep -c ' pull$' "$UPDATE_ORDER_LOG")" == "2" ]]
+    echo LINUX_SAME_VERSION_REFRESH_OK
+  fi
 done

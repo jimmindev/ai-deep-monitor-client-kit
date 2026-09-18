@@ -42,6 +42,24 @@ try {
     } else {
       if (-not $failed -or $start -ne -1 -or $envText -match "APP_VERSION=v0.1.99") { throw "Failed migration restarted services or changed version" }
     }
+    if ($result -eq 0) {
+      function global:docker {
+        param([Parameter(ValueFromRemainingArguments = $true)][string[]]$DockerArguments)
+        $command = $DockerArguments -join " "
+        $global:UpdateOrderCalls.Add($command)
+        $global:LASTEXITCODE = 0
+        if ($command -like "info --format *") { return "linux|amd64" }
+      }
+      try {
+        & (Join-Path $kit "scripts/windows/update-client.ps1") -InstallDir $install -AppVersion v0.1.99 -Yes -SkipBackup -SkipAgentInstall -SkipDockerLogin -SkipKitRefresh *> $null
+      } finally {
+        Remove-Item -LiteralPath Function:\global:docker
+      }
+      $migrations = @($global:UpdateOrderCalls | Where-Object { $_ -like "*run --rm --no-deps api alembic upgrade head*" })
+      $pulls = @($global:UpdateOrderCalls | Where-Object { $_ -match " pull$" })
+      if ($migrations.Count -ne 2 -or $pulls.Count -ne 2) { throw "Same-version update skipped the published patch" }
+      Write-Output "WINDOWS_SAME_VERSION_REFRESH_OK"
+    }
     Write-Output "WINDOWS_UPDATE_ORDER_OK migration_exit=$result"
   }
 } finally {
