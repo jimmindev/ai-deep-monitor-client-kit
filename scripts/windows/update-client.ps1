@@ -501,11 +501,7 @@ if (-not $AppVersion) {
 
 $refreshImages = $currentVersion -eq $AppVersion
 if ($refreshImages) {
-  $currentLlamaProfile = (Read-DotEnv -Path $envPath)["LLAMA_CPP_RUNTIME_PROFILE"]
-  if (-not $authRepair.Changed -and -not $llamaCppConfigChanged -and -not $RedetectLlamaRuntime -and -not $LlamaProfile -and $currentLlamaProfile -ne "auto") {
-    Write-Host "Application deja en $AppVersion; les outils de maintenance sont synchronises."
-    exit 0
-  }
+  # A stable tag can receive a patch without changing its version number.
   Write-Host "L'application reste en $AppVersion; le deploiement est resynchronise pour $dockerPlatform."
 } elseif (-not $Yes -and -not $versionWasSpecified) {
   $answer = Read-Host "Mettre a jour de $currentVersion vers $AppVersion ? (o/N)"
@@ -515,7 +511,7 @@ if ($refreshImages) {
   }
 }
 
-if (-not $SkipBackup -and -not $NoStart -and -not $refreshImages) {
+if (-not $SkipBackup -and -not $NoStart) {
   $backupScript = Join-Path $InstallDir "backup-client.ps1"
   if (-not (Test-Path -LiteralPath $backupScript)) {
     throw "backup-client.ps1 introuvable. Utilise -SkipBackup uniquement si une sauvegarde externe existe deja."

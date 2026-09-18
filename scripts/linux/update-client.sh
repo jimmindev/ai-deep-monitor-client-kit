@@ -247,17 +247,9 @@ fi
 [[ "$APP_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Version applicative invalide: ${APP_VERSION}"
 
 current_version="$(read_env_value "$ENV_FILE" APP_VERSION)"
-current_llama_profile="$(read_env_value "$ENV_FILE" LLAMA_CPP_RUNTIME_PROFILE)"
 refresh_images=false
 if [[ "$current_version" == "$APP_VERSION" ]]; then
-  if [[ "$AUTH_CONFIG_CHANGED" == "false" &&
-        "$LLAMA_CPP_CONFIG_CHANGED" == "false" &&
-        "$REDETECT_LLAMA_RUNTIME" == "false" &&
-        "$current_llama_profile" != "auto" &&
-        -z "$LLAMA_PROFILE" ]]; then
-    log "L'application est deja en ${APP_VERSION}; les outils de maintenance sont synchronises."
-    exit 0
-  fi
+  # Refresh stable tags even when the installed version number matches.
   refresh_images=true
   log "L'application reste en ${APP_VERSION}; le deploiement est resynchronise pour ${DOCKER_PLATFORM}."
 fi
@@ -267,7 +259,7 @@ if [[ "$refresh_images" == "false" ]]; then
     die "Mise a jour annulee."
 fi
 
-if [[ "$SKIP_BACKUP" == "false" && "$refresh_images" == "false" ]]; then
+if [[ "$SKIP_BACKUP" == "false" ]]; then
   "${INSTALL_DIR}/backup-client.sh" --install-dir "$INSTALL_DIR"
 fi
 

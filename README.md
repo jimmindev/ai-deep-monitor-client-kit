@@ -453,3 +453,7 @@ un certificat invalide), un repli HTTP est autorise. Les refus de licence et
 les erreurs de lecture/ecriture ne declenchent aucun repli. Pour imposer
 HTTPS seul, definir `LICENSE_VALIDATION_ALLOW_HTTP_FALLBACK=false` dans `.env`.
 Ce comportement est inclus dans les images applicatives 0.1.26 corrigees.
+
+Une mise a jour depuis le menu rafraichit les images meme si la version
+installee est deja 0.1.26, afin de recuperer les correctifs publies sous ce
+numero. La sauvegarde et la preparation MySQL restent executees.
