@@ -441,9 +441,15 @@ docker compose --env-file .env -f docker-compose.release.yml logs --tail=200
 
 ## Validation des licences
 
-Docker utilise par defaut l'autorite `http://83.228.243.229/licences`
+Docker utilise par defaut l'autorite `https://83.228.243.229/licences`
 et sa cle publique Ed25519 epinglee. La premiere activation d'une cle CD
 necessite Internet ; les licences deja activees restent utilisables hors ligne.
 Les variables `LICENSE_VALIDATION_URL` (adresse de base, sans endpoint)
 et `LICENSE_PUBLIC_KEYS` dans `.env` permettent de configurer une autre autorite.
 Aucun jeton administrateur ou cle privee n'est distribue dans le kit.
+
+HTTPS est essaye a chaque activation. Si la connexion HTTPS echoue (y compris
+un certificat invalide), un repli HTTP est autorise. Les refus de licence et
+les erreurs de lecture/ecriture ne declenchent aucun repli. Pour imposer
+HTTPS seul, definir `LICENSE_VALIDATION_ALLOW_HTTP_FALLBACK=false` dans `.env`.
+Ce comportement est inclus dans les images applicatives 0.1.26 corrigees.
