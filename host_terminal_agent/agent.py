@@ -42,7 +42,7 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.6.2"
+AGENT_VERSION = "3.6.3"
 MAX_DATABASE_MIGRATION_SECONDS = 6 * 60 * 60
 MIGRATION_STATUS_INTERVAL_SECONDS = 30
 MAX_COMMAND_BYTES = 4_000
@@ -60,6 +60,40 @@ class UpdateStepError(RuntimeError):
     def __init__(self, message: str, error_code: str):
         super().__init__(message)
         self.error_code = error_code
+
+
+def linux_adapter_identity(name: str, sysfs_root: Path = Path("/sys/class/net")) -> dict:
+    """Best-effort, read-only hardware identity from the host's sysfs/udev data."""
+    device = sysfs_root / name / "device"
+    if not device.exists():
+        return {"description": "", "driver": ""}
+    properties = {}
+    try:
+        result = subprocess.run(
+            ["udevadm", "info", "--query=property", "--path", str(device)],
+            capture_output=True, text=True, timeout=3, check=False,
+        )
+        if result.returncode == 0:
+            properties = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    try:
+        driver = (device / "driver").resolve(strict=True).name
+    except OSError:
+        driver = properties.get("ID_NET_DRIVER", "")
+    vendor = properties.get("ID_VENDOR_FROM_DATABASE") or properties.get("ID_VENDOR", "")
+    model = properties.get("ID_MODEL_FROM_DATABASE") or properties.get("ID_MODEL", "")
+    if not model:
+        try:
+            compatible = (device / "of_node" / "compatible").read_bytes().split(b"\0")[0].decode("ascii")
+            # Device-tree names such as brcm,bcm43438-fmac identify the chip.
+            if "," in compatible:
+                maker, chip = compatible.split(",", 1)
+                model = chip.replace("-fmac", "").upper()
+                vendor = vendor or {"brcm": "Broadcom", "rpi": "Raspberry Pi"}.get(maker, maker)
+        except (OSError, UnicodeError):
+            pass
+    return {"description": " ".join(part for part in (vendor, model) if part) if model else "", "driver": driver}
 
 
 def collect_network_interfaces() -> dict:
@@ -90,7 +124,7 @@ ConvertTo-Json -InputObject $result -Depth 5 -Compress
             routes = sorted(ip_json("route", "show", "default"), key=lambda route: route.get("metric", 0))
             primary = routes[0].get("dev") if routes else None
             dns = [line.split()[1] for line in Path("/etc/resolv.conf").read_text().splitlines() if line.startswith("nameserver ")]
-            interfaces = [{"physical": Path("/sys/class/net", link["ifname"], "device").exists(), "id": link["ifname"], "name": link["ifname"], "description": link.get("link_type", ""), "mac": link.get("address", ""), "status": link.get("operstate", "UNKNOWN"), "addresses": [f"{a['local']}/{a['prefixlen']}" for a in link.get("addr_info", [])], "gateway": [r["gateway"] for r in routes if r.get("dev") == link["ifname"] and r.get("gateway")], "dns": dns if link["ifname"] == primary else [], "primary": link["ifname"] == primary, "speed": ""} for link in links]
+            interfaces = [{"physical": Path("/sys/class/net", link["ifname"], "device").exists(), "id": link["ifname"], "name": link["ifname"], **linux_adapter_identity(link["ifname"]), "mac": link.get("address", ""), "status": link.get("operstate", "UNKNOWN"), "addresses": [f"{a['local']}/{a['prefixlen']}" for a in link.get("addr_info", [])], "gateway": [r["gateway"] for r in routes if r.get("dev") == link["ifname"] and r.get("gateway")], "dns": dns if link["ifname"] == primary else [], "primary": link["ifname"] == primary, "speed": ""} for link in links]
         return {"interfaces": sorted(interfaces, key=lambda item: (not item["primary"], item["name"])), "collected_at": time.time(), "error": None}
     except (OSError, ValueError, subprocess.SubprocessError):
         return {"interfaces": [], "collected_at": time.time(), "error": "Détection réseau indisponible sur cet hôte."}
