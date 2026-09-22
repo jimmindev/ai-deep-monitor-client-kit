@@ -6,7 +6,7 @@ l'agent terminal local restreint. L'application est livree sous forme d'images
 Docker privees publiees sur GHCR.
 
 Le kit suit un canal permanent sans numero de version propre. La version
-applicative stable installee par defaut est `v0.1.26`.
+applicative stable installee par defaut est `v0.1.28`.
 
 Le guide pas a pas est disponible dans
 [docs/installation.md](docs/installation.md).
@@ -58,7 +58,7 @@ resynchroniser les fichiers d'installation. Les clients possedant encore un
 ancien updater doivent telecharger et extraire une fois la nouvelle archive;
 les actualisations suivantes deviennent automatiques.
 
-Pour le premier passage vers **v0.1.26**, utilisez **Mettre a jour** dans
+Pour le premier passage vers **v0.1.28**, utilisez **Mettre a jour** dans
 le menu du dernier kit telecharge. Cette action installe l'agent **3.6.2**
 avant de preparer la base, puis redemarre l'application. Un ancien agent deja
 en execution ne se remplace pas par une simple actualisation des images
@@ -369,7 +369,7 @@ Linux:
 
 ```bash
 ~/ai-deep-monitor/ai-deep-monitor.sh restore \
-  ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.26-DATE.tar.gz
+  ~/ai-deep-monitor-backups/ai-deep-monitor-v0.1.28-DATE.tar.gz
 ```
 
 Windows:

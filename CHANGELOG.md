@@ -12,6 +12,12 @@ Le kit prend en charge Windows, Linux x64 et NVIDIA Jetson ARM64. Il fournit le
 menu interactif, les sauvegardes/restaurations et l'agent de terminal hote
 restreint sans embarquer les sources privees de l'application.
 
+## Application v0.1.28
+
+- Les nouvelles installations Windows, Linux et Jetson utilisent AI Deep Monitor
+  `v0.1.28` par défaut.
+- Le kit conserve les contrôles de mise à jour, de migration et de restauration
+  avant le redémarrage des services.
 ## Application v0.1.26
 
 - Reprise des migrations MySQL interrompues, sans doublon d’index.
