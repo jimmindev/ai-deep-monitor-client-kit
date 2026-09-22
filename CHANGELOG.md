@@ -12,6 +12,12 @@ Le kit prend en charge Windows, Linux x64 et NVIDIA Jetson ARM64. Il fournit le
 menu interactif, les sauvegardes/restaurations et l'agent de terminal hote
 restreint sans embarquer les sources privees de l'application.
 
+## Application v0.1.29
+
+- Les nouvelles installations Windows, Linux, Jetson et Raspberry Pi utilisent
+  AI Deep Monitor `v0.1.29` par défaut.
+- Cette version corrige le rendu des libellés du Builder 3D sur Chromium ARM,
+  afin que la pose et la sélection des racks restent disponibles.
 ## Application v0.1.28
 
 - Les nouvelles installations Windows, Linux et Jetson utilisent AI Deep Monitor
