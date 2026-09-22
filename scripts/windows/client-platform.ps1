@@ -391,8 +391,8 @@ function Install-AiMonitorHostTerminalAgent {
   }
   try {
     & $installer
-    if (-not (Test-AiMonitorHostTerminalAgent -InstallDir $InstallDir -TimeoutSeconds 15)) {
-      throw "l'agent a ete lance mais aucun signal valide n'a ete recu dans les 15 secondes."
+    if (-not (Test-AiMonitorHostTerminalAgent -InstallDir $InstallDir -TimeoutSeconds 45)) {
+      throw "l'agent a ete lance mais aucun signal valide n'a ete recu dans les 45 secondes."
     }
   } catch {
     Stop-AgentInstallation "Le terminal hote n'est pas operationnel: $($_.Exception.Message)"

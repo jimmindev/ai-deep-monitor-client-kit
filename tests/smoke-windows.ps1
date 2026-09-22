@@ -185,7 +185,7 @@ try {
     -WindowStyle Hidden `
     -PassThru
   . (Join-Path $testDir "client-platform.ps1")
-  if (-not (Test-AiMonitorHostTerminalAgent -InstallDir $testDir -TimeoutSeconds 15)) {
+  if (-not (Test-AiMonitorHostTerminalAgent -InstallDir $testDir -TimeoutSeconds 45)) {
     throw "Le controle de sante du terminal Windows n'a pas detecte l'agent."
   }
 
