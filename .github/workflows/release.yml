@@ -26,6 +26,7 @@ jobs:
           chmod +x tests/smoke-linux.sh
           SKIP_COMPOSE_TEST=true tests/smoke-linux.sh
           python3 -m unittest discover -s tests -p test_host_update_migrations.py
+          python3 -m unittest discover -s tests -p test_network_adapter_identity.py
           bash tests/update-order-linux.sh
 
   validate-windows:
@@ -40,6 +41,8 @@ jobs:
           ./tests/smoke-windows.ps1
           python -m unittest discover -s tests -p test_host_update_migrations.py
           if ($LASTEXITCODE -ne 0) { throw "Host update agent tests failed." }
+          python -m unittest discover -s tests -p test_network_adapter_identity.py
+          if ($LASTEXITCODE -ne 0) { throw "Network adapter identity tests failed." }
           ./tests/update-order-windows.ps1
 
   release:

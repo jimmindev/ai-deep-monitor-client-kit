@@ -6,7 +6,7 @@ l'agent terminal local restreint. L'application est livree sous forme d'images
 Docker privees publiees sur GHCR.
 
 Le kit suit un canal permanent sans numero de version propre. La version
-applicative stable installee par defaut est `v0.1.30`.
+applicative stable installee par defaut est `v0.1.31`.
 
 Le guide pas a pas est disponible dans
 [docs/installation.md](docs/installation.md).
@@ -59,7 +59,7 @@ ancien updater doivent telecharger et extraire une fois la nouvelle archive;
 les actualisations suivantes deviennent automatiques.
 
 Si l'agent hôte est encore en version 3.6.0, utilisez **Mettre a jour** dans
-le menu du dernier kit telecharge. Cette action installe l'agent **3.6.2**
+le menu du dernier kit telecharge. Cette action installe l'agent **3.6.3**
 avant de preparer la base, puis redemarre l'application. Un ancien agent deja
 en execution ne se remplace pas par une simple actualisation des images
 Docker depuis l'application. Les mises a jour suivantes depuis l'application
