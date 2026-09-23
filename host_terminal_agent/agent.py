@@ -1251,6 +1251,13 @@ class HostAgent:
             {"payload": response, "signature": sign(self.key, response)},
         )
 
+    def write_job_response(self, job_path: Path, job_id: str, response: dict, started: float) -> None:
+        job_path.unlink(missing_ok=True)
+        response.update({"id": job_id, "agent_id": self.agent_id,
+                         "duration_ms": int((time.monotonic() - started) * 1000)})
+        write_atomic(self.outgoing / f"{job_id}.json",
+                     {"payload": response, "signature": sign(self.key, response)})
+
     def write_update_status(
         self,
         context: dict,
