@@ -11,7 +11,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$TEST_DIR/bin" "$TEST_DIR/host_terminal_jobs" "$TEST_DIR/state"
+mkdir -p "$TEST_DIR/bin" "$TEST_DIR/host_terminal_jobs" "$TEST_DIR/state" "$TEST_DIR/host-time"
+export AI_DEEP_HOST_TIME_DIR="$TEST_DIR/host-time"
+touch "$AI_DEEP_HOST_TIME_DIR/ready"
 cp "${KIT_DIR}/tests/fixtures/systemctl" "$TEST_DIR/bin/systemctl"
 chmod +x "$TEST_DIR/bin/systemctl"
 printf 'HOST_TERMINAL_QUEUE_GID=10003\n' >"$TEST_DIR/.env"

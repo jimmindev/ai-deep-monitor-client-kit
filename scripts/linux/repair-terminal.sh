@@ -32,6 +32,7 @@ ENV_FILE="${INSTALL_DIR}/.env"
 AGENT_DIR="${INSTALL_DIR}/host_terminal_agent"
 INSTALLER="${AGENT_DIR}/install_linux_service.sh"
 SERVICE_NAME="ai-deep-monitor-host-terminal.service"
+TIME_SERVICE_NAME="ai-deep-monitor-host-time.service"
 STATUS_FILE="${INSTALL_DIR}/host_terminal_jobs/status.json"
 KEY_FILE="${INSTALL_DIR}/host_terminal_jobs/.agent-key"
 
@@ -68,7 +69,8 @@ try:
 except (OSError, TypeError, ValueError, json.JSONDecodeError):
     raise SystemExit(1)
 
-if not envelope.get("signature") or payload.get("available") is not True:
+if (not envelope.get("signature") or payload.get("available") is not True
+        or payload.get("time_config_supported") is not True):
     raise SystemExit(1)
 raise SystemExit(0 if time.time() - last_seen <= 15 else 1)
 PY
@@ -78,16 +80,19 @@ show_diagnostics() {
   configure_sudo
   warn "Diagnostic du service terminal hote:"
   run_root systemctl --no-pager --full status "$SERVICE_NAME" 2>&1 || true
+  run_root systemctl --no-pager --full status "$TIME_SERVICE_NAME" 2>&1 || true
   warn "Derniers journaux du service:"
   run_root journalctl --no-pager -u "$SERVICE_NAME" -n 60 2>&1 || true
+  run_root journalctl --no-pager -u "$TIME_SERVICE_NAME" -n 60 2>&1 || true
 }
 
 verify_terminal_agent() {
   local attempt
   configure_sudo
   for attempt in {1..15}; do
-    if run_root systemctl is-active --quiet "$SERVICE_NAME" && status_is_fresh; then
-      log "Terminal hote operationnel: service actif et liaison Docker validee."
+    if run_root systemctl is-active --quiet "$SERVICE_NAME" &&
+      run_root systemctl is-active --quiet "$TIME_SERVICE_NAME" && status_is_fresh; then
+      log "Terminal et service horaire hote operationnels: liaison Docker validee."
       return 0
     fi
     sleep 1
