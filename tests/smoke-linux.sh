@@ -29,7 +29,7 @@ grep -Fq -- '--skip-docker-login est reserve' "${INSTALL_DIR}/unsafe-login-bypas
   --skip-docker-login
 
 ! grep -q '^KIT_VERSION=' "${INSTALL_DIR}/.env"
-grep -Fxq 'APP_VERSION=v0.1.32' "${INSTALL_DIR}/.env"
+grep -Fxq 'APP_VERSION=v0.1.34' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_RUNTIME_PROFILE=auto' "${INSTALL_DIR}/.env"
@@ -57,8 +57,12 @@ test -f "${INSTALL_DIR}/docker-compose.accel.jetson.yml"
 test -f "${INSTALL_DIR}/Dockerfile.llama-cuda"
 test -f "${INSTALL_DIR}/client-platform.ps1"
 test -f "${INSTALL_DIR}/host_terminal_agent/agent.py"
+test -f "${INSTALL_DIR}/host_terminal_agent/time_helper.py"
 test -f "${INSTALL_DIR}/host_terminal_agent/terminal_policy.py"
 test -x "${INSTALL_DIR}/host_terminal_agent/install_linux_service.sh"
+test -f "${INSTALL_DIR}/host_storage_agent/auto_mount.py"
+test -x "${INSTALL_DIR}/host_storage_agent/install_linux_service.sh"
+test -f "${INSTALL_DIR}/docker-compose.linux-host-storage.yml"
 python3 "${INSTALL_DIR}/host_terminal_agent/agent.py" --help >/dev/null
 
 # Simule la release permanente avec un marqueur absent de l'installation,
@@ -66,7 +70,7 @@ python3 "${INSTALL_DIR}/host_terminal_agent/agent.py" --help >/dev/null
 fixture_parent="${CLIENT_KIT_RELEASE_DIR}/package"
 fixture_root="${fixture_parent}/ai-deep-monitor-client-kit"
 mkdir -p "$fixture_root"
-for directory in deploy docs host_terminal_agent scripts; do
+for directory in deploy docs host_terminal_agent host_storage_agent scripts; do
   cp -a "${KIT_DIR}/${directory}" "$fixture_root/"
 done
 for file in AI-Deep-Monitor.cmd ai-deep-monitor.ps1 ai-deep-monitor.sh CHANGELOG.md README.md; do

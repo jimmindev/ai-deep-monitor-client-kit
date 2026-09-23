@@ -31,8 +31,19 @@ sync_host_terminal_agent() {
   local file
   [[ -d "$source_dir" ]] || return 0
   [[ "$(cd "$source_dir" && pwd)" == "$(mkdir -p "$target_dir" && cd "$target_dir" && pwd)" ]] && return 0
-  for file in agent.py terminal_policy.py install_linux_service.sh uninstall_linux_service.sh install_windows_task.ps1 uninstall_windows_task.ps1 README.md; do
+  for file in agent.py time_helper.py terminal_policy.py install_linux_service.sh uninstall_linux_service.sh install_windows_task.ps1 uninstall_windows_task.ps1 README.md; do
     [[ -f "${source_dir}/${file}" ]] && cp -f "${source_dir}/${file}" "${target_dir}/${file}"
+  done
+  chmod +x "${target_dir}"/*.sh 2>/dev/null || true
+}
+
+sync_host_storage_agent() {
+  local source_dir="${KIT_ROOT}/host_storage_agent"
+  local target_dir="${INSTALL_DIR}/host_storage_agent"
+  [[ -d "$source_dir" ]] || return 0
+  mkdir -p "$target_dir"
+  for file in auto_mount.py install_linux_service.sh; do
+    [[ -f "${source_dir}/${file}" && "${source_dir}/${file}" != "${target_dir}/${file}" ]] && cp -f "${source_dir}/${file}" "${target_dir}/${file}"
   done
   chmod +x "${target_dir}"/*.sh 2>/dev/null || true
 }
@@ -62,7 +73,7 @@ Usage: ./install-client.sh [options]
 
 Options:
   --install-dir CHEMIN       Dossier cible (defaut: ~/ai-deep-monitor)
-  --app-version VERSION      Version applicative (defaut: v0.1.32)
+  --app-version VERSION      Version applicative (defaut: v0.1.34)
   --github-owner NOM         Proprietaire des images GHCR
   --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
@@ -114,6 +125,7 @@ PROJECT_NAME="$(project_name_from_dir "$INSTALL_DIR")"
 
 kit_files=(
   docker-compose.release.yml
+  docker-compose.linux-host-storage.yml
   docker-compose.dhcp.yml
   dhcp/Dockerfile
   dhcp/bootstrap.sh
@@ -157,6 +169,7 @@ done
 rm -f -- "${INSTALL_DIR}/VERSION"
 chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true
 sync_host_terminal_agent
+sync_host_storage_agent
 
 existing_env=false
 [[ -f "$ENV_FILE" ]] && existing_env=true
@@ -306,6 +319,8 @@ fi
 
 require_command curl
 install_host_terminal_agent
+configure_sudo
+run_root bash "${INSTALL_DIR}/host_storage_agent/install_linux_service.sh" --no-recreate
 configure_llama_cpp_runtime "$ENV_FILE" "$LLAMA_PROFILE" "$REQUIRE_GPU" "$REDETECT_LLAMA_RUNTIME"
 compose_runtime_exec "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
 [[ -z "$existing_volumes" ]] || log "Volumes existants reutilises."

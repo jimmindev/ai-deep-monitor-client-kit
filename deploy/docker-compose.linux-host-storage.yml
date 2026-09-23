@@ -1,0 +1,42 @@
+# Development-only Linux override. Use with docker-compose.yml on a Linux host.
+# /mnt and /media are host directories; mount propagation makes newly attached
+# disks visible to the API and the backup scheduler without granting access to /.
+services:
+  api:
+    environment:
+      BACKUP_EXTERNAL_ROOTS: /backups,/host/mnt,/host/media,/host/run/media
+    volumes:
+      - type: bind
+        source: /mnt
+        target: /host/mnt
+        bind:
+          propagation: rslave
+      - type: bind
+        source: /media
+        target: /host/media
+        bind:
+          propagation: rslave
+      - type: bind
+        source: /run/media
+        target: /host/run/media
+        bind:
+          propagation: rslave
+  backup-scheduler:
+    environment:
+      BACKUP_EXTERNAL_ROOTS: /backups,/host/mnt,/host/media,/host/run/media
+    volumes:
+      - type: bind
+        source: /mnt
+        target: /host/mnt
+        bind:
+          propagation: rslave
+      - type: bind
+        source: /media
+        target: /host/media
+        bind:
+          propagation: rslave
+      - type: bind
+        source: /run/media
+        target: /host/run/media
+        bind:
+          propagation: rslave

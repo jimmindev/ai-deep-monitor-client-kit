@@ -39,8 +39,19 @@ sync_host_terminal_agent() {
   local file
   [[ -d "$source_dir" ]] || return 0
   [[ "$(cd "$source_dir" && pwd)" == "$(mkdir -p "$target_dir" && cd "$target_dir" && pwd)" ]] && return 0
-  for file in agent.py terminal_policy.py install_linux_service.sh uninstall_linux_service.sh install_windows_task.ps1 uninstall_windows_task.ps1 README.md; do
+  for file in agent.py time_helper.py terminal_policy.py install_linux_service.sh uninstall_linux_service.sh install_windows_task.ps1 uninstall_windows_task.ps1 README.md; do
     [[ -f "${source_dir}/${file}" ]] && cp -f "${source_dir}/${file}" "${target_dir}/${file}"
+  done
+  chmod +x "${target_dir}"/*.sh 2>/dev/null || true
+}
+
+sync_host_storage_agent() {
+  local source_dir="${KIT_ROOT}/host_storage_agent"
+  local target_dir="${INSTALL_DIR}/host_storage_agent"
+  [[ -d "$source_dir" ]] || return 0
+  mkdir -p "$target_dir"
+  for file in auto_mount.py install_linux_service.sh; do
+    [[ -f "${source_dir}/${file}" && "${source_dir}/${file}" != "${target_dir}/${file}" ]] && cp -f "${source_dir}/${file}" "${target_dir}/${file}"
   done
   chmod +x "${target_dir}"/*.sh 2>/dev/null || true
 }
@@ -172,7 +183,7 @@ COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 if [[ "$SKIP_KIT_REFRESH" == "false" ]]; then
   run_latest_client_kit_updater
 fi
-for file in docker-compose.release.yml docker-compose.dhcp.yml dhcp/Dockerfile dhcp/bootstrap.sh dhcp/README.md docker-compose.accel.nvidia.yml docker-compose.accel.jetson.yml Dockerfile.llama-cuda client-common.sh client-platform.ps1 ai-deep-monitor.sh ai-deep-monitor.ps1 AI-Deep-Monitor.cmd install-client.sh check-update.sh update-client.sh backup-client.sh backup-maintenance.sh restore-client.sh uninstall-client.sh repair-terminal.sh verify-llama-gpu.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 backup-maintenance.ps1 restore-client.ps1 uninstall-client.ps1 repair-terminal.ps1 README_CLIENT.md; do
+for file in docker-compose.release.yml docker-compose.linux-host-storage.yml docker-compose.dhcp.yml dhcp/Dockerfile dhcp/bootstrap.sh dhcp/README.md docker-compose.accel.nvidia.yml docker-compose.accel.jetson.yml Dockerfile.llama-cuda client-common.sh client-platform.ps1 ai-deep-monitor.sh ai-deep-monitor.ps1 AI-Deep-Monitor.cmd install-client.sh check-update.sh update-client.sh backup-client.sh backup-maintenance.sh restore-client.sh uninstall-client.sh repair-terminal.sh verify-llama-gpu.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 backup-maintenance.ps1 restore-client.ps1 uninstall-client.ps1 repair-terminal.ps1 README_CLIENT.md; do
   source_file="$(kit_source "$file" || true)"
   [[ -n "$source_file" ]] || continue
   if [[ "$source_file" != "${INSTALL_DIR}/${file}" ]]; then
@@ -184,6 +195,7 @@ done
 rm -f -- "${INSTALL_DIR}/VERSION"
 chmod +x "${INSTALL_DIR}"/*.sh 2>/dev/null || true
 sync_host_terminal_agent
+sync_host_storage_agent
 if [[ "$REFRESH_KIT_ONLY" == "true" ]]; then
   log "Fichiers d'installation du Client Kit actualises."
   exit 0
@@ -225,6 +237,8 @@ write_env_value "$ENV_FILE" DOCKER_PLATFORM "$DOCKER_PLATFORM"
 # que l'action normale "Mettre a jour" maintient aussi le terminal.
 if [[ "$SKIP_AGENT_INSTALL" == "false" ]]; then
   install_host_terminal_agent
+  configure_sudo
+  run_root bash "${INSTALL_DIR}/host_storage_agent/install_linux_service.sh" --no-recreate
 fi
 
 require_command curl

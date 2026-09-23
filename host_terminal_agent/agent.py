@@ -42,7 +42,8 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.6.3"
+AGENT_VERSION = "3.6.4"
+HOST_TIME_DIR = Path(os.getenv("AI_DEEP_HOST_TIME_DIR", "/var/lib/ai-deep-monitor-host-time"))
 MAX_DATABASE_MIGRATION_SECONDS = 6 * 60 * 60
 MIGRATION_STATUS_INTERVAL_SECONDS = 30
 MAX_COMMAND_BYTES = 4_000
@@ -130,6 +131,174 @@ ConvertTo-Json -InputObject $result -Depth 5 -Compress
         return {"interfaces": [], "collected_at": time.time(), "error": "Détection réseau indisponible sur cet hôte."}
 
 
+def collect_storage_disks() -> dict:
+    """Inventory host disks without mounting or modifying any filesystem."""
+    if os.name == "nt":
+        return {"disks": [], "collected_at": time.time(), "error": None}
+    try:
+        result = subprocess.run(
+            ["lsblk", "--json", "--bytes", "--output", "NAME,PATH,TYPE,SIZE,FSTYPE,LABEL,MOUNTPOINT,MODEL,TRAN"],
+            capture_output=True, text=True, timeout=8, check=True,
+        )
+        disks = []
+
+        def visit(device, parent=None):
+            kind = str(device.get("type") or "")
+            if kind in {"disk", "part", "crypt", "lvm"}:
+                mount = str(device.get("mountpoint") or "")
+                capacity = None
+                if mount and Path(mount).is_dir():
+                    try:
+                        usage = shutil.disk_usage(mount)
+                        capacity = {"total_bytes": usage.total, "free_bytes": usage.free}
+                    except OSError:
+                        pass
+                disks.append({
+                    "path": str(device.get("path") or ""),
+                    "name": str(device.get("name") or ""),
+                    "type": kind,
+                    "size_bytes": int(device.get("size") or 0),
+                    "filesystem": str(device.get("fstype") or ""),
+                    "label": str(device.get("label") or ""),
+                    "model": str(device.get("model") or parent or ""),
+                    "transport": str(device.get("tran") or ""),
+                    "mount_path": mount,
+                    **(capacity or {}),
+                })
+            for child in device.get("children") or []:
+                visit(child, device.get("model") or parent)
+
+        for device in json.loads(result.stdout).get("blockdevices") or []:
+            visit(device)
+        return {"disks": disks, "collected_at": time.time(), "error": None}
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return {"disks": [], "collected_at": time.time(), "error": "Inventaire des disques indisponible sur cet hôte."}
+
+
+def _empty_gpu_snapshot(name: str = "Non détecté") -> dict:
+    return {
+        "available": False,
+        "name": name,
+        "usedPercent": None,
+        "memoryUsedBytes": 0,
+        "memoryTotalBytes": 0,
+        "source": "host-agent",
+    }
+
+
+def collect_gpu_snapshot() -> dict:
+    """Collect GPU facts on the host, outside the application container."""
+    nvidia_smi = shutil.which("nvidia-smi")
+    if os.name == "nt" and not nvidia_smi:
+        candidates = [
+            Path(os.environ.get("ProgramFiles", r"C:\Program Files"))
+            / "NVIDIA Corporation/NVSMI/nvidia-smi.exe",
+            Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32/nvidia-smi.exe",
+        ]
+        nvidia_smi = next((str(path) for path in candidates if path.is_file()), None)
+
+    if nvidia_smi:
+        try:
+            kwargs = {
+                "capture_output": True,
+                "text": True,
+                "timeout": 5,
+                "check": True,
+            }
+            if os.name == "nt":
+                kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+            result = subprocess.run(
+                [
+                    nvidia_smi,
+                    "--query-gpu=name,utilization.gpu,memory.used,memory.total",
+                    "--format=csv,noheader,nounits",
+                ],
+                **kwargs,
+            )
+            rows = [row for row in result.stdout.splitlines() if row.strip()]
+            parsed = [[item.strip() for item in row.split(",")] for row in rows]
+            names = [row[0] for row in parsed if len(row) >= 4]
+            used = [float(row[1]) for row in parsed if len(row) >= 4]
+            memory_used = [int(float(row[2])) for row in parsed if len(row) >= 4]
+            memory_total = [int(float(row[3])) for row in parsed if len(row) >= 4]
+            if names:
+                return {
+                    "available": True,
+                    "name": " · ".join(names),
+                    "usedPercent": round(sum(used) / len(used), 2),
+                    "memoryUsedBytes": sum(memory_used) * 1024 * 1024,
+                    "memoryTotalBytes": sum(memory_total) * 1024 * 1024,
+                    "source": "host-nvidia-smi",
+                }
+        except (OSError, subprocess.SubprocessError, ValueError, IndexError):
+            pass
+
+    if os.name == "nt":
+        try:
+            powershell = shutil.which("pwsh") or shutil.which("powershell.exe")
+            if powershell:
+                script = (
+                    "Get-CimInstance Win32_VideoController | "
+                    "Select-Object Name,AdapterRAM | ConvertTo-Json -Compress"
+                )
+                result = subprocess.run(
+                    [powershell, "-NoProfile", "-NonInteractive", "-Command", script],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=8,
+                    check=True,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
+                payload = json.loads(result.stdout.lstrip("\ufeff"))
+                devices = payload if isinstance(payload, list) else [payload]
+                names = [str(device.get("Name") or "").strip() for device in devices]
+                names = [name for name in names if name]
+                memory_total = sum(int(device.get("AdapterRAM") or 0) for device in devices)
+                if names:
+                    return {
+                        "available": True,
+                        "name": " · ".join(names),
+                        "usedPercent": None,
+                        "memoryUsedBytes": 0,
+                        "memoryTotalBytes": memory_total,
+                        "source": "host-windows-cim",
+                    }
+        except (OSError, subprocess.SubprocessError, ValueError, TypeError, json.JSONDecodeError):
+            pass
+    else:
+        try:
+            cards = sorted(Path("/sys/class/drm").glob("card[0-9]*"))
+            devices = [card / "device" for card in cards if (card / "device").is_dir()]
+            if devices:
+                usage_values = []
+                names = []
+                vendor_names = {"0x1002": "AMD", "0x10de": "NVIDIA", "0x8086": "Intel"}
+                for device in devices:
+                    try:
+                        vendor = (device / "vendor").read_text(encoding="ascii").strip().lower()
+                    except OSError:
+                        vendor = ""
+                    names.append(vendor_names.get(vendor, f"GPU {vendor or 'Linux'}"))
+                    try:
+                        usage_values.append(float((device / "gpu_busy_percent").read_text(encoding="ascii").strip()))
+                    except (OSError, ValueError):
+                        pass
+                return {
+                    "available": True,
+                    "name": " · ".join(dict.fromkeys(names)),
+                    "usedPercent": round(sum(usage_values) / len(usage_values), 2) if usage_values else None,
+                    "memoryUsedBytes": 0,
+                    "memoryTotalBytes": 0,
+                    "source": "host-linux-sysfs",
+                }
+        except OSError:
+            pass
+
+    return _empty_gpu_snapshot()
+
+
 def canonical(payload: dict) -> bytes:
     return json.dumps(
         payload,
@@ -141,6 +310,44 @@ def canonical(payload: dict) -> bytes:
 
 def sign(key: bytes, payload: dict) -> str:
     return hmac.new(key, canonical(payload), hashlib.sha256).hexdigest()
+
+
+def validate_time_configuration(timezone: str, ntp_server: str, zoneinfo_root: Path = Path("/usr/share/zoneinfo")) -> None:
+    if not re.fullmatch(r"[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*", timezone or "") or any(part in {".", ".."} for part in timezone.split("/")) or not (zoneinfo_root / timezone).is_file():
+        raise ValueError("Fuseau horaire invalide ou absent sur l’hôte.")
+    if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.:-]{0,251}[A-Za-z0-9])?", ntp_server or ""):
+        raise ValueError("Adresse du serveur NTP invalide.")
+
+
+def configure_host_time(timezone: str, ntp_server: str) -> dict:
+    """Forward a time-only request to the isolated root service."""
+    validate_time_configuration(timezone, ntp_server)
+    if detect_host_family() not in {"linux", "jetson"} or not time_helper_ready():
+        raise ValueError("Le service de réglage de l’heure hôte est indisponible. Réinstallez l’agent Linux.")
+    key = load_or_create_key(HOST_TIME_DIR)
+    request_id = secrets.token_hex(16)
+    request = {"id": request_id, "issued_at": time.time(), "timezone": timezone, "ntp_server": ntp_server}
+    incoming = HOST_TIME_DIR / "incoming" / f"{request_id}.json"
+    outgoing = HOST_TIME_DIR / "outgoing" / f"{request_id}.json"
+    write_atomic(incoming, {"payload": request, "signature": sign(key, request)})
+    deadline = time.monotonic() + 14
+    while time.monotonic() < deadline:
+        if outgoing.exists():
+            envelope = json.loads(outgoing.read_text(encoding="utf-8"))
+            response = envelope.get("payload")
+            if not isinstance(response, dict) or response.get("id") != request_id or not hmac.compare_digest(str(envelope.get("signature") or ""), sign(key, response)):
+                raise ValueError("Réponse du service horaire invalide.")
+            return response
+        time.sleep(0.1)
+    incoming.unlink(missing_ok=True)
+    raise ValueError("Le service de réglage de l’heure n’a pas répondu.")
+
+
+def time_helper_ready() -> bool:
+    try:
+        return time.time() - (HOST_TIME_DIR / "ready").stat().st_mtime < 10
+    except OSError:
+        return False
 
 
 def write_atomic(path: Path, data: dict) -> None:
@@ -784,6 +991,8 @@ class HostAgent:
         ).resolve()
         self.safety_backup_dir = self.state_dir / "update-backups"
         self.last_api_health_state = "inconnu"
+        self._gpu_snapshot = _empty_gpu_snapshot()
+        self._gpu_checked = -120.0
         self.update_thread: threading.Thread | None = None
         self.seen_nonces: dict[str, float] = {}
         for directory in (
@@ -852,6 +1061,12 @@ class HostAgent:
         if time.monotonic() - getattr(self, "_network_checked", -120) >= 60:
             self._network_inventory = collect_network_interfaces()
             self._network_checked = time.monotonic()
+        if time.monotonic() - getattr(self, "_storage_checked", -120) >= 5:
+            self._storage_inventory = collect_storage_disks()
+            self._storage_checked = time.monotonic()
+        if time.monotonic() - self._gpu_checked >= 10:
+            self._gpu_snapshot = collect_gpu_snapshot()
+            self._gpu_checked = time.monotonic()
         return {
             "available": True,
             "target": "host",
@@ -861,10 +1076,13 @@ class HostAgent:
             "restricted": True,
             "hostname": socket.gethostname(),
             "network": self._network_inventory,
+            "storage": self._storage_inventory,
+            "gpu": self._gpu_snapshot,
             "host_family": self.host_family,
             "platform": platform_label(self.host_family),
             "shells": self.shells,
             "privileged": is_privileged(),
+            "time_config_supported": self.host_family in {"linux", "jetson"} and time_helper_ready(),
             "update_supported": update["supported"],
             "update_reason": update["reason"],
             "installed_version": update["current_version"],
@@ -977,6 +1195,10 @@ class HostAgent:
             payload = self.verify_job(envelope)
             if str(payload.get("id")) != job_id:
                 raise ValueError("Identifiant de travail incohérent.")
+            operation = payload.get("operation")
+            if isinstance(operation, dict) and operation.get("kind") == "configure_time":
+                response = configure_host_time(str(operation.get("timezone") or ""), str(operation.get("ntp_server") or ""))
+                return self.write_job_response(job_path, job_id, response, started)
             command = str(payload.get("command") or "")
             if not command.strip():
                 raise ValueError("La commande est vide.")

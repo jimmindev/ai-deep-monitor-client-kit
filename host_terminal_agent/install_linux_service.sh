@@ -4,6 +4,8 @@ set -Eeuo pipefail
 SERVICE_NAME="ai-deep-monitor-host-terminal"
 INSTALL_DIR="/opt/ai-deep-monitor-host-terminal"
 STATE_DIR="/var/lib/ai-deep-monitor-host-terminal"
+TIME_DIR="/var/lib/ai-deep-monitor-host-time"
+TIME_UNIT_PATH="/etc/systemd/system/ai-deep-monitor-host-time.service"
 UNIT_PATH="/etc/systemd/system/${SERVICE_NAME}.service"
 QUEUE_GID="${HOST_TERMINAL_QUEUE_GID:-10003}"
 QUEUE_GROUP_NAME="${HOST_TERMINAL_QUEUE_GROUP:-ai-deep-terminal-queue}"
@@ -31,6 +33,7 @@ fi
   "indiquez un utilisateur Linux non-root : sudo bash ./host_terminal_agent/install_linux_service.sh <utilisateur>."
 id "${RUN_USER}" >/dev/null 2>&1 || fail "l'utilisateur ${RUN_USER} n'existe pas."
 [[ -f "${SCRIPT_DIR}/agent.py" ]] || fail "agent.py est introuvable."
+[[ -f "${SCRIPT_DIR}/time_helper.py" ]] || fail "time_helper.py est introuvable."
 [[ -f "${POLICY_SOURCE}" ]] || fail "terminal_policy.py est introuvable."
 
 RUN_GROUP="$(id -gn "${RUN_USER}")"
@@ -59,9 +62,19 @@ usermod --append --groups "${QUEUE_GROUP},${DOCKER_GROUP}" "${RUN_USER}"
 
 install -d -o root -g root -m 0755 "${INSTALL_DIR}"
 install -o root -g root -m 0755 "${SCRIPT_DIR}/agent.py" "${INSTALL_DIR}/agent.py"
+install -o root -g root -m 0755 "${SCRIPT_DIR}/time_helper.py" "${INSTALL_DIR}/time_helper.py"
 install -o root -g root -m 0644 "${POLICY_SOURCE}" "${INSTALL_DIR}/terminal_policy.py"
 install -d -o "${RUN_USER}" -g "${QUEUE_GROUP}" -m 0770 "${STATE_DIR}"
 install -d -o "${RUN_USER}" -g "${QUEUE_GROUP}" -m 2770 "${JOBS_DIR}"
+[[ ! -L "${TIME_DIR}" ]] || fail "répertoire horaire non sûr."
+install -d -o root -g "${QUEUE_GROUP}" -m 0750 "${TIME_DIR}"
+install -d -o root -g "${QUEUE_GROUP}" -m 0730 "${TIME_DIR}/incoming"
+install -d -o root -g "${QUEUE_GROUP}" -m 0750 "${TIME_DIR}/outgoing"
+install -d -o root -g root -m 0755 /etc/systemd/timesyncd.conf.d
+if [[ ! -f "${TIME_DIR}/.agent-key" ]]; then
+  install -o root -g "${QUEUE_GROUP}" -m 0640 /dev/null "${TIME_DIR}/.agent-key"
+  "${PYTHON_BIN}" -c 'import secrets,sys; open(sys.argv[1], "w").write(secrets.token_hex(48))' "${TIME_DIR}/.agent-key"
+fi
 
 # Le bit setgid garantit que l'agent et l'API Docker partagent toujours le groupe
 # de la file, même après un redémarrage ou la création de nouveaux sous-dossiers.
@@ -101,6 +114,7 @@ ProtectSystem=strict
 ProtectHome=read-only
 ReadOnlyPaths="${INSTALL_DIR}"
 ReadWritePaths="${STATE_DIR}" "${JOBS_DIR}" "${PROJECT_ROOT}"
+ReadWritePaths="${TIME_DIR}/incoming"
 PrivateTmp=true
 PrivateDevices=true
 ProtectClock=true
@@ -119,8 +133,41 @@ RemoveIPC=true
 WantedBy=multi-user.target
 EOF
 
+cat >"${TIME_UNIT_PATH}" <<EOF
+[Unit]
+Description=AI-Deep Monitor - service horaire hote limite
+After=local-fs.target
+
+[Service]
+Type=simple
+User=root
+Group=${QUEUE_GROUP}
+ExecStart="${PYTHON_BIN}" "${INSTALL_DIR}/time_helper.py" --base "${TIME_DIR}"
+Restart=always
+RestartSec=3
+UMask=0027
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths="${TIME_DIR}" /etc/systemd/timesyncd.conf.d
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 chmod 0644 "${UNIT_PATH}"
+chmod 0644 "${TIME_UNIT_PATH}"
 systemctl daemon-reload
+systemctl enable "ai-deep-monitor-host-time.service"
+systemctl restart "ai-deep-monitor-host-time.service"
+systemctl is-active --quiet "ai-deep-monitor-host-time.service" || fail "le service horaire hôte est inactif."
 systemctl enable "${SERVICE_NAME}.service"
 systemctl restart "${SERVICE_NAME}.service"
 
