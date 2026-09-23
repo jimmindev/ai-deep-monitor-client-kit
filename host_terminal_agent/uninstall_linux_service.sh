@@ -5,6 +5,8 @@ SERVICE_NAME="ai-deep-monitor-host-terminal"
 INSTALL_DIR="/opt/ai-deep-monitor-host-terminal"
 STATE_DIR="/var/lib/ai-deep-monitor-host-terminal"
 UNIT_PATH="/etc/systemd/system/${SERVICE_NAME}.service"
+TIME_SERVICE="ai-deep-monitor-host-time.service"
+TIME_UNIT_PATH="/etc/systemd/system/${TIME_SERVICE}"
 
 if [[ "${EUID}" -ne 0 ]]; then
   printf 'Erreur : la désinstallation doit être lancée avec sudo.\n' >&2
@@ -12,10 +14,12 @@ if [[ "${EUID}" -ne 0 ]]; then
 fi
 
 systemctl disable --now "${SERVICE_NAME}.service" 2>/dev/null || true
-rm -f -- "${UNIT_PATH}"
+systemctl disable --now "${TIME_SERVICE}" 2>/dev/null || true
+rm -f -- "${UNIT_PATH}" "${TIME_UNIT_PATH}"
 rm -rf -- "${INSTALL_DIR}" "${STATE_DIR}"
 systemctl daemon-reload
 systemctl reset-failed "${SERVICE_NAME}.service" 2>/dev/null || true
+systemctl reset-failed "${TIME_SERVICE}" 2>/dev/null || true
 
 printf 'Agent terminal Linux/Jetson désinstallé.\n'
 printf 'La file host_terminal_jobs et sa clé ont été conservées.\n'

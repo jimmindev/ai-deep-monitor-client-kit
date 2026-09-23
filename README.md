@@ -6,7 +6,7 @@ l'agent terminal local restreint. L'application est livree sous forme d'images
 Docker privees publiees sur GHCR.
 
 Le kit suit un canal permanent sans numero de version propre. La version
-applicative stable installee par defaut est `v0.1.32`.
+applicative stable installee par defaut est `v0.1.34`.
 
 Le guide pas a pas est disponible dans
 [docs/installation.md](docs/installation.md).
@@ -21,6 +21,7 @@ ai-deep-monitor-client-kit/
 |-- deploy/                  # definition Docker Compose
 |-- docs/                    # guide d'installation
 |-- host_terminal_agent/     # agent local restreint Windows/Linux/Jetson
+|-- host_storage_agent/      # montage des disques de données Linux
 |-- scripts/                 # implementation interne Linux et Windows
 |-- tests/                   # tests de non-regression du kit
 |-- CHANGELOG.md

@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-export DEFAULT_APP_VERSION="v0.1.32"
+export DEFAULT_APP_VERSION="v0.1.34"
 export DOCKER_PLATFORM=""
 LLAMA_CPP_DEFAULT_CPU_IMAGE='ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31'
 LLAMA_CPP_DEFAULT_CUDA_IMAGE='ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42'
@@ -212,13 +212,23 @@ compose_runtime_exec() {
   local compose_file="$2"
   local env_file="$3"
   local override_file
+  local storage_file
   shift 3
   override_file="$(llama_compose_override "$compose_file" "$env_file")"
+  storage_file="$(dirname "$compose_file")/docker-compose.linux-host-storage.yml"
   if [[ -n "$override_file" ]]; then
     [[ -f "$override_file" ]] || die "Override llama.cpp absent: ${override_file}"
-    compose_exec -p "$project" -f "$compose_file" -f "$override_file" --env-file "$env_file" "$@"
+    if [[ -f "$storage_file" ]]; then
+      compose_exec -p "$project" -f "$compose_file" -f "$override_file" -f "$storage_file" --env-file "$env_file" "$@"
+    else
+      compose_exec -p "$project" -f "$compose_file" -f "$override_file" --env-file "$env_file" "$@"
+    fi
   else
-    compose_exec -p "$project" -f "$compose_file" --env-file "$env_file" "$@"
+    if [[ -f "$storage_file" ]]; then
+      compose_exec -p "$project" -f "$compose_file" -f "$storage_file" --env-file "$env_file" "$@"
+    else
+      compose_exec -p "$project" -f "$compose_file" --env-file "$env_file" "$@"
+    fi
   fi
 }
 

@@ -69,6 +69,13 @@ Le menu reste ouvert apres l'operation ou apres une erreur. Le choix `0`
 permet de quitter. Le dossier d'installation par defaut est
 `~/ai-deep-monitor`.
 
+L’installation Linux démarre aussi deux services systemd hôtes : un service
+limité pour appliquer le fuseau et le serveur NTP depuis l’interface Docker,
+et un service qui découvre les disques de données déjà formatés (dont USB),
+les monte et les rend disponibles aux sauvegardes. L’agent terminal reste
+sans droits administrateur. Aucun disque n’est formaté et le disque système
+est exclu. La mise à jour du kit réinstalle ces services automatiquement.
+
 Docker Engine et Compose v2 sont installes s'ils sont absents. Le kit choisit
 automatiquement `linux/amd64` sur PC x64 et `linux/arm64` sur NVIDIA Jetson.
 Il selectionne ensuite `nvidia`, `jetson` ou `cpu`, valide le runtime dans un

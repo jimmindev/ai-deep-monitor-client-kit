@@ -23,7 +23,7 @@ trap 'rm -rf -- "$temporary_dir"' EXIT
 package_root="${temporary_dir}/${ROOT_NAME}"
 mkdir -p "$package_root"
 
-for directory in deploy docs host_terminal_agent scripts; do
+for directory in deploy docs host_terminal_agent host_storage_agent scripts; do
   cp -a "${REPOSITORY_ROOT}/${directory}" "$package_root/"
 done
 rm -rf -- "${package_root}/docs/release-notes"
