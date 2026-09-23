@@ -12,6 +12,15 @@ Le kit prend en charge Windows, Linux x64 et NVIDIA Jetson ARM64. Il fournit le
 menu interactif, les sauvegardes/restaurations et l'agent de terminal hote
 restreint sans embarquer les sources privees de l'application.
 
+## Application v0.1.31
+
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.31` par défaut.
+- L'agent hôte 3.6.3 remonte le modèle matériel et le pilote des cartes réseau
+  Linux et Raspberry Pi à partir des données udev et device tree lorsqu'elles
+  sont disponibles. La lecture ne modifie pas la configuration réseau.
+- Pour voir ces informations sur une installation existante, actualiser le
+  Client Kit afin de remplacer l'agent local, puis mettre à jour l'application.
+
 ## Application v0.1.30
 
 - Les nouvelles installations Windows, Linux, Jetson et Raspberry Pi utilisent
