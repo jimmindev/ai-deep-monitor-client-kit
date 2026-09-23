@@ -12,6 +12,14 @@ Le kit prend en charge Windows, Linux x64 et NVIDIA Jetson ARM64. Il fournit le
 menu interactif, les sauvegardes/restaurations et l'agent de terminal hote
 restreint sans embarquer les sources privees de l'application.
 
+## Application v0.1.32
+
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.32` par défaut.
+- L'application distingue les modes SMTP STARTTLS (587) et SSL/TLS direct
+  (465), refuse les ports IMAP/POP et confirme l'issue réelle du test d'envoi.
+- Les installations existantes conservent leurs identifiants et peuvent être
+  mises à jour via le menu du Client Kit.
+
 ## Application v0.1.31
 
 - Les nouvelles installations utilisent AI Deep Monitor `v0.1.31` par défaut.
