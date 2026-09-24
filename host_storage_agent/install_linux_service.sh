@@ -69,5 +69,14 @@ if [[ "$NO_RECREATE" == "false" ]]; then
   docker compose -f "${INSTALL_ROOT}/docker-compose.release.yml" \
     -f "${INSTALL_ROOT}/docker-compose.linux-host-storage.yml" \
     --env-file "${INSTALL_ROOT}/.env" up -d --no-deps --force-recreate api backup-scheduler
+  # Docker may create the default ./backups bind as root:root (0755).
+  # The image runs as appuser, so prepare this separate backup destination too.
+  compose=(docker compose -f "${INSTALL_ROOT}/docker-compose.release.yml"
+    -f "${INSTALL_ROOT}/docker-compose.linux-host-storage.yml"
+    --env-file "${INSTALL_ROOT}/.env")
+  # Nginx must resolve the API's new container address after recreation.
+  "${compose[@]}" exec -T frontend nginx -s reload
+  bash "${PROJECT_ROOT}/repair-backup-permissions.sh" \
+    "$("${compose[@]}" ps -q api)" "$("${compose[@]}" ps -q backup-scheduler)"
 fi
 echo 'Montage automatique actif. Les disques de données apparaîtront sous /media/ai-deep-monitor.'

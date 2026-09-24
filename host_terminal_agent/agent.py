@@ -143,6 +143,7 @@ def collect_storage_disks() -> dict:
         disks = []
 
         def visit(device, parent=None):
+            parent = parent or {}
             kind = str(device.get("type") or "")
             if kind in {"disk", "part", "crypt", "lvm"}:
                 mount = str(device.get("mountpoint") or "")
@@ -160,13 +161,16 @@ def collect_storage_disks() -> dict:
                     "size_bytes": int(device.get("size") or 0),
                     "filesystem": str(device.get("fstype") or ""),
                     "label": str(device.get("label") or ""),
-                    "model": str(device.get("model") or parent or ""),
-                    "transport": str(device.get("tran") or ""),
+                    "model": str(device.get("model") or parent.get("model") or "").strip(),
+                    "transport": str(device.get("tran") or parent.get("tran") or ""),
+                    "parent_path": str(parent.get("path") or ""),
                     "mount_path": mount,
                     **(capacity or {}),
                 })
             for child in device.get("children") or []:
-                visit(child, device.get("model") or parent)
+                visit(child, {**device,
+                              "model": device.get("model") or parent.get("model"),
+                              "tran": device.get("tran") or parent.get("tran")})
 
         for device in json.loads(result.stdout).get("blockdevices") or []:
             visit(device)

@@ -29,7 +29,7 @@ grep -Fq -- '--skip-docker-login est reserve' "${INSTALL_DIR}/unsafe-login-bypas
   --skip-docker-login
 
 ! grep -q '^KIT_VERSION=' "${INSTALL_DIR}/.env"
-grep -Fxq 'APP_VERSION=v0.1.36' "${INSTALL_DIR}/.env"
+grep -Fxq 'APP_VERSION=v0.1.37' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_RUNTIME_PROFILE=auto' "${INSTALL_DIR}/.env"
@@ -40,6 +40,7 @@ grep -Fxq 'NVIDIA_VISIBLE_DEVICES=all' "${INSTALL_DIR}/.env"
 grep -Fxq 'HOST_TERMINAL_QUEUE_GID=10003' "${INSTALL_DIR}/.env"
 grep -Fxq 'TERMINAL_SESSION_TTL_SECONDS=300' "${INSTALL_DIR}/.env"
 grep -Fxq 'TERMINAL_POLICY_ADMIN_PASSWORD=ysitech1234' "${INSTALL_DIR}/.env"
+test -x "${INSTALL_DIR}/repair-backup-permissions.sh"
 test -x "${INSTALL_DIR}/update-client.sh"
 test -x "${INSTALL_DIR}/backup-maintenance.sh"
 test -x "${INSTALL_DIR}/ai-deep-monitor.sh"
