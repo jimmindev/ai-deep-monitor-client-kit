@@ -28,6 +28,7 @@ mkdir -p /media /mnt /run/media /media/ai-deep-monitor /opt/ai-deep-monitor-stor
 chown root:root /media/ai-deep-monitor
 chmod 0755 /media/ai-deep-monitor
 install -m 0755 "${SCRIPT_DIR}/auto_mount.py" /opt/ai-deep-monitor-storage/auto_mount.py
+install -m 0644 "${SCRIPT_DIR}/locations.py" /opt/ai-deep-monitor-storage/locations.py
 APP_UID="${AI_DEEP_STORAGE_UID:-1000}"
 APP_GID="${AI_DEEP_STORAGE_GID:-1000}"
 PYTHON_BIN="$(command -v python3)"
@@ -45,7 +46,7 @@ Before=docker.service
 [Service]
 Type=simple
 User=root
-ExecStart=${PYTHON_BIN} /opt/ai-deep-monitor-storage/auto_mount.py --uid ${APP_UID} --gid ${APP_GID}
+ExecStart=${PYTHON_BIN} /opt/ai-deep-monitor-storage/auto_mount.py --uid ${APP_UID} --gid ${APP_GID} --install-dir "${INSTALL_ROOT}"
 Restart=always
 RestartSec=5
 NoNewPrivileges=true
@@ -57,7 +58,8 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable --now ai-deep-monitor-storage.service
+systemctl enable ai-deep-monitor-storage.service
+systemctl restart ai-deep-monitor-storage.service
 systemctl is-active --quiet ai-deep-monitor-storage.service || {
   journalctl -u ai-deep-monitor-storage.service -n 30 --no-pager >&2
   exit 1
