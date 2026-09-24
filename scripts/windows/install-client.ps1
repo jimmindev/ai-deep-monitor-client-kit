@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [string]$AppVersion = "v0.1.34",
+  [string]$AppVersion = "v0.1.35",
   [string]$GithubOwner = "jimmindev",
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
