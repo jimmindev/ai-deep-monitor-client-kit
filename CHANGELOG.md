@@ -1,5 +1,12 @@
 # Evolutions du Client Kit
 
+## Application v0.1.37
+
+- Version applicative par défaut : v0.1.37.
+- Réparation ciblée des droits de sauvegarde et rechargement du proxy après préparation du stockage Linux.
+- Inventaire des supports avec liens parent/enfant et type USB hérité par les volumes.
+
+
 Le Client Kit suit un canal permanent `latest` et ne possede plus de numero de
 version independant. Les archives GitHub gardent toujours le meme nom et sont
 remplacees automatiquement apres validation d'une modification sur `main`.
