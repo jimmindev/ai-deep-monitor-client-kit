@@ -65,6 +65,12 @@ def scan_once(root: Path = MOUNT_ROOT, uid: int = 1000, gid: int = 1000) -> list
                 subprocess.run(["mount", "-o", options, source, str(target)],
                                capture_output=True, text=True, timeout=20, check=True)
                 mounted.append(str(target))
+            # This service only mounts non-system data disks under its own
+            # mount root. Make their top level writable without changing any
+            # existing files or directories on the disk.
+            if disk["filesystem"] not in USER_MOUNT_OPTIONS:
+                os.chown(target, uid, gid)
+                os.chmod(target, 0o770)
             backup = target / BACKUP_FOLDER
             backup.mkdir(exist_ok=True)
             os.chown(backup, uid, gid)
