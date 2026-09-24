@@ -42,7 +42,7 @@ sync_host_storage_agent() {
   local target_dir="${INSTALL_DIR}/host_storage_agent"
   [[ -d "$source_dir" ]] || return 0
   mkdir -p "$target_dir"
-  for file in auto_mount.py install_linux_service.sh; do
+  for file in auto_mount.py locations.py install_linux_service.sh; do
     [[ -f "${source_dir}/${file}" && "${source_dir}/${file}" != "${target_dir}/${file}" ]] && cp -f "${source_dir}/${file}" "${target_dir}/${file}"
   done
   chmod +x "${target_dir}"/*.sh 2>/dev/null || true
