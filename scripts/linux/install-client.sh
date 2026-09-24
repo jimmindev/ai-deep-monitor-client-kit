@@ -321,6 +321,7 @@ require_command curl
 install_host_terminal_agent
 configure_sudo
 run_root bash "${INSTALL_DIR}/host_storage_agent/install_linux_service.sh" --no-recreate
+prepare_default_backup_path "$INSTALL_DIR" "$ENV_FILE"
 configure_llama_cpp_runtime "$ENV_FILE" "$LLAMA_PROFILE" "$REQUIRE_GPU" "$REDETECT_LLAMA_RUNTIME"
 compose_runtime_exec "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
 [[ -z "$existing_volumes" ]] || log "Volumes existants reutilises."

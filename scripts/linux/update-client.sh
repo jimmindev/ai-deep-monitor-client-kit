@@ -289,6 +289,7 @@ unset github_token
 
 project_name="$(project_name_from_dir "$INSTALL_DIR")"
 configure_llama_cpp_runtime "$ENV_FILE" "$LLAMA_PROFILE" "$REQUIRE_GPU" "$REDETECT_LLAMA_RUNTIME"
+prepare_default_backup_path "$INSTALL_DIR" "$ENV_FILE"
 compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
 compose_runtime_pull "$project_name" "$COMPOSE_FILE" "$ENV_FILE"
 log "Preparation de la base de donnees; les grandes bases peuvent demander plusieurs minutes."
