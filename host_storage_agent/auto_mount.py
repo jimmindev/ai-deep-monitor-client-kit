@@ -7,6 +7,10 @@ import os
 import re
 import subprocess
 import time
+try:
+    from .locations import Locations
+except ImportError:
+    from locations import Locations
 from pathlib import Path
 
 MOUNT_ROOT = Path("/media/ai-deep-monitor")
@@ -96,6 +100,7 @@ def ensure_shared_mount_roots() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--once", action="store_true")
+    parser.add_argument("--install-dir", type=Path)
     parser.add_argument("--uid", type=int, default=1000)
     parser.add_argument("--gid", type=int, default=1000)
     args = parser.parse_args()
@@ -105,14 +110,24 @@ def main() -> None:
     if MOUNT_ROOT.is_symlink():
         raise SystemExit("Racine de montage non sûre.")
     ensure_shared_mount_roots()
+    locations = None
+    last_scan = 0
     while True:
         try:
-            scan_once(uid=args.uid, gid=args.gid)
+            if time.monotonic() - last_scan > 5:
+                scan_once(uid=args.uid, gid=args.gid)
+                last_scan = time.monotonic()
+                if locations is not None:
+                    locations.restore()
+            if args.install_dir:
+                if locations is None:
+                    locations = Locations(args.install_dir / "host_terminal_jobs", args.install_dir, args.uid, args.gid)
+                locations.tick()
         except (OSError, ValueError, subprocess.SubprocessError):
             pass
         if args.once:
             break
-        time.sleep(5)
+        time.sleep(0.25)
 
 
 if __name__ == "__main__":
