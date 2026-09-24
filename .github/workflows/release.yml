@@ -28,6 +28,7 @@ jobs:
           python3 tests/check_compose_backup_mounts.py
           python3 -m unittest discover -s tests -p 'test_*.py'
           bash tests/update-order-linux.sh
+          bash tests/backup-path-permissions-linux.sh
 
   validate-windows:
     runs-on: windows-latest

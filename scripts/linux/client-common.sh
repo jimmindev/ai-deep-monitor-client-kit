@@ -40,6 +40,20 @@ run_root() {
   "${SUDO_CMD[@]}" "$@"
 }
 
+prepare_default_backup_path() {
+  local install_dir="$1"
+  local env_file="$2"
+  local configured_path
+  configured_path="${BACKUP_HOST_PATH:-$(read_env_value "$env_file" BACKUP_HOST_PATH)}"
+  # A custom path can be an existing user mount; never change its ownership.
+  [[ -z "$configured_path" || "$configured_path" == "./backups" ]] || return 0
+  [[ ! -L "${install_dir}/backups" ]] || die "Le dossier de sauvegarde par defaut ne doit pas etre un lien symbolique."
+  configure_sudo
+  # Docker may have created this bind source as root:root on an earlier run.
+  # Change only the managed directory itself, never its existing contents.
+  run_root install -d -o 1000 -g 1000 -m 0770 "${install_dir}/backups"
+}
+
 ensure_python3() {
   command -v python3 >/dev/null 2>&1 && return 0
   configure_sudo
