@@ -8,6 +8,7 @@ CLIENT_KIT_RELEASE_DIR="$(mktemp -d -t ai-monitor-kit-release-test-XXXXXX)"
 trap 'rm -rf -- "$INSTALL_DIR" "$CLIENT_KIT_RELEASE_DIR"' EXIT
 
 update_source="${KIT_DIR}/scripts/linux/update-client.sh"
+grep -Fq "for file in auto_mount.py locations.py install_linux_service.sh" "$update_source"
 agent_repair_line="$(grep -n 'if \[\[ "\$SKIP_AGENT_INSTALL" == "false" \]\]' "$update_source" | head -n 1 | cut -d: -f1)"
 same_version_line="$(grep -n 'if \[\[ "\$current_version" == "\$APP_VERSION" \]\]' "$update_source" | head -n 1 | cut -d: -f1)"
 test -n "$agent_repair_line"
@@ -62,6 +63,7 @@ test -f "${INSTALL_DIR}/host_terminal_agent/time_helper.py"
 test -f "${INSTALL_DIR}/host_terminal_agent/terminal_policy.py"
 test -x "${INSTALL_DIR}/host_terminal_agent/install_linux_service.sh"
 test -f "${INSTALL_DIR}/host_storage_agent/auto_mount.py"
+test -f "${INSTALL_DIR}/host_storage_agent/locations.py"
 test -x "${INSTALL_DIR}/host_storage_agent/install_linux_service.sh"
 test -f "${INSTALL_DIR}/docker-compose.linux-host-storage.yml"
 python3 "${INSTALL_DIR}/host_terminal_agent/agent.py" --help >/dev/null
