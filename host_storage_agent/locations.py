@@ -5,9 +5,10 @@ import json
 import os
 import re
 import secrets
+import stat
 import subprocess
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 DENIED = {"/etc", "/proc", "/sys", "/dev", "/usr", "/bin", "/sbin", "/lib", "/lib64", "/run", "/var", "/boot", "/root", "/opt"}
 MOUNTS = Path("/mnt/ai-deep-monitor-locations")
@@ -125,10 +126,71 @@ class Locations:
             except (OSError, ValueError, subprocess.SubprocessError):
                 continue
 
+    def remove(self, source, files):
+        """Remove only registered archives from one managed folder, then its bind."""
+        identifier = hashlib.sha256(str(source).encode()).hexdigest()[:24]
+        record = self.records.get(identifier)
+        if not record or record.get("host_path") != str(source):
+            raise ValueError("Cet emplacement n’est pas géré par l’application.")
+        if any(Path(other.get("host_path", "")).is_relative_to(source) for key, other in self.records.items() if key != identifier):
+            raise ValueError("Supprimez d’abord les emplacements de sauvegarde créés dans ce dossier.")
+        if filesystem_id(source) != record["filesystem"]:
+            raise ValueError("Le support d’origine n’est plus accessible.")
+        if not isinstance(files, list) or len(files) > 5000:
+            raise ValueError("Liste des archives invalide.")
+        allowed = set()
+        for raw in files:
+            if not isinstance(raw, str) or not raw or len(raw) > 2048:
+                raise ValueError("Chemin d’archive invalide.")
+            relative = PurePosixPath(raw)
+            if relative.is_absolute() or "\\" in raw or any(part in (".", "..") or part.startswith(".") for part in relative.parts):
+                raise ValueError("Chemin d’archive invalide.")
+            if relative.suffix.lower() not in {".admb", ".aibak", ".zip", ".json"}:
+                raise ValueError("Format d’archive non reconnu.")
+            allowed.add(relative.as_posix())
+        found = set()
+        directories = []
+        def inspect(directory):
+            for child in directory.iterdir():
+                mode = child.lstat().st_mode
+                if stat.S_ISLNK(mode) or is_mount(child):
+                    raise ValueError("Un lien ou un montage empêche la suppression de cet emplacement.")
+                if stat.S_ISDIR(mode):
+                    inspect(child)
+                    directories.append(child)
+                elif stat.S_ISREG(mode):
+                    relative = child.relative_to(source).as_posix()
+                    if relative not in allowed:
+                        raise ValueError("Ce dossier contient une archive non répertoriée ou un fichier étranger. Déplacez-le avant de supprimer l’emplacement.")
+                    found.add(relative)
+                else:
+                    raise ValueError("Ce dossier contient un élément spécial qui empêche sa suppression.")
+        inspect(source)
+        for relative in sorted(found):
+            target = source / relative
+            if not target.is_file() or target.is_symlink():
+                raise ValueError("L’archive a changé pendant la suppression.")
+            target.unlink()
+        for directory in directories:
+            directory.rmdir()
+        target = MOUNTS / identifier
+        if is_mount(target):
+            subprocess.run(["umount", str(target)], check=True, capture_output=True, timeout=10)
+        source.rmdir()
+        if target.exists():
+            target.rmdir()
+        del self.records[identifier]
+        temp = self.registry.with_suffix(".tmp")
+        temp.write_text(json.dumps(self.records))
+        temp.replace(self.registry)
+        return {"host_path": str(source), "removed_archives": len(found)}
+
     def execute(self, payload):
         parent = checked_path(payload.get("path", "/"), self.install)
         if not parent.is_dir():
             raise ValueError("Le dossier parent n’existe pas ou le disque est débranché.")
+        if payload.get("action") == "delete":
+            return self.remove(parent, payload.get("files"))
         if payload.get("action") == "browse":
             folders = []
             for child in sorted(parent.iterdir()):
@@ -199,7 +261,7 @@ class Locations:
                 try:
                     fd = os.open(request.name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory)
                     with os.fdopen(fd) as input_file:
-                        envelope = json.loads(input_file.read(8193))
+                        envelope = json.loads(input_file.read(12_000_001))
                     os.unlink(request.name, dir_fd=directory)
                 finally:
                     os.close(directory)
@@ -214,7 +276,7 @@ class Locations:
                     continue
                 try:
                     result = {"id": request.stem, "ok": True, **self.execute(payload)}
-                    if payload.get("action") == "create":
+                    if payload.get("action") in {"create", "delete"}:
                         self.publish_status()
                 except (OSError, ValueError, subprocess.SubprocessError) as error:
                     result = {"id": request.stem, "ok": False, "error": "Ce dossier existe déjà. Choisissez un nouveau nom." if isinstance(error, FileExistsError) else str(error)}
