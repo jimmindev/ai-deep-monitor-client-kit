@@ -14,7 +14,6 @@ except ImportError:
 from pathlib import Path
 
 MOUNT_ROOT = Path("/media/ai-deep-monitor")
-BACKUP_FOLDER = "ai-deep-monitor-backups"
 SUPPORTED = {"ext2", "ext3", "ext4", "btrfs", "xfs", "vfat", "exfat", "ntfs", "ntfs3"}
 USER_MOUNT_OPTIONS = {"vfat", "exfat", "ntfs", "ntfs3"}
 UUID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{3,63}\Z")
@@ -69,16 +68,6 @@ def scan_once(root: Path = MOUNT_ROOT, uid: int = 1000, gid: int = 1000) -> list
                 subprocess.run(["mount", "-o", options, source, str(target)],
                                capture_output=True, text=True, timeout=20, check=True)
                 mounted.append(str(target))
-            # This service only mounts non-system data disks under its own
-            # mount root. Make their top level writable without changing any
-            # existing files or directories on the disk.
-            if disk["filesystem"] not in USER_MOUNT_OPTIONS:
-                os.chown(target, uid, gid)
-                os.chmod(target, 0o770)
-            backup = target / BACKUP_FOLDER
-            backup.mkdir(exist_ok=True)
-            os.chown(backup, uid, gid)
-            os.chmod(backup, 0o770)
         except (OSError, subprocess.SubprocessError):
             # A failed mount must never make an empty host directory appear
             # to the application as a usable backup disk.
@@ -118,7 +107,7 @@ def main() -> None:
                 scan_once(uid=args.uid, gid=args.gid)
                 last_scan = time.monotonic()
                 if locations is not None:
-                    locations.restore()
+                    locations.restore(include_network=False)
             if args.install_dir:
                 if locations is None:
                     locations = Locations(args.install_dir / "host_terminal_jobs", args.install_dir, args.uid, args.gid)

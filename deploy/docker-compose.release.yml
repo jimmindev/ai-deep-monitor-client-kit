@@ -126,7 +126,7 @@ services:
     volumes:
       - client_api_data:/app/data
       - client_uploaded_mibs:/app/uploaded_mibs
-      - ${BACKUP_HOST_PATH:-./backups}:/backups
+      - ${BACKUP_HOST_PATH:-./backups}:/backups:ro
       - client_generated_backups:/app/generated_backups
       - client_backup_secrets:/app/backup-secrets
       - dhcp_config:/dhcp/config
@@ -206,7 +206,7 @@ services:
     platform: ${DOCKER_PLATFORM:-linux/amd64}
     container_name: ai-monitor-client-backup-scheduler
     volumes:
-    - ${BACKUP_HOST_PATH:-./backups}:/backups
+    - ${BACKUP_HOST_PATH:-./backups}:/backups:ro
     - client_backup_secrets:/app/backup-secrets
     - client_generated_backups:/app/generated_backups
   discovery-worker:

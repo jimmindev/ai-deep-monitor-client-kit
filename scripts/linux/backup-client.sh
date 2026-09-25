@@ -27,11 +27,16 @@ ensure_docker
 require_command tar
 require_command gzip
 require_command sha256sum
+require_command findmnt
 
 if [[ -z "$DESTINATION_DIR" ]]; then
-  DESTINATION_DIR="$(dirname "$INSTALL_DIR")/ai-deep-monitor-backups"
+  DESTINATION_DIR="$(read_env_value "$ENV_FILE" MAINTENANCE_BACKUP_PATH)"
 fi
-mkdir -p "$DESTINATION_DIR"
+[[ -n "$DESTINATION_DIR" && -d "$DESTINATION_DIR" ]] ||
+  die "Indiquez --destination-dir sur un partage SMB/NFS monte ou MAINTENANCE_BACKUP_PATH dans .env."
+filesystem_type="$(findmnt -T "$DESTINATION_DIR" -n -o FSTYPE 2>/dev/null || true)"
+[[ "$filesystem_type" == "cifs" || "$filesystem_type" == "nfs" || "$filesystem_type" == "nfs4" ]] ||
+  die "La sauvegarde de maintenance exige un partage reseau SMB ou NFS monte."
 
 project_name="$(project_name_from_dir "$INSTALL_DIR")"
 compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
@@ -43,7 +48,7 @@ wait_for_container "$mysql_container" 180 || die "MySQL n'est pas pret."
 timestamp="$(date -u +%Y%m%d-%H%M%S)"
 version="$(read_env_value "$ENV_FILE" APP_VERSION)"
 version="${version:-unknown}"
-staging_dir="$(mktemp -d -t ai-monitor-backup-XXXXXX)"
+staging_dir="$(mktemp -d "${DESTINATION_DIR}/.ai-monitor-backup-staging-XXXXXX")"
 archive_path="${DESTINATION_DIR}/ai-deep-monitor-${version}-${timestamp}.tar.gz"
 partial_archive="${archive_path}.partial"
 trap 'rm -rf -- "$staging_dir"; rm -f -- "$partial_archive"' EXIT INT TERM

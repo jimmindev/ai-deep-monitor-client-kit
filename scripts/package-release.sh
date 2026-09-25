@@ -38,7 +38,6 @@ for file in \
   cp -a "${REPOSITORY_ROOT}/${file}" "$package_root/"
 done
 
-cp "${REPOSITORY_ROOT}/scripts/linux/repair-backup-permissions.sh" "$package_root/repair-backup-permissions.sh"
 
 find "$package_root" -type f -name '*.sh' -exec chmod 0755 {} +
 find "$package_root" -type f ! -name '*.sh' -exec chmod 0644 {} +

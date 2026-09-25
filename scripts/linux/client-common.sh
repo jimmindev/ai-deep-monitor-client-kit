@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-export DEFAULT_APP_VERSION="v0.1.42"
+export DEFAULT_APP_VERSION="v0.1.43"
 export DOCKER_PLATFORM=""
 LLAMA_CPP_DEFAULT_CPU_IMAGE='ghcr.io/ggml-org/llama.cpp:server@sha256:fcca4dac388066ca93db561751e8caf5fc7d46d9df5f00a7422026db68468e31'
 LLAMA_CPP_DEFAULT_CUDA_IMAGE='ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:8557e3d273aa6010d46f355e826348b691ba3ddffccae8eaf0150596bbc3ec42'
@@ -38,20 +38,6 @@ configure_sudo() {
 
 run_root() {
   "${SUDO_CMD[@]}" "$@"
-}
-
-prepare_default_backup_path() {
-  local install_dir="$1"
-  local env_file="$2"
-  local configured_path
-  configured_path="${BACKUP_HOST_PATH:-$(read_env_value "$env_file" BACKUP_HOST_PATH)}"
-  # A custom path can be an existing user mount; never change its ownership.
-  [[ -z "$configured_path" || "$configured_path" == "./backups" ]] || return 0
-  [[ ! -L "${install_dir}/backups" ]] || die "Le dossier de sauvegarde par defaut ne doit pas etre un lien symbolique."
-  configure_sudo
-  # Docker may have created this bind source as root:root on an earlier run.
-  # Change only the managed directory itself, never its existing contents.
-  run_root install -d -o 1000 -g 1000 -m 0770 "${install_dir}/backups"
 }
 
 ensure_python3() {

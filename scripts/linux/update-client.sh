@@ -183,7 +183,7 @@ COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 if [[ "$SKIP_KIT_REFRESH" == "false" ]]; then
   run_latest_client_kit_updater
 fi
-for file in docker-compose.release.yml docker-compose.linux-host-storage.yml docker-compose.dhcp.yml dhcp/Dockerfile dhcp/bootstrap.sh dhcp/README.md docker-compose.accel.nvidia.yml docker-compose.accel.jetson.yml Dockerfile.llama-cuda client-common.sh client-platform.ps1 ai-deep-monitor.sh ai-deep-monitor.ps1 AI-Deep-Monitor.cmd install-client.sh check-update.sh update-client.sh backup-client.sh backup-maintenance.sh restore-client.sh uninstall-client.sh repair-terminal.sh repair-backup-permissions.sh verify-llama-gpu.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 backup-maintenance.ps1 restore-client.ps1 uninstall-client.ps1 repair-terminal.ps1 README_CLIENT.md; do
+for file in docker-compose.release.yml docker-compose.linux-host-storage.yml docker-compose.dhcp.yml dhcp/Dockerfile dhcp/bootstrap.sh dhcp/README.md docker-compose.accel.nvidia.yml docker-compose.accel.jetson.yml Dockerfile.llama-cuda client-common.sh client-platform.ps1 ai-deep-monitor.sh ai-deep-monitor.ps1 AI-Deep-Monitor.cmd install-client.sh check-update.sh update-client.sh backup-client.sh backup-maintenance.sh restore-client.sh uninstall-client.sh repair-terminal.sh verify-llama-gpu.sh install-client.ps1 check-update.ps1 update-client.ps1 backup-client.ps1 backup-maintenance.ps1 restore-client.ps1 uninstall-client.ps1 repair-terminal.ps1 README_CLIENT.md; do
   source_file="$(kit_source "$file" || true)"
   [[ -n "$source_file" ]] || continue
   if [[ "$source_file" != "${INSTALL_DIR}/${file}" ]]; then
@@ -289,7 +289,6 @@ unset github_token
 
 project_name="$(project_name_from_dir "$INSTALL_DIR")"
 configure_llama_cpp_runtime "$ENV_FILE" "$LLAMA_PROFILE" "$REQUIRE_GPU" "$REDETECT_LLAMA_RUNTIME"
-prepare_default_backup_path "$INSTALL_DIR" "$ENV_FILE"
 compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
 compose_runtime_pull "$project_name" "$COMPOSE_FILE" "$ENV_FILE"
 log "Preparation de la base de donnees; les grandes bases peuvent demander plusieurs minutes."

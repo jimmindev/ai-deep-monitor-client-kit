@@ -25,7 +25,7 @@ backup_sources = []
 for service_name in ("api", "backup-scheduler"):
     volumes = {volume["target"]: volume for volume in services[service_name]["volumes"]}
     backup = volumes["/backups"]
-    assert backup["type"] == "bind" and backup["source"], service_name
+    assert backup["type"] == "bind" and backup["source"] and backup["read_only"], service_name
     backup_sources.append(backup["source"])
     for target in ("/host/mnt", "/host/media", "/host/run/media"):
         assert volumes[target]["bind"]["propagation"] == "rslave", (service_name, target)
