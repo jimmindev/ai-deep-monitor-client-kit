@@ -51,13 +51,12 @@ Require-Command "docker"
 docker version | Out-Null
 docker compose version | Out-Null
 
-if (-not $DestinationDir) {
-  $parentDir = Split-Path -Parent $InstallDir
-  if (-not $parentDir) { $parentDir = "C:\" }
-  $DestinationDir = Join-Path $parentDir "ai-deep-monitor-backups"
+$envValues = Read-DotEnv -Path $envPath
+if (-not $DestinationDir) { $DestinationDir = $envValues["MAINTENANCE_BACKUP_UNC"] }
+if (-not $DestinationDir -or -not $DestinationDir.StartsWith("\\")) {
+  throw "Indiquez -DestinationDir \\serveur\partage\dossier ou configurez MAINTENANCE_BACKUP_UNC dans .env."
 }
 $destination = New-Item -ItemType Directory -Force -Path $DestinationDir
-$envValues = Read-DotEnv -Path $envPath
 $version = $envValues["APP_VERSION"]
 if (-not $version) { $version = "unknown" }
 
@@ -70,7 +69,7 @@ if (-not $mysqlContainer) { throw "Conteneur MySQL introuvable." }
 Wait-ForHealthyContainer -ContainerId $mysqlContainer
 
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$stagingDir = Join-Path ([IO.Path]::GetTempPath()) "ai-monitor-backup-$timestamp-$PID"
+$stagingDir = Join-Path $destination.FullName ".ai-monitor-backup-staging-$timestamp-$PID"
 $archivePath = Join-Path $destination.FullName "ai-deep-monitor-$version-$timestamp.zip"
 New-Item -ItemType Directory -Force -Path $stagingDir | Out-Null
 

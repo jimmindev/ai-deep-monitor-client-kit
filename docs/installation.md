@@ -210,11 +210,13 @@ d'installation.
 ## Sauvegardes
 
 Une sauvegarde complete contient la base MySQL et les donnees applicatives,
-notamment les MIB et les fichiers geres par l'API. Elle est stockee hors du
-dossier d'installation:
-
-- Linux: `~/ai-deep-monitor-backups` par defaut;
-- Windows: `C:\ai-deep-monitor-backups` par defaut.
+notamment les MIB et les fichiers geres par l'API. Elle doit etre stockee sur
+un partage reseau : `MAINTENANCE_BACKUP_PATH` pointe vers un montage SMB/NFS
+sous Linux ; `MAINTENANCE_BACKUP_UNC` pointe vers un chemin UNC sous Windows.
+Vous pouvez aussi fournir `--destination-dir` sous Linux ou `-DestinationDir`
+sous Windows. Sans destination reseau, la sauvegarde de maintenance et la mise
+a jour automatique s'arretent avant la migration. Si une sauvegarde externe
+verifiee existe deja, l'option `--skip-backup` permet une mise a jour Linux.
 
 Le kit cree une sauvegarde:
 

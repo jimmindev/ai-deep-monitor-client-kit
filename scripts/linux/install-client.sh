@@ -73,7 +73,7 @@ Usage: ./install-client.sh [options]
 
 Options:
   --install-dir CHEMIN       Dossier cible (defaut: ~/ai-deep-monitor)
-  --app-version VERSION      Version applicative (defaut: v0.1.42)
+  --app-version VERSION      Version applicative (defaut: v0.1.43)
   --github-owner NOM         Proprietaire des images GHCR
   --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
@@ -145,7 +145,6 @@ kit_files=(
   restore-client.sh
   uninstall-client.sh
   repair-terminal.sh
-  repair-backup-permissions.sh
   verify-llama-gpu.sh
   install-client.ps1
   check-update.ps1
@@ -322,7 +321,6 @@ require_command curl
 install_host_terminal_agent
 configure_sudo
 run_root bash "${INSTALL_DIR}/host_storage_agent/install_linux_service.sh" --no-recreate
-prepare_default_backup_path "$INSTALL_DIR" "$ENV_FILE"
 configure_llama_cpp_runtime "$ENV_FILE" "$LLAMA_PROFILE" "$REQUIRE_GPU" "$REDETECT_LLAMA_RUNTIME"
 compose_runtime_exec "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
 [[ -z "$existing_volumes" ]] || log "Volumes existants reutilises."

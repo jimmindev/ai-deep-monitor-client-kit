@@ -1,5 +1,11 @@
 # Evolutions du Client Kit
 
+## Application v0.1.43
+
+- Les sauvegardes applicatives exigent un partage SMB ou NFS monte par le service hote Linux ; les anciens fichiers locaux restent accessibles en lecture pour restauration.
+- Le kit ne cree plus de dossier local de sauvegarde. Le ZIP/TAR de maintenance exige un partage reseau explicite, y compris pour sa preparation temporaire.
+- Les identifiants SMB sont conserves uniquement sur l'hote Linux avec des droits root.
+
 ## Application v0.1.42
 
 - Les nouvelles installations ciblent AI Deep Monitor `v0.1.42` par défaut.

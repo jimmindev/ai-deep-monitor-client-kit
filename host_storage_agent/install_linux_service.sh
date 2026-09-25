@@ -18,6 +18,15 @@ fi
 for command in python3 lsblk mount findmnt docker systemctl; do
   command -v "${command}" >/dev/null || { echo "Commande manquante : ${command}" >&2; exit 1; }
 done
+if ! command -v mount.cifs >/dev/null || ! command -v mount.nfs >/dev/null; then
+  if command -v apt-get >/dev/null; then
+    DEBIAN_FRONTEND=noninteractive apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y cifs-utils nfs-common
+  else
+    echo 'Installez les utilitaires de montage SMB (cifs-utils) et NFS (nfs-common) sur cet hôte.' >&2
+    exit 1
+  fi
+fi
 [[ -f "${INSTALL_ROOT}/docker-compose.release.yml" && -f "${INSTALL_ROOT}/docker-compose.linux-host-storage.yml" && -f "${INSTALL_ROOT}/.env" ]] || {
   echo 'Fichiers Compose Linux ou .env manquants dans le dossier d’installation.' >&2
   exit 1
@@ -71,14 +80,10 @@ if [[ "$NO_RECREATE" == "false" ]]; then
   docker compose -f "${INSTALL_ROOT}/docker-compose.release.yml" \
     -f "${INSTALL_ROOT}/docker-compose.linux-host-storage.yml" \
     --env-file "${INSTALL_ROOT}/.env" up -d --no-deps --force-recreate api backup-scheduler
-  # Docker may create the default ./backups bind as root:root (0755).
-  # The image runs as appuser, so prepare this separate backup destination too.
   compose=(docker compose -f "${INSTALL_ROOT}/docker-compose.release.yml"
     -f "${INSTALL_ROOT}/docker-compose.linux-host-storage.yml"
     --env-file "${INSTALL_ROOT}/.env")
   # Nginx must resolve the API's new container address after recreation.
   "${compose[@]}" exec -T frontend nginx -s reload
-  bash "${PROJECT_ROOT}/repair-backup-permissions.sh" \
-    "$("${compose[@]}" ps -q api)" "$("${compose[@]}" ps -q backup-scheduler)"
 fi
-echo 'Montage automatique actif. Les disques de données apparaîtront sous /media/ai-deep-monitor.'
+echo 'Service hôte actif. Les partages réseau seront configurés dans le formulaire de sauvegarde.'
