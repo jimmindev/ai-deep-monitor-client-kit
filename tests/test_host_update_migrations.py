@@ -13,6 +13,29 @@ agent = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(agent)
 
 class UpdateMigrationTest(unittest.TestCase):
+    def test_update_and_rollback_keep_linux_storage_mounts(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            install = Path(temporary)
+            (install / ".env").write_text("LLAMA_CPP_RUNTIME_PROFILE=nvidia\n", encoding="utf-8")
+            for name in (
+                "docker-compose.release.yml",
+                "docker-compose.accel.nvidia.yml",
+                "docker-compose.linux-host-storage.yml",
+            ):
+                (install / name).write_text("services: {}\n", encoding="utf-8")
+            host = object.__new__(agent.HostAgent)
+            host.install_dir = install
+            arguments = host.compose_file_arguments()
+            files = [arguments[index + 1] for index, value in enumerate(arguments) if value == "-f"]
+            expected = [
+                str(install / "docker-compose.release.yml"),
+                str(install / "docker-compose.accel.nvidia.yml"),
+            ]
+            if agent.os.name != "nt":
+                expected.append(str(install / "docker-compose.linux-host-storage.yml"))
+            self.assertEqual(files, expected)
+            self.assertEqual(arguments[-2:], ["--env-file", str(install / ".env")])
+
     def scenario(self, migration_ok):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
