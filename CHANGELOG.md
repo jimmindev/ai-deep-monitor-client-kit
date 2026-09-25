@@ -4,6 +4,7 @@
 
 - Les nouvelles installations ciblent AI Deep Monitor `v0.1.42` par défaut.
 - L’agent de stockage Linux refuse de supprimer un emplacement contenant une archive non répertoriée ou un fichier étranger, afin de préserver les données du support.
+- Les mises à jour intégrées conservent les montages Linux des clés USB et dossiers hôtes, y compris pendant un retour à la version précédente.
 - Les installations existantes peuvent se mettre à jour sans effacer leurs volumes, comptes ou réglages.
 
 ## Application v0.1.37

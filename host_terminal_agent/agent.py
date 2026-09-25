@@ -1366,6 +1366,9 @@ class HostAgent:
                     f"Override llama.cpp absent pour le profil {profile}: {override_path}"
                 )
             arguments.extend(["-f", str(override_path)])
+        storage_override = self.install_dir / "docker-compose.linux-host-storage.yml"
+        if os.name != "nt" and storage_override.is_file():
+            arguments.extend(["-f", str(storage_override)])
         arguments.extend(["--env-file", str(env_path)])
         return arguments
 
