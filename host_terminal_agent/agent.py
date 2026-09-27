@@ -34,7 +34,7 @@ POLICY_PATH = Path(
 ).resolve()
 _POLICY_SPEC = importlib.util.spec_from_file_location("ai_deep_terminal_policy", POLICY_PATH)
 if not _POLICY_SPEC or not _POLICY_SPEC.loader:
-    raise RuntimeError("La politique de sÃƒÂ©curitÃƒÂ© du terminal est introuvable.")
+    raise RuntimeError("La politique de sécurité du terminal est introuvable.")
 _POLICY_MODULE = importlib.util.module_from_spec(_POLICY_SPEC)
 _POLICY_SPEC.loader.exec_module(_POLICY_MODULE)
 POLICY_VERSION = _POLICY_MODULE.POLICY_VERSION
@@ -128,7 +128,7 @@ ConvertTo-Json -InputObject $result -Depth 5 -Compress
             interfaces = [{"physical": Path("/sys/class/net", link["ifname"], "device").exists(), "id": link["ifname"], "name": link["ifname"], **linux_adapter_identity(link["ifname"]), "mac": link.get("address", ""), "status": link.get("operstate", "UNKNOWN"), "addresses": [f"{a['local']}/{a['prefixlen']}" for a in link.get("addr_info", [])], "gateway": [r["gateway"] for r in routes if r.get("dev") == link["ifname"] and r.get("gateway")], "dns": dns if link["ifname"] == primary else [], "primary": link["ifname"] == primary, "speed": ""} for link in links]
         return {"interfaces": sorted(interfaces, key=lambda item: (not item["primary"], item["name"])), "collected_at": time.time(), "error": None}
     except (OSError, ValueError, subprocess.SubprocessError):
-        return {"interfaces": [], "collected_at": time.time(), "error": "DÃƒÂ©tection rÃƒÂ©seau indisponible sur cet hÃƒÂ´te."}
+        return {"interfaces": [], "collected_at": time.time(), "error": "Détection réseau indisponible sur cet hôte."}
 
 
 def collect_storage_disks() -> dict:
@@ -176,10 +176,10 @@ def collect_storage_disks() -> dict:
             visit(device)
         return {"disks": disks, "collected_at": time.time(), "error": None}
     except (OSError, ValueError, subprocess.SubprocessError):
-        return {"disks": [], "collected_at": time.time(), "error": "Inventaire des disques indisponible sur cet hÃƒÂ´te."}
+        return {"disks": [], "collected_at": time.time(), "error": "Inventaire des disques indisponible sur cet hôte."}
 
 
-def _empty_gpu_snapshot(name: str = "Non dÃƒÂ©tectÃƒÂ©") -> dict:
+def _empty_gpu_snapshot(name: str = "Non détecté") -> dict:
     return {
         "available": False,
         "name": name,
@@ -228,7 +228,7 @@ def collect_gpu_snapshot() -> dict:
             if names:
                 return {
                     "available": True,
-                    "name": " Ã‚Â· ".join(names),
+                    "name": " · ".join(names),
                     "usedPercent": round(sum(used) / len(used), 2),
                     "memoryUsedBytes": sum(memory_used) * 1024 * 1024,
                     "memoryTotalBytes": sum(memory_total) * 1024 * 1024,
@@ -263,7 +263,7 @@ def collect_gpu_snapshot() -> dict:
                 if names:
                     return {
                         "available": True,
-                        "name": " Ã‚Â· ".join(names),
+                        "name": " · ".join(names),
                         "usedPercent": None,
                         "memoryUsedBytes": 0,
                         "memoryTotalBytes": memory_total,
@@ -291,7 +291,7 @@ def collect_gpu_snapshot() -> dict:
                         pass
                 return {
                     "available": True,
-                    "name": " Ã‚Â· ".join(dict.fromkeys(names)),
+                    "name": " · ".join(dict.fromkeys(names)),
                     "usedPercent": round(sum(usage_values) / len(usage_values), 2) if usage_values else None,
                     "memoryUsedBytes": 0,
                     "memoryTotalBytes": 0,
@@ -318,7 +318,7 @@ def sign(key: bytes, payload: dict) -> str:
 
 def validate_time_configuration(timezone: str, ntp_server: str, zoneinfo_root: Path = Path("/usr/share/zoneinfo")) -> None:
     if not re.fullmatch(r"[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*", timezone or "") or any(part in {".", ".."} for part in timezone.split("/")) or not (zoneinfo_root / timezone).is_file():
-        raise ValueError("Fuseau horaire invalide ou absent sur lÃ¢â‚¬â„¢hÃƒÂ´te.")
+        raise ValueError("Fuseau horaire invalide ou absent sur l’hôte.")
     if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.:-]{0,251}[A-Za-z0-9])?", ntp_server or ""):
         raise ValueError("Adresse du serveur NTP invalide.")
 
@@ -327,7 +327,7 @@ def configure_host_time(timezone: str, ntp_server: str) -> dict:
     """Forward a time-only request to the isolated root service."""
     validate_time_configuration(timezone, ntp_server)
     if detect_host_family() not in {"linux", "jetson"} or not time_helper_ready():
-        raise ValueError("Le service de rÃƒÂ©glage de lÃ¢â‚¬â„¢heure hÃƒÂ´te est indisponible. RÃƒÂ©installez lÃ¢â‚¬â„¢agent Linux.")
+        raise ValueError("Le service de réglage de l’heure hôte est indisponible. Réinstallez l’agent Linux.")
     key = load_or_create_key(HOST_TIME_DIR)
     request_id = secrets.token_hex(16)
     request = {"id": request_id, "issued_at": time.time(), "timezone": timezone, "ntp_server": ntp_server}
@@ -340,11 +340,11 @@ def configure_host_time(timezone: str, ntp_server: str) -> dict:
             envelope = json.loads(outgoing.read_text(encoding="utf-8"))
             response = envelope.get("payload")
             if not isinstance(response, dict) or response.get("id") != request_id or not hmac.compare_digest(str(envelope.get("signature") or ""), sign(key, response)):
-                raise ValueError("RÃƒÂ©ponse du service horaire invalide.")
+                raise ValueError("Réponse du service horaire invalide.")
             return response
         time.sleep(0.1)
     incoming.unlink(missing_ok=True)
-    raise ValueError("Le service de rÃƒÂ©glage de lÃ¢â‚¬â„¢heure nÃ¢â‚¬â„¢a pas rÃƒÂ©pondu.")
+    raise ValueError("Le service de réglage de l’heure n’a pas répondu.")
 
 
 def time_helper_ready() -> bool:
@@ -366,7 +366,7 @@ def load_or_create_key(base: Path) -> bytes:
         raw = key_path.read_text(encoding="ascii").strip()
         key = bytes.fromhex(raw)
         if len(key) < 32:
-            raise RuntimeError("La clÃƒÂ© de l'agent hÃƒÂ´te est invalide.")
+            raise RuntimeError("La clé de l'agent hôte est invalide.")
         return key
 
     key = secrets.token_bytes(48)
@@ -405,7 +405,7 @@ def detect_host_family() -> str:
 def platform_label(host_family: str) -> str:
     base = f"{platform.system()} {platform.release()}"
     if host_family == "jetson":
-        return f"NVIDIA Jetson Ã‚Â· {base}"
+        return f"NVIDIA Jetson · {base}"
     return base
 
 
@@ -427,7 +427,7 @@ def shell_argv(shell: str, command: str) -> list[str]:
         if shell == "powershell":
             executable = shutil.which("pwsh") or shutil.which("powershell.exe")
             if not executable:
-                raise ValueError("PowerShell n'est pas disponible sur cet hÃƒÂ´te.")
+                raise ValueError("PowerShell n'est pas disponible sur cet hôte.")
             return [
                 executable,
                 "-NoLogo",
@@ -440,7 +440,7 @@ def shell_argv(shell: str, command: str) -> list[str]:
         return [shutil.which("bash"), "--noprofile", "--norc", "-c", command]
     elif shell == "sh" and shutil.which("sh"):
         return [shutil.which("sh"), "-c", command]
-    raise ValueError("Shell demandÃƒÂ© non disponible.")
+    raise ValueError("Shell demandé non disponible.")
 
 
 def trusted_search_path() -> str:
@@ -547,16 +547,16 @@ def resolve_terminal_directory(
     try:
         resolved = target.resolve(strict=True)
     except (OSError, RuntimeError) as exc:
-        raise TerminalPolicyViolation("filesystem", "Ce rÃƒÂ©pertoire est introuvable ou inaccessible.") from exc
+        raise TerminalPolicyViolation("filesystem", "Ce répertoire est introuvable ou inaccessible.") from exc
     if not resolved.is_dir() or not _path_is_within(resolved, navigation_root):
-        raise TerminalPolicyViolation("filesystem", "La navigation est limitÃƒÂ©e au dossier personnel de l'utilisateur du terminal.")
+        raise TerminalPolicyViolation("filesystem", "La navigation est limitée au dossier personnel de l'utilisateur du terminal.")
     for root in protected_terminal_paths(protected_paths):
         try:
             protected_root = root.resolve(strict=False)
         except (OSError, RuntimeError):
             protected_root = root.absolute()
         if _path_is_within(resolved, protected_root):
-            raise TerminalPolicyViolation("filesystem", "Ce rÃƒÂ©pertoire protÃƒÂ©gÃƒÂ© n'est pas accessible depuis le terminal.")
+            raise TerminalPolicyViolation("filesystem", "Ce répertoire protégé n'est pas accessible depuis le terminal.")
     return resolved
 
 
@@ -594,7 +594,7 @@ def run_safe_listing(
         if _path_is_within(resolved, protected_root):
             raise TerminalPolicyViolation(
                 "filesystem",
-                "Ce rÃƒÂ©pertoire protÃƒÂ©gÃƒÂ© ne peut pas ÃƒÂªtre listÃƒÂ©.",
+                "Ce répertoire protégé ne peut pas être listé.",
             )
 
     names: list[str] = []
@@ -645,7 +645,7 @@ def run_safe_listing(
     return {
         "ok": True,
         "stdout": output,
-        "stderr": "Liste tronquÃƒÂ©e.\n" if truncated else "",
+        "stderr": "Liste tronquée.\n" if truncated else "",
         "exit_code": 0,
         "timed_out": False,
         "truncated": truncated,
@@ -673,19 +673,19 @@ def hardened_execution_command(command: str, host_family: str) -> str:
             '"table {{.ID}}\\t{{.Names}}\\t{{.Image}}\\t{{.Status}}\\t{{.Ports}}"'
         )
     if host_family in {"linux", "jetson"} and lowered in (["ps", "-ef"], ["ps", "aux"]):
-        # Ne jamais exposer argv : un secret transmis ÃƒÂ  un processus hÃƒÂ´te ou ÃƒÂ 
-        # un conteneur pourrait sinon apparaÃƒÂ®tre dans la colonne COMMAND.
+        # Ne jamais exposer argv : un secret transmis à un processus hôte ou à
+        # un conteneur pourrait sinon apparaître dans la colonne COMMAND.
         return "ps -eo pid=PID,ppid=PPID,user=USER,stat=STAT,comm=PROCESS --sort=comm"
     if host_family == "jetson" and command.strip().lower() == "jetson-info":
         return (
-            "printf 'ModÃƒÂ¨le : '; tr -d '\\000' < /proc/device-tree/model; printf '\\n'; "
+            "printf 'Modèle : '; tr -d '\\000' < /proc/device-tree/model; printf '\\n'; "
             "printf 'Version L4T : '; head -n 1 /etc/nv_tegra_release; "
             "printf 'Noyau : '; uname -r"
         )
     if host_family == "jetson" and command.strip().lower() == "jetson-stats":
         return (
             "command -v tegrastats >/dev/null || { "
-            "echo 'tegrastats est indisponible sur cet hÃƒÂ´te.' >&2; exit 127; }; "
+            "echo 'tegrastats est indisponible sur cet hôte.' >&2; exit 127; }; "
             "tegrastats --interval 1000 & stats_pid=$!; sleep 3; "
             "kill \"$stats_pid\" 2>/dev/null; wait \"$stats_pid\" 2>/dev/null; exit 0"
         )
@@ -735,7 +735,7 @@ def run_limited(
     if command.lower() in {"jetson-info", "jetson-stats"} and effective_family != "jetson":
         raise TerminalPolicyViolation(
             "jetson",
-            "Cette commande est disponible uniquement sur un hÃƒÂ´te NVIDIA Jetson.",
+            "Cette commande est disponible uniquement sur un hôte NVIDIA Jetson.",
         )
     command_name = command.split()[0].lower()
     if command_name in {"cd", "set-location"}:
@@ -907,16 +907,16 @@ def run_maintenance_process(
 def safe_maintenance_diagnostics(result: dict, *, max_lines: int = 12) -> list[str]:
     """Return useful maintenance output without leaking credentials."""
     if result.get("timed_out"):
-        return ["DÃƒÂ©lai maximal dÃƒÂ©passÃƒÂ©."]
+        return ["Délai maximal dépassé."]
 
     output = str(result.get("output_tail") or "")[-8_000:]
     output = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", output)
     secret_patterns = (
-        (r"(?i)(authorization\s*:\s*(?:bearer|basic)\s+)\S+", r"\1[masquÃƒÂ©]"),
-        (r"(?i)\b(gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)\b", "[masquÃƒÂ©]"),
+        (r"(?i)(authorization\s*:\s*(?:bearer|basic)\s+)\S+", r"\1[masqué]"),
+        (r"(?i)\b(gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)\b", "[masqué]"),
         (
             r"(?i)\b([A-Z0-9_]*(?:password|passwd|token|secret|mysql_pwd)[A-Z0-9_]*)\s*([=:])\s*([^\s,;]+)",
-            r"\1\2[masquÃƒÂ©]",
+            r"\1\2[masqué]",
         ),
     )
     for pattern, replacement in secret_patterns:
@@ -928,7 +928,7 @@ def safe_maintenance_diagnostics(result: dict, *, max_lines: int = 12) -> list[s
         if not line or (lines and line == lines[-1]):
             continue
         if len(line) > 320:
-            line = f"Ã¢â‚¬Â¦{line[-319:]}"
+            line = f"…{line[-319:]}"
         lines.append(line)
     return lines[-max(1, min(max_lines, 20)):]
 
@@ -1039,7 +1039,7 @@ class HostAgent:
             except OSError:
                 status_age = float("inf")
             if status_age <= 10:
-                raise RuntimeError("Un agent terminal hÃƒÂ´te est dÃƒÂ©jÃƒÂ  actif.") from exc
+                raise RuntimeError("Un agent terminal hôte est déjà actif.") from exc
             self.lock_path.unlink(missing_ok=True)
             descriptor = os.open(
                 self.lock_path,
@@ -1117,13 +1117,13 @@ class HostAgent:
         if marker not in script_content:
             return {
                 "supported": False,
-                "reason": "Mettez ÃƒÂ  jour le kit client pour activer les mises ÃƒÂ  jour intÃƒÂ©grÃƒÂ©es.",
+                "reason": "Mettez à jour le kit client pour activer les mises à jour intégrées.",
                 "current_version": current,
             }
         if not shutil.which("docker", path=trusted_search_path()):
             return {
                 "supported": False,
-                "reason": "Docker nÃ¢â‚¬â„¢est pas accessible depuis lÃ¢â‚¬â„¢agent de maintenance.",
+                "reason": "Docker n’est pas accessible depuis l’agent de maintenance.",
                 "current_version": current,
             }
         owner = read_env_value(env_path, "GITHUB_OWNER") or "jimmindev"
@@ -1131,13 +1131,13 @@ class HostAgent:
         if owner.lower() != expected_owner.lower():
             return {
                 "supported": False,
-                "reason": "Le registre dÃ¢â‚¬â„¢images configurÃƒÂ© nÃ¢â‚¬â„¢est pas autorisÃƒÂ©.",
+                "reason": "Le registre d’images configuré n’est pas autorisé.",
                 "current_version": current,
             }
         if not version_tuple(current):
             return {
                 "supported": False,
-                "reason": "La version installÃƒÂ©e ne permet pas une mise ÃƒÂ  jour automatique sÃƒÂ»re.",
+                "reason": "La version installée ne permet pas une mise à jour automatique sûre.",
                 "current_version": current,
             }
         return {"supported": True, "reason": None, "current_version": current}
@@ -1181,10 +1181,10 @@ class HostAgent:
             raise ValueError("Signature de travail invalide.")
         issued_at = float(payload.get("issued_at") or 0)
         if abs(time.time() - issued_at) > max_age:
-            raise ValueError("Travail expirÃƒÂ©.")
+            raise ValueError("Travail expiré.")
         nonce = str(payload.get("nonce") or "")
         if not nonce or nonce in self.seen_nonces:
-            raise ValueError("Travail dÃƒÂ©jÃƒÂ  traitÃƒÂ© ou nonce invalide.")
+            raise ValueError("Travail déjà traité ou nonce invalide.")
         self.seen_nonces[nonce] = time.time()
         return payload
 
@@ -1195,7 +1195,7 @@ class HostAgent:
             envelope = json.loads(job_path.read_text(encoding="utf-8"))
             payload = self.verify_job(envelope)
             if str(payload.get("id")) != job_id:
-                raise ValueError("Identifiant de travail incohÃƒÂ©rent.")
+                raise ValueError("Identifiant de travail incohérent.")
             operation = payload.get("operation")
             if isinstance(operation, dict) and operation.get("kind") == "configure_time":
                 response = configure_host_time(str(operation.get("timezone") or ""), str(operation.get("ntp_server") or ""))
@@ -1204,10 +1204,10 @@ class HostAgent:
             if not command.strip():
                 raise ValueError("La commande est vide.")
             if len(command.encode("utf-8")) > MAX_COMMAND_BYTES:
-                raise ValueError("La commande dÃƒÂ©passe 4 Ko.")
+                raise ValueError("La commande dépasse 4 Ko.")
             shell = str(payload.get("shell") or self.shells[0])
             if shell not in self.shells:
-                raise ValueError("Shell demandÃƒÂ© non disponible.")
+                raise ValueError("Shell demandé non disponible.")
             timeout = min(
                 max(float(payload.get("timeout") or 10.0), 1.0),
                 MAX_TIMEOUT_SECONDS,
@@ -1295,7 +1295,7 @@ class HostAgent:
         if os.name == "nt":
             powershell = shutil.which("pwsh") or shutil.which("powershell.exe")
             if not powershell:
-                raise RuntimeError("PowerShell est indisponible sur lÃ¢â‚¬â„¢hÃƒÂ´te.")
+                raise RuntimeError("PowerShell est indisponible sur l’hôte.")
             backup = self.install_dir / "backup-client.ps1"
             update = self.install_dir / "update-client.ps1"
             common = [
@@ -1315,7 +1315,7 @@ class HostAgent:
 
         bash = shutil.which("bash")
         if not bash:
-            raise RuntimeError("Bash est indisponible sur lÃ¢â‚¬â„¢hÃƒÂ´te.")
+            raise RuntimeError("Bash est indisponible sur l’hôte.")
         backup = self.install_dir / "backup-client.sh"
         update = self.install_dir / "update-client.sh"
         return backup, update, [
@@ -1377,7 +1377,7 @@ class HostAgent:
                 "ok": False,
                 "exit_code": 127,
                 "timed_out": False,
-                "output_tail": "Docker est introuvable dans le chemin systÃƒÂ¨me autorisÃƒÂ©.",
+                "output_tail": "Docker est introuvable dans le chemin système autorisé.",
             }
         return run_maintenance_process(
             [
@@ -1401,7 +1401,7 @@ class HostAgent:
                 minutes = int((time.monotonic() - started_at) / 60)
                 self.write_update_status(
                     context, phase="downloading", progress=60,
-                    message=f"PrÃƒÂ©paration de la base de donnÃƒÂ©es ({minutes} min).",
+                    message=f"Préparation de la base de données ({minutes} min).",
                     backup_created=True,
                 )
 
@@ -1460,7 +1460,7 @@ class HostAgent:
                 "ok": False,
                 "exit_code": 127,
                 "timed_out": False,
-                "output_tail": "Docker est introuvable dans le chemin systÃƒÂ¨me autorisÃƒÂ©.",
+                "output_tail": "Docker est introuvable dans le chemin système autorisé.",
             }
 
         # Do not depend on HOME or on the account that originally ran
@@ -1490,7 +1490,7 @@ class HostAgent:
             )
             if not login_result.get("ok"):
                 login_result["output_tail"] = (
-                    "Authentification GHCR refusÃƒÂ©e. "
+                    "Authentification GHCR refusée. "
                     + str(login_result.get("output_tail") or "")
                 )
                 return login_result
@@ -1555,13 +1555,13 @@ class HostAgent:
                     ),
                 )
                 state = result.stdout.decode("utf-8", errors="replace").strip().lower()
-                self.last_api_health_state = state or "ÃƒÂ©tat non retournÃƒÂ©"
+                self.last_api_health_state = state or "état non retourné"
                 if result.returncode == 0 and state in {"healthy", "running"}:
                     return True
                 if state in {"unhealthy", "exited", "dead"}:
                     return False
             except (OSError, subprocess.TimeoutExpired):
-                self.last_api_health_state = "contrÃƒÂ´le Docker inaccessible"
+                self.last_api_health_state = "contrôle Docker inaccessible"
             time.sleep(2)
         return False
 
@@ -1586,9 +1586,9 @@ class HostAgent:
                 max_age=MAX_UPDATE_SECONDS + 600,
             )
             if str(payload.get("id")) != job_id:
-                raise ValueError("Identifiant de mise ÃƒÂ  jour incohÃƒÂ©rent.")
+                raise ValueError("Identifiant de mise à jour incohérent.")
             if payload.get("action") != "application_update":
-                raise ValueError("Action de maintenance non autorisÃƒÂ©e.")
+                raise ValueError("Action de maintenance non autorisée.")
             context.update(
                 {
                     "current_version": str(payload.get("current_version") or ""),
@@ -1601,7 +1601,7 @@ class HostAgent:
                 context,
                 phase="validating",
                 progress=5,
-                message="Validation de lÃ¢â‚¬â„¢installation et de la version cible.",
+                message="Validation de l’installation et de la version cible.",
             )
             capability = self.update_capability()
             if not capability["supported"]:
@@ -1609,7 +1609,7 @@ class HostAgent:
             current = capability["current_version"]
             target = context["target_version"]
             if not version_tuple(target) or not version_tuple(current):
-                raise ValueError("Version de mise ÃƒÂ  jour invalide.")
+                raise ValueError("Version de mise à jour invalide.")
             requested_current = context["current_version"]
             recovering = bool(
                 current == target
@@ -1618,9 +1618,9 @@ class HostAgent:
             )
             if not recovering:
                 if version_tuple(target) <= version_tuple(current):
-                    raise ValueError("Une rÃƒÂ©trogradation ou rÃƒÂ©installation nÃ¢â‚¬â„¢est pas autorisÃƒÂ©e.")
+                    raise ValueError("Une rétrogradation ou réinstallation n’est pas autorisée.")
                 if requested_current != current:
-                    raise ValueError("La version installÃƒÂ©e a changÃƒÂ© depuis la demande.")
+                    raise ValueError("La version installée a changé depuis la demande.")
 
             env_path = self.install_dir / ".env"
             rollback_dir = self.state_dir / "update-rollbacks"
@@ -1631,7 +1631,7 @@ class HostAgent:
             if recovering:
                 if not env_backup.is_file():
                     raise RuntimeError(
-                        "La maintenance interrompue ne peut pas ÃƒÂªtre reprise sans son ÃƒÂ©tat privÃƒÂ©."
+                        "La maintenance interrompue ne peut pas être reprise sans son état privé."
                     )
                 context["backup_created"] = True
             else:
@@ -1649,13 +1649,13 @@ class HostAgent:
                 context,
                 phase="refreshing_client_kit",
                 progress=10,
-                message="TÃƒÂ©lÃƒÂ©chargement et vÃƒÂ©rification du dernier Client Kit.",
+                message="Téléchargement et vérification du dernier Client Kit.",
                 backup_created=context["backup_created"],
             )
             kit_result = self.refresh_client_kit(update_prefix)
             if not kit_result["ok"]:
                 kit_reason = failed_step_message(
-                    "LÃ¢â‚¬â„¢actualisation du Client Kit a ÃƒÂ©chouÃƒÂ©",
+                    "L’actualisation du Client Kit a échoué",
                     kit_result,
                 )
                 record_update_failure(
@@ -1664,28 +1664,28 @@ class HostAgent:
                     step="Actualisation du Client Kit",
                     reason=kit_reason,
                     hint=(
-                        "VÃƒÂ©rifiez lÃ¢â‚¬â„¢accÃƒÂ¨s ÃƒÂ  GitHub Releases, la somme SHA256 publiÃƒÂ©e "
-                        "et les droits dÃ¢â‚¬â„¢ÃƒÂ©criture du dossier dÃ¢â‚¬â„¢installation."
+                        "Vérifiez l’accès à GitHub Releases, la somme SHA256 publiée "
+                        "et les droits d’écriture du dossier d’installation."
                     ),
                     result=kit_result,
                 )
                 raise UpdateStepError(kit_reason, "client_kit_update_failed")
 
-            # Le Client Kit venant de remplacer les scripts installÃƒÂ©s, recharge les
+            # Le Client Kit venant de remplacer les scripts installés, recharge les
             # chemins et les arguments avant de poursuivre la maintenance.
             backup_script, update_script, backup_argv, update_prefix = (
                 self.maintenance_commands()
             )
             if not backup_script.is_file() or not update_script.is_file():
                 raise RuntimeError(
-                    "Les scripts de maintenance actualisÃƒÂ©s sont introuvables."
+                    "Les scripts de maintenance actualisés sont introuvables."
                 )
             if not recovering:
                 self.write_update_status(
                     context,
                     phase="backing_up",
                     progress=15,
-                    message="CrÃƒÂ©ation de la sauvegarde de sÃƒÂ©curitÃƒÂ©.",
+                    message="Création de la sauvegarde de sécurité.",
                 )
                 backup_result = run_maintenance_process(
                     backup_argv,
@@ -1694,15 +1694,15 @@ class HostAgent:
                 )
                 if not backup_result["ok"]:
                     backup_reason = failed_step_message(
-                        "La sauvegarde de sÃƒÂ©curitÃƒÂ© a ÃƒÂ©chouÃƒÂ©",
+                        "La sauvegarde de sécurité a échoué",
                         backup_result,
                     )
                     record_update_failure(
                         context,
                         code="backup_failed",
-                        step="Sauvegarde de sÃƒÂ©curitÃƒÂ©",
+                        step="Sauvegarde de sécurité",
                         reason=backup_reason,
-                        hint="VÃƒÂ©rifiez lÃ¢â‚¬â„¢espace disque disponible et lÃ¢â‚¬â„¢accÃƒÂ¨s de lÃ¢â‚¬â„¢agent ÃƒÂ  Docker.",
+                        hint="Vérifiez l’espace disque disponible et l’accès de l’agent à Docker.",
                         result=backup_result,
                     )
                     raise UpdateStepError(
@@ -1715,7 +1715,7 @@ class HostAgent:
                 context,
                 phase="downloading",
                 progress=45,
-                message=f"TÃƒÂ©lÃƒÂ©chargement et installation de {target}.",
+                message=f"Téléchargement et installation de {target}.",
                 backup_created=True,
             )
             if not recovering:
@@ -1729,7 +1729,7 @@ class HostAgent:
                     code="docker_configuration_failed",
                     step="Validation de la configuration Docker",
                     reason=failed_step_message("La configuration Docker est invalide", config_result),
-                    hint="VÃƒÂ©rifiez le fichier .env et docker-compose.release.yml de lÃ¢â‚¬â„¢installation.",
+                    hint="Vérifiez le fichier .env et docker-compose.release.yml de l’installation.",
                     result=config_result,
                 )
             if deployment_ok:
@@ -1739,9 +1739,9 @@ class HostAgent:
                     record_update_failure(
                         context,
                         code="image_download_failed",
-                        step="TÃƒÂ©lÃƒÂ©chargement des images Docker",
-                        reason=failed_step_message("Le tÃƒÂ©lÃƒÂ©chargement des images a ÃƒÂ©chouÃƒÂ©", pull_result),
-                        hint="VÃƒÂ©rifiez Internet, lÃ¢â‚¬â„¢accÃƒÂ¨s ÃƒÂ  GHCR, le token GitHub et lÃ¢â‚¬â„¢espace disque disponible.",
+                        step="Téléchargement des images Docker",
+                        reason=failed_step_message("Le téléchargement des images a échoué", pull_result),
+                        hint="Vérifiez Internet, l’accès à GHCR, le token GitHub et l’espace disque disponible.",
                         result=pull_result,
                     )
             migration_result = {}
@@ -1752,7 +1752,7 @@ class HostAgent:
                     context,
                     phase="downloading",
                     progress=60,
-                    message="PrÃƒÂ©paration de la base de donnÃƒÂ©es avec la nouvelle version.",
+                    message="Préparation de la base de données avec la nouvelle version.",
                     backup_created=True,
                 )
                 migration_result = self.migrate_database(job_id, context)
@@ -1761,8 +1761,8 @@ class HostAgent:
                     record_update_failure(
                         context,
                         code="database_migration_failed",
-                        step="Migration de la base de donnÃƒÂ©es",
-                        reason=failed_step_message("La migration a ÃƒÂ©chouÃƒÂ©", migration_result),
+                        step="Migration de la base de données",
+                        reason=failed_step_message("La migration a échoué", migration_result),
                         hint="Consultez le journal de migration avant de reprendre la maintenance.",
                         result=migration_result,
                     )
@@ -1771,7 +1771,7 @@ class HostAgent:
                     context,
                     phase="restarting",
                     progress=75,
-                    message="RedÃƒÂ©marrage des services avec la nouvelle version.",
+                    message="Redémarrage des services avec la nouvelle version.",
                     backup_created=True,
                 )
                 start_result = self.compose_command("up", "-d", timeout=900)
@@ -1780,9 +1780,9 @@ class HostAgent:
                     record_update_failure(
                         context,
                         code="service_start_failed",
-                        step="RedÃƒÂ©marrage des services Docker",
-                        reason=failed_step_message("Le redÃƒÂ©marrage des services a ÃƒÂ©chouÃƒÂ©", start_result),
-                        hint="VÃƒÂ©rifiez les ports, la mÃƒÂ©moire disponible et lÃ¢â‚¬â„¢ÃƒÂ©tat du moteur Docker.",
+                        step="Redémarrage des services Docker",
+                        reason=failed_step_message("Le redémarrage des services a échoué", start_result),
+                        hint="Vérifiez les ports, la mémoire disponible et l’état du moteur Docker.",
                         result=start_result,
                     )
             if deployment_ok:
@@ -1790,7 +1790,7 @@ class HostAgent:
                     context,
                     phase="health_check",
                     progress=92,
-                    message="VÃƒÂ©rification du bon fonctionnement de la nouvelle version.",
+                    message="Vérification du bon fonctionnement de la nouvelle version.",
                     backup_created=True,
                 )
                 deployment_ok = self.wait_for_api_health(300)
@@ -1807,12 +1807,12 @@ class HostAgent:
                     record_update_failure(
                         context,
                         code="api_health_failed",
-                        step="ContrÃƒÂ´le de santÃƒÂ© de lÃ¢â‚¬â„¢API",
+                        step="Contrôle de santé de l’API",
                         reason=(
-                            "LÃ¢â‚¬â„¢API nÃ¢â‚¬â„¢a pas retrouvÃƒÂ© un ÃƒÂ©tat sain "
-                            f"(dernier ÃƒÂ©tat Docker : {health_state})."
+                            "L’API n’a pas retrouvé un état sain "
+                            f"(dernier état Docker : {health_state})."
                         ),
-                        hint="Consultez le journal technique ci-dessous pour identifier lÃ¢â‚¬â„¢erreur de dÃƒÂ©marrage de lÃ¢â‚¬â„¢API.",
+                        hint="Consultez le journal technique ci-dessous pour identifier l’erreur de démarrage de l’API.",
                         result=logs_result,
                     )
 
@@ -1821,21 +1821,21 @@ class HostAgent:
                 keep_env_backup = True
                 self.write_update_status(
                     context, phase="failed", progress=100,
-                    message="Le conteneur de migration nÃ¢â‚¬â„¢a pas pu ÃƒÂªtre arrÃƒÂªtÃƒÂ©. Intervention requise avant toute reprise.",
+                    message="Le conteneur de migration n’a pas pu être arrêté. Intervention requise avant toute reprise.",
                     error_code="database_migration_cleanup_failed", backup_created=True,
                 )
                 return
 
             if not deployment_ok:
-                failure_step = context.get("failure_step") or "Ãƒâ€°tape de dÃƒÂ©ploiement inconnue"
-                failure_reason = context.get("failure_reason") or "Cause non dÃƒÂ©terminÃƒÂ©e."
+                failure_step = context.get("failure_step") or "Étape de déploiement inconnue"
+                failure_reason = context.get("failure_reason") or "Cause non déterminée."
                 self.write_update_status(
                     context,
                     phase="rolling_back",
                     progress=90,
                     message=(
-                        f"Ãƒâ€°chec pendant Ã‚Â« {failure_step} Ã‚Â» : {failure_reason} "
-                        "Restauration de la version prÃƒÂ©cÃƒÂ©dente."
+                        f"Échec pendant « {failure_step} » : {failure_reason} "
+                        "Restauration de la version précédente."
                     ),
                     error_code="update_failed",
                     backup_created=True,
@@ -1848,11 +1848,11 @@ class HostAgent:
                     phase="rolled_back" if rollback_ok else "failed",
                     progress=100,
                     message=(
-                        f"Ãƒâ€°chec pendant Ã‚Â« {failure_step} Ã‚Â» : {failure_reason} "
-                        "La version prÃƒÂ©cÃƒÂ©dente a ÃƒÂ©tÃƒÂ© restaurÃƒÂ©e."
+                        f"Échec pendant « {failure_step} » : {failure_reason} "
+                        "La version précédente a été restaurée."
                         if rollback_ok
-                        else f"Ãƒâ€°chec pendant Ã‚Â« {failure_step} Ã‚Â» : {failure_reason} "
-                        "La restauration a ÃƒÂ©galement ÃƒÂ©chouÃƒÂ©. Intervention requise."
+                        else f"Échec pendant « {failure_step} » : {failure_reason} "
+                        "La restauration a également échoué. Intervention requise."
                     ),
                     error_code="update_rolled_back" if rollback_ok else "rollback_failed",
                     backup_created=True,
@@ -1864,7 +1864,7 @@ class HostAgent:
                 context,
                 phase="completed",
                 progress=100,
-                message=f"Mise ÃƒÂ  jour vers {target} terminÃƒÂ©e avec succÃƒÂ¨s.",
+                message=f"Mise à jour vers {target} terminée avec succès.",
                 backup_created=True,
             )
         except Exception as exc:
@@ -1875,12 +1875,12 @@ class HostAgent:
                     code=getattr(exc, "error_code", "unexpected_update_error"),
                     step="Validation ou maintenance",
                     reason=safe_maintenance_error(exception_result) or "Erreur inattendue.",
-                    hint="Consultez le journal technique puis vÃƒÂ©rifiez lÃ¢â‚¬â„¢ÃƒÂ©tat de Docker et de lÃ¢â‚¬â„¢installation.",
+                    hint="Consultez le journal technique puis vérifiez l’état de Docker et de l’installation.",
                     result=exception_result,
                 )
             if env_changed and env_backup and context["backup_created"]:
                 failure_step = context.get("failure_step") or "Maintenance"
-                failure_reason = context.get("failure_reason") or "Cause non dÃƒÂ©terminÃƒÂ©e."
+                failure_reason = context.get("failure_reason") or "Cause non déterminée."
                 rollback_ok = self.rollback_update(env_backup)
                 context["rollback_performed"] = rollback_ok
                 keep_env_backup = not rollback_ok
@@ -1889,10 +1889,10 @@ class HostAgent:
                     phase="rolled_back" if rollback_ok else "failed",
                     progress=100,
                     message=(
-                        f"Ãƒâ€°chec pendant Ã‚Â« {failure_step} Ã‚Â» : {failure_reason} "
-                        "La version prÃƒÂ©cÃƒÂ©dente a ÃƒÂ©tÃƒÂ© restaurÃƒÂ©e."
+                        f"Échec pendant « {failure_step} » : {failure_reason} "
+                        "La version précédente a été restaurée."
                         if rollback_ok
-                        else f"Ãƒâ€°chec pendant Ã‚Â« {failure_step} Ã‚Â» : {failure_reason} "
+                        else f"Échec pendant « {failure_step} » : {failure_reason} "
                         "La restauration automatique est impossible."
                     ),
                     error_code="update_rolled_back" if rollback_ok else "rollback_failed",
@@ -1904,7 +1904,7 @@ class HostAgent:
                     context,
                     phase="failed",
                     progress=100,
-                    message=str(exc)[:500] or "La mise ÃƒÂ  jour a ÃƒÂ©chouÃƒÂ©.",
+                    message=str(exc)[:500] or "La mise à jour a échoué.",
                     error_code=getattr(exc, "error_code", "update_validation_failed"),
                     backup_created=context["backup_created"],
                     rollback_performed=context["rollback_performed"],
@@ -1971,17 +1971,17 @@ def main() -> None:
     parser.add_argument(
         "--jobs-dir",
         default=str(Path(__file__).resolve().parent.parent / "host_terminal_jobs"),
-        help="Dossier de communication local partagÃƒÂ© avec Docker.",
+        help="Dossier de communication local partagé avec Docker.",
     )
     parser.add_argument(
         "--install-dir",
         default=str(PROJECT_ROOT),
-        help="Dossier de lÃ¢â‚¬â„¢installation AI-Deep Monitor ÃƒÂ  maintenir.",
+        help="Dossier de l’installation AI-Deep Monitor à maintenir.",
     )
     parser.add_argument(
         "--state-dir",
         default="",
-        help="Dossier privÃƒÂ© utilisÃƒÂ© pour les ÃƒÂ©tats de restauration.",
+        help="Dossier privé utilisé pour les états de restauration.",
     )
     args = parser.parse_args()
     signal.signal(signal.SIGINT, request_stop)
