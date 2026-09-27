@@ -2,7 +2,9 @@
 
 ## Application v0.1.44
 
-- Installation Windows/Linux/Jetson sur v0.1.44 par defaut.
+- Installation Windows/Linux/Jetson sur v0.1.44 par defaut ; verification des mises a jour de production sur main.
+- Agent de maintenance 3.6.5 : la mise a jour integree respecte la destination reseau configuree, y compris avec un ancien agent encore actif.
+- Detection du type de montage corrigee quand plusieurs entrees designent le meme partage reseau.
 - Montage SMB corrige : capacite CIFS, reutilisation du volume monte et identifiant de reponse signee.
 - Repli vers NFS v3 lorsque le serveur ne prend pas en charge NFS v4.
 - La mise a jour normale actualise et reinstalle l'agent Linux meme si les images applicatives sont deja a jour.
