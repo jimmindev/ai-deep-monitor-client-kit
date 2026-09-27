@@ -169,8 +169,6 @@ class Locations:
         if target.is_symlink():
             raise ValueError("Point de montage réseau non sûr.")
         target.mkdir(mode=0o755, exist_ok=True)
-        if target.stat().st_uid != 0:
-            raise ValueError("Point de montage réseau non sûr.")
         protocol, host, share = self.network_fields(record)
         expected = ("cifs", f"//{host}/{share}") if protocol == "SMB" else ("nfs4", f"{host}:{share}")
         current = mount_details(target)
@@ -178,6 +176,8 @@ class Locations:
             if current[1] != expected[1] or (current[0] not in {"nfs", "nfs4"} if protocol == "NFS" else current[0] != "cifs"):
                 raise ValueError("Un autre volume occupe ce point de montage.")
             return target
+        if target.stat().st_uid != 0:
+            raise ValueError("Point de montage réseau non sûr.")
         with socket.create_connection((host, 445 if protocol == "SMB" else 2049), timeout=2):
             pass
         if protocol == "SMB":
@@ -237,7 +237,7 @@ class Locations:
         except (OSError, ValueError, subprocess.SubprocessError) as exc:
             raise ValueError("Le partage est monté sur l’hôte, mais l’API ou le planificateur ne peut pas y écrire. Vérifiez la propagation Docker et les droits réseau, puis réessayez.") from exc
         return {"path": container_path, "protocol": protocol,
-                "host": host, "share": share, "id": identifier, "host_path": str(target)}
+                "host": host, "share": share, "location_id": identifier, "host_path": str(target)}
 
     def probe_containers(self, container_path):
         compose = ["docker", "compose", "--project-directory", str(self.install),
