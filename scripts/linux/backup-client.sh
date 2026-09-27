@@ -42,7 +42,7 @@ if [[ -z "$DESTINATION_DIR" ]]; then
 fi
 [[ -n "$DESTINATION_DIR" && -d "$DESTINATION_DIR" ]] ||
   die "Indiquez --destination-dir sur un partage SMB/NFS monte ou MAINTENANCE_BACKUP_PATH dans .env."
-filesystem_type="$(findmnt -T "$DESTINATION_DIR" -n -o FSTYPE 2>/dev/null || true)"
+filesystem_type="$(findmnt -T "$DESTINATION_DIR" --first-only -n -o FSTYPE 2>/dev/null || true)"
 [[ "$filesystem_type" == "cifs" || "$filesystem_type" == "nfs" || "$filesystem_type" == "nfs4" ]] ||
   die "La sauvegarde de maintenance exige un partage reseau SMB ou NFS monte."
 
