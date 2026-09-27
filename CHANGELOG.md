@@ -1,5 +1,12 @@
 # Evolutions du Client Kit
 
+## Application v0.1.44
+
+- Installation Windows/Linux/Jetson sur v0.1.44 par defaut.
+- Montage SMB corrige : capacite CIFS, reutilisation du volume monte et identifiant de reponse signee.
+- Repli vers NFS v3 lorsque le serveur ne prend pas en charge NFS v4.
+- La mise a jour normale actualise et reinstalle l'agent Linux meme si les images applicatives sont deja a jour.
+
 ## Application v0.1.43
 
 - Les sauvegardes applicatives exigent un partage SMB ou NFS monte par le service hote Linux ; les anciens fichiers locaux restent accessibles en lecture pour restauration.
