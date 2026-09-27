@@ -1,5 +1,6 @@
 import importlib.util
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -37,6 +38,34 @@ class NetworkMountTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "non sûr"):
                 self.agent.mount_network("share-id", self.record)
             connect.assert_not_called()
+
+    def test_nfs3_fallback_when_server_does_not_support_nfs4(self):
+        self.target.stat.return_value.st_uid = 0
+        record = {"protocol": "NFS", "host": "192.168.1.97", "share": "/srv/nfs-test"}
+        unsupported = subprocess.CalledProcessError(32, "mount", stderr=b"mount.nfs: Protocol not supported")
+        with patch.object(locations, "NETWORK_MOUNTS") as root, patch.object(
+            locations, "mount_details", side_effect=[None, ("nfs", "192.168.1.97:/srv/nfs-test")]
+        ), patch.object(locations.socket, "create_connection"), patch.object(
+            locations.subprocess, "run", side_effect=[unsupported, Mock()]
+        ) as run:
+            root.__truediv__.return_value = self.target
+            self.assertIs(self.agent.mount_network("share-id", record), self.target)
+        self.assertIn("vers=4,", run.call_args_list[0].args[0][4])
+        self.assertIn("vers=3,", run.call_args_list[1].args[0][4])
+
+    def test_nfs_permission_failure_does_not_downgrade(self):
+        self.target.stat.return_value.st_uid = 0
+        record = {"protocol": "NFS", "host": "192.168.1.97", "share": "/srv/nfs-test"}
+        denied = subprocess.CalledProcessError(32, "mount", stderr=b"mount.nfs: access denied by server")
+        with patch.object(locations, "NETWORK_MOUNTS") as root, patch.object(
+            locations, "mount_details", return_value=None
+        ), patch.object(locations.socket, "create_connection"), patch.object(
+            locations.subprocess, "run", side_effect=denied
+        ) as run:
+            root.__truediv__.return_value = self.target
+            with self.assertRaises(subprocess.CalledProcessError):
+                self.agent.mount_network("share-id", record)
+            run.assert_called_once()
 
     def test_share_identifier_does_not_replace_signed_request_identifier(self):
         with tempfile.TemporaryDirectory() as temporary, patch.object(

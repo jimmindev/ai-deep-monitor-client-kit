@@ -188,9 +188,17 @@ class Locations:
                        "file_mode=0660,dir_mode=0770,nosuid,nodev,noexec")
             command = ["mount", "-t", "cifs", "-o", options, f"//{host}/{share}", str(target)]
         else:
-            command = ["mount", "-t", "nfs", "-o", "vers=4,soft,timeo=100,retrans=2,nosuid,nodev,noexec",
-                       f"{host}:{share}", str(target)]
-        subprocess.run(command, check=True, capture_output=True, timeout=30)
+            options = "soft,timeo=100,retrans=2,nosuid,nodev,noexec"
+            command = ["mount", "-t", "nfs", "-o", f"vers=4,{options}", f"{host}:{share}", str(target)]
+        try:
+            subprocess.run(command, check=True, capture_output=True, timeout=30)
+        except subprocess.CalledProcessError as error:
+            message = error.stderr.decode(errors="replace") if isinstance(error.stderr, bytes) else str(error.stderr or "")
+            if protocol != "NFS" or "protocol not supported" not in message.lower():
+                raise
+            fallback = command.copy()
+            fallback[4] = f"vers=3,{options}"
+            subprocess.run(fallback, check=True, capture_output=True, timeout=30)
         current = mount_details(target)
         if not current or current[1] != expected[1] or (current[0] not in {"nfs", "nfs4"} if protocol == "NFS" else current[0] != "cifs"):
             raise ValueError("Le partage réseau n’a pas été monté.")
