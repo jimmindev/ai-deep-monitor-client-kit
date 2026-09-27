@@ -59,8 +59,8 @@ ExecStart=${PYTHON_BIN} /opt/ai-deep-monitor-storage/auto_mount.py --uid ${APP_U
 Restart=always
 RestartSec=5
 NoNewPrivileges=true
-CapabilityBoundingSet=CAP_SYS_ADMIN CAP_CHOWN CAP_DAC_OVERRIDE CAP_FOWNER
-AmbientCapabilities=CAP_SYS_ADMIN CAP_CHOWN CAP_DAC_OVERRIDE CAP_FOWNER
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_CHOWN CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH CAP_FOWNER
+AmbientCapabilities=CAP_SYS_ADMIN CAP_CHOWN CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH CAP_FOWNER
 
 [Install]
 WantedBy=multi-user.target
