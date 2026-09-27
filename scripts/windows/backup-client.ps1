@@ -53,8 +53,12 @@ docker compose version | Out-Null
 
 $envValues = Read-DotEnv -Path $envPath
 # Compatibility with an older running agent after its Client Kit refresh.
-$legacyDestination = Join-Path $InstallDir ".host-agent-state\update-backups"
-if ($DestinationDir -and $DestinationDir.TrimEnd('\') -eq $legacyDestination.TrimEnd('\')) {
+$stateRoot = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { $InstallDir }
+$legacyDestinations = @(
+  (Join-Path $InstallDir ".host-agent-state\update-backups"),
+  (Join-Path $stateRoot "AI-Deep-Monitor\HostAgent\update-backups")
+)
+if ($DestinationDir -and $DestinationDir.TrimEnd('\') -in $legacyDestinations) {
   $DestinationDir = ""
 }
 if (-not $DestinationDir) { $DestinationDir = $envValues["MAINTENANCE_BACKUP_UNC"] }
