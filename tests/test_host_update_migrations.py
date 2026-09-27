@@ -13,6 +13,15 @@ agent = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(agent)
 
 class UpdateMigrationTest(unittest.TestCase):
+    def test_safety_backup_uses_script_network_destination(self):
+        host = object.__new__(agent.HostAgent)
+        host.install_dir = Path("/test/install")
+        with patch.object(agent.shutil, "which", return_value="/test/shell"):
+            _, _, command, _ = host.maintenance_commands()
+        self.assertNotIn("--destination-dir", command)
+        self.assertNotIn("-DestinationDir", command)
+        self.assertFalse(any("update-backups" in part for part in command))
+
     def test_update_and_rollback_keep_linux_storage_mounts(self):
         with tempfile.TemporaryDirectory() as temporary:
             install = Path(temporary)
