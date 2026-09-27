@@ -42,7 +42,7 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.6.4"
+AGENT_VERSION = "3.6.5"
 HOST_TIME_DIR = Path(os.getenv("AI_DEEP_HOST_TIME_DIR", "/var/lib/ai-deep-monitor-host-time"))
 MAX_DATABASE_MIGRATION_SECONDS = 6 * 60 * 60
 MIGRATION_STATUS_INTERVAL_SECONDS = 30
@@ -993,7 +993,6 @@ class HostAgent:
         self.state_dir = (
             state_dir or (self.install_dir / ".host-agent-state")
         ).resolve()
-        self.safety_backup_dir = self.state_dir / "update-backups"
         self.last_api_health_state = "inconnu"
         self._gpu_snapshot = _empty_gpu_snapshot()
         self._gpu_checked = -120.0
@@ -1008,12 +1007,10 @@ class HostAgent:
             self.update_processing,
             self.update_status,
             self.state_dir,
-            self.safety_backup_dir,
         ):
             directory.mkdir(parents=True, exist_ok=True)
         if os.name != "nt":
             os.chmod(self.state_dir, 0o700)
-            os.chmod(self.safety_backup_dir, 0o700)
         # If the host rebooted during maintenance, let the signed job resume.
         # Terminal jobs are short lived and keep their existing cleanup rules.
         for interrupted in self.update_processing.glob("*.json"):
@@ -1314,8 +1311,6 @@ class HostAgent:
                 str(backup),
                 "-InstallDir",
                 str(self.install_dir),
-                "-DestinationDir",
-                str(self.safety_backup_dir),
             ], common + [str(update)]
 
         bash = shutil.which("bash")
@@ -1328,8 +1323,6 @@ class HostAgent:
             str(backup),
             "--install-dir",
             str(self.install_dir),
-            "--destination-dir",
-            str(self.safety_backup_dir),
         ], [bash, str(update)]
 
     def rollback_update(self, env_backup: Path) -> bool:

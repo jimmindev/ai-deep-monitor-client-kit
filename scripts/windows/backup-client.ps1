@@ -52,6 +52,15 @@ docker version | Out-Null
 docker compose version | Out-Null
 
 $envValues = Read-DotEnv -Path $envPath
+# Compatibility with an older running agent after its Client Kit refresh.
+$stateRoot = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { $InstallDir }
+$legacyDestinations = @(
+  (Join-Path $InstallDir ".host-agent-state\update-backups"),
+  (Join-Path $stateRoot "AI-Deep-Monitor\HostAgent\update-backups")
+)
+if ($DestinationDir -and $DestinationDir.TrimEnd('\') -in $legacyDestinations) {
+  $DestinationDir = ""
+}
 if (-not $DestinationDir) { $DestinationDir = $envValues["MAINTENANCE_BACKUP_UNC"] }
 if (-not $DestinationDir -or -not $DestinationDir.StartsWith("\\")) {
   throw "Indiquez -DestinationDir \\serveur\partage\dossier ou configurez MAINTENANCE_BACKUP_UNC dans .env."

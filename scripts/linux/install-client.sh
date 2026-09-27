@@ -73,7 +73,7 @@ Usage: ./install-client.sh [options]
 
 Options:
   --install-dir CHEMIN       Dossier cible (defaut: ~/ai-deep-monitor)
-  --app-version VERSION      Version applicative (defaut: v0.1.43)
+  --app-version VERSION      Version applicative (defaut: v0.1.44)
   --github-owner NOM         Proprietaire des images GHCR
   --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
@@ -245,7 +245,7 @@ APP_CHANNEL=stable
 DOCKER_PLATFORM=${DOCKER_PLATFORM}
 UPDATE_CHECK_ENABLED=true
 UPDATE_CHECK_CHANNEL=stable
-UPDATE_CHECK_BRANCH=preprod
+UPDATE_CHECK_BRANCH=main
 UPDATE_CHECK_USER=
 UPDATE_CHECK_TOKEN=
 

@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [string]$AppVersion = "v0.1.43",
+  [string]$AppVersion = "v0.1.44",
   [string]$GithubOwner = "jimmindev",
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
@@ -484,7 +484,7 @@ APP_CHANNEL=stable
 DOCKER_PLATFORM=$dockerPlatform
 UPDATE_CHECK_ENABLED=true
 UPDATE_CHECK_CHANNEL=stable
-UPDATE_CHECK_BRANCH=preprod
+UPDATE_CHECK_BRANCH=main
 UPDATE_CHECK_USER=
 UPDATE_CHECK_TOKEN=
 

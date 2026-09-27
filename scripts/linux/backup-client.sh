@@ -29,12 +29,20 @@ require_command gzip
 require_command sha256sum
 require_command findmnt
 
+# Older running host agents pass this local path after refreshing the kit.
+# Resolve only that legacy default through the configured network destination;
+# explicit local destinations remain rejected by findmnt below.
+if [[ "$DESTINATION_DIR" == "${INSTALL_DIR}/.host-agent-state/update-backups" ||
+      "$DESTINATION_DIR" == "/var/lib/ai-deep-monitor-host-terminal/update-backups" ]]; then
+  DESTINATION_DIR=""
+fi
+
 if [[ -z "$DESTINATION_DIR" ]]; then
   DESTINATION_DIR="$(read_env_value "$ENV_FILE" MAINTENANCE_BACKUP_PATH)"
 fi
 [[ -n "$DESTINATION_DIR" && -d "$DESTINATION_DIR" ]] ||
   die "Indiquez --destination-dir sur un partage SMB/NFS monte ou MAINTENANCE_BACKUP_PATH dans .env."
-filesystem_type="$(findmnt -T "$DESTINATION_DIR" -n -o FSTYPE 2>/dev/null || true)"
+filesystem_type="$(findmnt -T "$DESTINATION_DIR" --first-only -n -o FSTYPE 2>/dev/null || true)"
 [[ "$filesystem_type" == "cifs" || "$filesystem_type" == "nfs" || "$filesystem_type" == "nfs4" ]] ||
   die "La sauvegarde de maintenance exige un partage reseau SMB ou NFS monte."
 
