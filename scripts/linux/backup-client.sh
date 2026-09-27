@@ -29,6 +29,14 @@ require_command gzip
 require_command sha256sum
 require_command findmnt
 
+# Older running host agents pass this local path after refreshing the kit.
+# Resolve only that legacy default through the configured network destination;
+# explicit local destinations remain rejected by findmnt below.
+if [[ "$DESTINATION_DIR" == "${INSTALL_DIR}/.host-agent-state/update-backups" ||
+      "$DESTINATION_DIR" == "/var/lib/ai-deep-monitor-host-terminal/update-backups" ]]; then
+  DESTINATION_DIR=""
+fi
+
 if [[ -z "$DESTINATION_DIR" ]]; then
   DESTINATION_DIR="$(read_env_value "$ENV_FILE" MAINTENANCE_BACKUP_PATH)"
 fi
