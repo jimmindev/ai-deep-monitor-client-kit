@@ -115,6 +115,9 @@ ProtectHome=read-only
 ReadOnlyPaths="${INSTALL_DIR}"
 ReadWritePaths="${STATE_DIR}" "${JOBS_DIR}" "${PROJECT_ROOT}"
 ReadWritePaths="${TIME_DIR}/incoming"
+# Les sauvegardes de maintenance utilisent les partages réseau gérés par
+# l'application. Garder cette exception après chaque réparation de l'agent.
+ReadWritePaths=-/mnt/ai-deep-monitor-network
 PrivateTmp=true
 PrivateDevices=true
 ProtectClock=true
