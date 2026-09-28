@@ -1,3 +1,8 @@
+# v0.1.46
+
+- Installation et mise à jour vers la version applicative v0.1.46.
+- Accès aux partages réseau de maintenance conservé après réparation.
+
 # Evolutions du Client Kit
 
 ## v0.1.45
