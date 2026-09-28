@@ -1,3 +1,7 @@
+# v0.1.48 / agent 3.6.7
+
+Oublier les connexions SMB/NFS sans supprimer les fichiers distants. Protection des montages occupés et des sauvegardes de maintenance.
+
 # v0.1.47
 
 - Installation et mise à jour de l’application v0.1.47 par défaut.
