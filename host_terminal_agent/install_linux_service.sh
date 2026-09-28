@@ -66,6 +66,10 @@ install -o root -g root -m 0755 "${SCRIPT_DIR}/time_helper.py" "${INSTALL_DIR}/t
 install -o root -g root -m 0644 "${POLICY_SOURCE}" "${INSTALL_DIR}/terminal_policy.py"
 install -d -o "${RUN_USER}" -g "${QUEUE_GROUP}" -m 0770 "${STATE_DIR}"
 install -d -o "${RUN_USER}" -g "${QUEUE_GROUP}" -m 2770 "${JOBS_DIR}"
+# Créer la racine avant le démarrage : systemd doit pouvoir rendre cette
+# arborescence accessible même si le premier partage est ajouté plus tard.
+[[ ! -L /mnt/ai-deep-monitor-network ]] || fail "répertoire réseau non sûr."
+install -d -o root -g root -m 0755 /mnt/ai-deep-monitor-network
 [[ ! -L "${TIME_DIR}" ]] || fail "répertoire horaire non sûr."
 install -d -o root -g "${QUEUE_GROUP}" -m 0750 "${TIME_DIR}"
 install -d -o root -g "${QUEUE_GROUP}" -m 0730 "${TIME_DIR}/incoming"
