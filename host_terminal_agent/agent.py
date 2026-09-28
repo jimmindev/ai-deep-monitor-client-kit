@@ -42,7 +42,7 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.6.5"
+AGENT_VERSION = "3.6.6"
 HOST_TIME_DIR = Path(os.getenv("AI_DEEP_HOST_TIME_DIR", "/var/lib/ai-deep-monitor-host-time"))
 MAX_DATABASE_MIGRATION_SECONDS = 6 * 60 * 60
 MIGRATION_STATUS_INTERVAL_SECONDS = 30
@@ -345,6 +345,34 @@ def configure_host_time(timezone: str, ntp_server: str) -> dict:
         time.sleep(0.1)
     incoming.unlink(missing_ok=True)
     raise ValueError("Le service de réglage de l’heure n’a pas répondu.")
+
+
+def read_host_time() -> dict:
+    """Read the host clock and systemd state without changing either."""
+    values = {}
+    try:
+        result = subprocess.run(
+            ["timedatectl", "show", "--property=Timezone", "--property=NTP", "--property=NTPSynchronized"],
+            capture_output=True, text=True, timeout=3, check=True,
+        )
+        values = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    server = None
+    try:
+        result = subprocess.run(
+            ["timedatectl", "show-timesync", "--property=ServerName", "--value"],
+            capture_output=True, text=True, timeout=3, check=True,
+        )
+        server = result.stdout.strip() or None
+    except (OSError, subprocess.SubprocessError):
+        pass
+    def boolean(key):
+        return {"yes": True, "no": False}.get(values.get(key))
+    return {"ok": True, "epoch_ms": time.time() * 1000,
+            "timezone": values.get("Timezone") or None,
+            "ntp_enabled": boolean("NTP"), "synchronized": boolean("NTPSynchronized"),
+            "ntp_server": server}
 
 
 def time_helper_ready() -> bool:
@@ -1083,6 +1111,7 @@ class HostAgent:
             "platform": platform_label(self.host_family),
             "shells": self.shells,
             "privileged": is_privileged(),
+            "time_status_supported": self.host_family in {"linux", "jetson"},
             "time_config_supported": self.host_family in {"linux", "jetson"} and time_helper_ready(),
             "update_supported": update["supported"],
             "update_reason": update["reason"],
@@ -1197,6 +1226,8 @@ class HostAgent:
             if str(payload.get("id")) != job_id:
                 raise ValueError("Identifiant de travail incohérent.")
             operation = payload.get("operation")
+            if isinstance(operation, dict) and operation.get("kind") == "read_time":
+                return self.write_job_response(job_path, job_id, read_host_time(), started)
             if isinstance(operation, dict) and operation.get("kind") == "configure_time":
                 response = configure_host_time(str(operation.get("timezone") or ""), str(operation.get("ntp_server") or ""))
                 return self.write_job_response(job_path, job_id, response, started)

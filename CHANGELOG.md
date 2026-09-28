@@ -1,5 +1,9 @@
 # Evolutions du Client Kit
 
+## v0.1.45
+
+Version applicative par défaut 0.1.45 et agent 3.6.6 avec lecture signée de l’horloge, du fuseau et de l’état NTP du serveur.
+
 ## Application v0.1.44
 
 - Installation Windows/Linux/Jetson sur v0.1.44 par defaut ; verification des mises a jour de production sur main.
