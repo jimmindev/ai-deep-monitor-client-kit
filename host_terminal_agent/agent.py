@@ -42,7 +42,7 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.6.6"
+AGENT_VERSION = "3.6.7"
 HOST_TIME_DIR = Path(os.getenv("AI_DEEP_HOST_TIME_DIR", "/var/lib/ai-deep-monitor-host-time"))
 MAX_DATABASE_MIGRATION_SECONDS = 6 * 60 * 60
 MIGRATION_STATUS_INTERVAL_SECONDS = 30

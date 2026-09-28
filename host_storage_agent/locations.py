@@ -247,6 +247,43 @@ class Locations:
         return {"path": container_path, "protocol": protocol,
                 "host": host, "share": share, "location_id": identifier, "host_path": str(target)}
 
+    def remove_network(self, payload):
+        identifier = str(payload.get("location_id") or "")
+        record = self.records.get(identifier)
+        if not re.fullmatch(r"[0-9a-f]{24}", identifier) or not record or record.get("kind") != "network":
+            raise ValueError("Ce partage réseau n’est pas configuré.")
+        target = NETWORK_MOUNTS / identifier
+        # Maintenance checkpoints must retain their destination for client updates.
+        env = self.install / ".env"
+        for line in env.read_text().splitlines() if env.exists() else []:
+            key, separator, value = line.partition("=")
+            if separator and key.strip() == "MAINTENANCE_BACKUP_PATH":
+                configured = Path(value.strip().strip("\"'"))
+                if configured == target or configured.is_relative_to(target):
+                    raise ValueError("Ce partage est utilisé pour les sauvegardes de maintenance. Configurez une autre destination avant de le retirer.")
+        if target.is_symlink():
+            raise ValueError("Point de montage réseau non sûr.")
+        current = mount_details(target)
+        if current:
+            protocol, host, share = self.network_fields(record)
+            expected = f"//{host}/{share}" if protocol == "SMB" else f"{host}:{share}"
+            if current[1] != expected or current[0] not in ({"cifs"} if protocol == "SMB" else {"nfs", "nfs4"}):
+                raise ValueError("Un autre volume occupe ce point de montage.")
+            try:
+                # Never force/lazy unmount: a running operation must finish first.
+                subprocess.run(["umount", str(target)], check=True, capture_output=True, timeout=15)
+            except subprocess.SubprocessError:
+                raise ValueError("Le partage est occupé. Réessayez après la fin des opérations en cours.") from None
+        remaining = {key: value for key, value in self.records.items() if key != identifier}
+        temporary = self.registry.with_suffix(".tmp")
+        temporary.write_text(json.dumps(remaining))
+        os.chmod(temporary, 0o600)
+        temporary.replace(self.registry)
+        self.records = remaining
+        (STATE / f"{identifier}.credentials").unlink(missing_ok=True)
+        # Do not traverse or delete the remote filesystem, even when offline.
+        return {"location_id": identifier, "status": "removed"}
+
     def probe_containers(self, container_path):
         compose = ["docker", "compose", "--project-directory", str(self.install),
                    "-f", str(self.install / "docker-compose.release.yml"),
@@ -321,6 +358,8 @@ class Locations:
         return {"host_path": str(source), "removed_archives": len(found)}
 
     def execute(self, payload):
+        if payload.get("action") == "network_remove":
+            return self.remove_network(payload)
         if payload.get("action") == "network_create":
             return self.create_network(payload)
         parent = checked_path(payload.get("path", "/"), self.install)
@@ -405,7 +444,7 @@ class Locations:
                     continue
                 try:
                     result = {"id": request.stem, "ok": True, **self.execute(payload)}
-                    if payload.get("action") in {"create", "delete", "network_create"}:
+                    if payload.get("action") in {"create", "delete", "network_create", "network_remove"}:
                         self.publish_status()
                 except (OSError, ValueError, subprocess.SubprocessError) as error:
                     result = {"id": request.stem, "ok": False, "error": "Ce dossier existe déjà. Choisissez un nouveau nom." if isinstance(error, FileExistsError) else str(error)}
