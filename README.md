@@ -6,7 +6,7 @@ l'agent terminal local restreint. L'application est livree sous forme d'images
 Docker privees publiees sur GHCR.
 
 Le kit suit un canal permanent sans numero de version propre. La version
-applicative stable installee par defaut est `v0.1.46`.
+applicative stable installee par defaut est `v0.1.47`.
 
 Le guide pas a pas est disponible dans
 [docs/installation.md](docs/installation.md).
@@ -370,7 +370,7 @@ Linux:
 
 ```bash
 ~/ai-deep-monitor/ai-deep-monitor.sh restore \
-  /mnt/nas/sauvegardes/ai-deep-monitor-v0.1.46-DATE.tar.gz
+  /mnt/nas/sauvegardes/ai-deep-monitor-v0.1.47-DATE.tar.gz
 ```
 
 Windows:

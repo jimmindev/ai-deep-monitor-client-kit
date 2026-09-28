@@ -1,3 +1,7 @@
+# v0.1.47
+
+- Installation et mise à jour de l’application v0.1.47 par défaut.
+
 # v0.1.46
 
 - Installation et mise à jour vers la version applicative v0.1.46.
