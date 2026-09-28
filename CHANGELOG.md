@@ -1,3 +1,7 @@
+# Agent 3.6.8
+
+Autoriser le retrait administratif des destinations de maintenance, sans suppression des archives distantes. Refuser le retrait pendant une mise à jour active.
+
 # v0.1.48 / agent 3.6.7
 
 Oublier les connexions SMB/NFS sans supprimer les fichiers distants. Protection des montages occupés et des sauvegardes de maintenance.

@@ -253,14 +253,24 @@ class Locations:
         if not re.fullmatch(r"[0-9a-f]{24}", identifier) or not record or record.get("kind") != "network":
             raise ValueError("Ce partage réseau n’est pas configuré.")
         target = NETWORK_MOUNTS / identifier
-        # Maintenance checkpoints must retain their destination for client updates.
-        env = self.install / ".env"
-        for line in env.read_text().splitlines() if env.exists() else []:
-            key, separator, value = line.partition("=")
-            if separator and key.strip() == "MAINTENANCE_BACKUP_PATH":
-                configured = Path(value.strip().strip("\"'"))
-                if configured == target or configured.is_relative_to(target):
-                    raise ValueError("Ce partage est utilisé pour les sauvegardes de maintenance. Configurez une autre destination avant de le retirer.")
+        # Administrators may forget a maintenance destination too. Keep its
+        # configured path: backup-client refuses unmounted/local filesystems,
+        # and reconnecting the same share restores the original destination.
+        try:
+            updates = self.jobs / "updates"
+            latest = json.loads((updates / "latest.json").read_text())
+            pointer = latest["payload"]
+            if hmac.compare_digest(latest["signature"], sign(self.key, pointer)):
+                job_id = str(pointer.get("job_id") or "")
+                if re.fullmatch(r"[0-9a-f-]{36}", job_id):
+                    envelope = json.loads((updates / "status" / f"{job_id}.json").read_text())
+                    status = envelope["payload"]
+                    if (hmac.compare_digest(envelope["signature"], sign(self.key, status))
+                            and status.get("phase") in {"queued", "validating", "backing_up", "downloading", "restarting", "health_check", "rolling_back"}
+                            and time.time() - float(status.get("updated_at", 0)) < 7200):
+                        raise ValueError("Le partage est occupé. Réessayez après la fin des opérations en cours.")
+        except (FileNotFoundError, KeyError, TypeError, json.JSONDecodeError):
+            pass
         if target.is_symlink():
             raise ValueError("Point de montage réseau non sûr.")
         current = mount_details(target)

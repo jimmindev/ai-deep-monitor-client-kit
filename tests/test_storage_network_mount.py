@@ -86,3 +86,33 @@ class NetworkMountTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NetworkRemovalTest(unittest.TestCase):
+    def test_admin_can_forget_maintenance_share_without_deleting_archives(self):
+        import json
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            identifier = "a"*24
+            target = base / identifier
+            target.mkdir()
+            (target / "full.admb").write_bytes(b"keep")
+            credentials = base / f"{identifier}.credentials"
+            credentials.write_text("secret")
+            worker = locations.Locations.__new__(locations.Locations)
+            worker.jobs = base / "jobs"
+            worker.key = b"k"*32
+            worker.install = base / "install"
+            worker.install.mkdir()
+            configured = f"MAINTENANCE_BACKUP_PATH={target}/maintenance"
+            (worker.install / ".env").write_text(configured)
+            worker.records = {identifier: {"kind": "network", "protocol": "SMB", "host": "nas", "share": "demo"}}
+            worker.registry = base / "locations.json"
+            worker.registry.write_text(json.dumps(worker.records))
+            with patch.object(locations, "NETWORK_MOUNTS", base), patch.object(locations, "STATE", base), patch.object(locations, "mount_details", return_value=("cifs", "//nas/demo")), patch.object(locations.subprocess, "run") as run:
+                worker.remove_network({"location_id": identifier})
+                self.assertEqual(run.call_args.args[0], ["umount", str(target)])
+            self.assertEqual(worker.records, {})
+            self.assertFalse(credentials.exists())
+            self.assertEqual((target / "full.admb").read_bytes(), b"keep")
+            self.assertEqual((worker.install / ".env").read_text(), configured)
