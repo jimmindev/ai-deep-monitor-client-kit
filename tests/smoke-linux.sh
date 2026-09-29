@@ -86,7 +86,8 @@ printf '\nCLIENT_KIT_SELF_REFRESH_OK\n' >>"${fixture_root}/docs/installation.md"
 )
 (
   cd "$CLIENT_KIT_RELEASE_DIR"
-  sha256sum ai-deep-monitor-client-kit.tar.gz >ai-deep-monitor-client-kit-SHA256.txt
+  checksum="$(sha256sum ai-deep-monitor-client-kit.tar.gz)"
+  printf '%s\r\n' "$checksum" >ai-deep-monitor-client-kit-SHA256.txt
 )
 printf 'ANCIEN_CLIENT_KIT\n' >"${INSTALL_DIR}/README_CLIENT.md"
 AI_DEEP_MONITOR_CLIENT_KIT_RELEASE_BASE="$CLIENT_KIT_RELEASE_DIR" \

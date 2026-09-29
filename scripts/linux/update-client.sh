@@ -84,7 +84,7 @@ stage_latest_client_kit() {
     curl -fL --retry 3 --retry-delay 2 -o "$checksum_file" "${release_base}/${checksum_name}"
   fi
 
-  expected_hash="$(awk -v file="$archive_name" '$2 == file { print $1; exit }' "$checksum_file")"
+  expected_hash="$(awk -v file="$archive_name" '{ sub(/\r$/, "", $2); if ($2 == file) { print $1; exit } }' "$checksum_file")"
   [[ "$expected_hash" =~ ^[0-9a-fA-F]{64}$ ]] ||
     die "Somme SHA256 du Client Kit absente ou invalide."
   actual_hash="$(sha256sum "$archive_file" | awk '{ print $1 }')"

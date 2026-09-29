@@ -64,12 +64,11 @@ def build(output_dir: Path) -> None:
                 entry.mode = mode
                 archive.addfile(entry, io.BytesIO(data))
         checksum_path = scratch_path / f"{PACKAGE_ROOT}-SHA256.txt"
-        checksum_path.write_text(
+        checksum_path.write_bytes(
             "".join(
                 f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n"
                 for path in (zip_path, tar_path)
-            ),
-            encoding="utf-8",
+            ).encode("ascii"),
         )
         for path in (zip_path, tar_path, checksum_path):
             os.replace(path, output_dir / path.name)
