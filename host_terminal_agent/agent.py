@@ -1734,8 +1734,8 @@ class HostAgent:
                         step="Sauvegarde de sécurité",
                         reason=backup_reason,
                         hint=(
-                            "Actualisez le Client Kit puis connectez un partage SMB ou NFS dans Sauvegarde / Restauration. "
-                            "Si plusieurs partages sont montés, indiquez MAINTENANCE_BACKUP_PATH dans .env."
+                            "Actualisez le Client Kit puis réessayez. Sans partage réseau, la sauvegarde de sécurité "
+                            "utilisera un volume Docker. Si plusieurs partages sont montés, indiquez MAINTENANCE_BACKUP_PATH dans .env."
                             if "MAINTENANCE_BACKUP_PATH" in backup_reason
                             else "Vérifiez l’espace disque disponible et l’accès de l’agent à Docker."
                         ),

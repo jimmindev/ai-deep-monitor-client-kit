@@ -7,11 +7,13 @@ source "${SCRIPT_DIR}/client-common.sh"
 
 INSTALL_DIR="${HOME}/ai-deep-monitor"
 DESTINATION_DIR=""
+explicit_destination=false
+destination_kind="network"
 
 while (($#)); do
   case "$1" in
     --install-dir) INSTALL_DIR="$2"; shift 2 ;;
-    --destination-dir) DESTINATION_DIR="$2"; shift 2 ;;
+    --destination-dir) DESTINATION_DIR="$2"; explicit_destination=true; shift 2 ;;
     -h|--help)
       printf 'Usage: ./backup-client.sh [--install-dir CHEMIN] [--destination-dir CHEMIN]\n'
       exit 0
@@ -30,7 +32,7 @@ require_command sha256sum
 require_command findmnt
 
 # Older running host agents pass this local path after refreshing the kit.
-# Resolve only that legacy default through the configured network destination;
+# Resolve only that legacy default through the selected maintenance destination;
 # explicit local destinations remain rejected by findmnt below.
 if [[ "$DESTINATION_DIR" == "${INSTALL_DIR}/.host-agent-state/update-backups" ||
       "$DESTINATION_DIR" == "/var/lib/ai-deep-monitor-host-terminal/update-backups" ]]; then
@@ -39,6 +41,14 @@ fi
 
 if [[ -z "$DESTINATION_DIR" ]]; then
   DESTINATION_DIR="$(read_env_value "$ENV_FILE" MAINTENANCE_BACKUP_PATH)"
+fi
+if [[ "$explicit_destination" == "false" && -n "$DESTINATION_DIR" ]]; then
+  configured_type="$(findmnt -T "$DESTINATION_DIR" --first-only -n -o FSTYPE 2>/dev/null || true)"
+  if [[ ! -d "$DESTINATION_DIR" ||
+        ( "$configured_type" != "cifs" && "$configured_type" != "nfs" && "$configured_type" != "nfs4" ) ]]; then
+    warn "Le partage de maintenance configure est indisponible; recherche d'une autre destination."
+    DESTINATION_DIR=""
+  fi
 fi
 if [[ -z "$DESTINATION_DIR" ]]; then
   # A single share already connected in the application is unambiguous.
@@ -60,16 +70,23 @@ if [[ -z "$DESTINATION_DIR" ]]; then
   elif ((${#network_shares[@]} > 1)); then
     die "Plusieurs partages reseau sont montes. Choisissez MAINTENANCE_BACKUP_PATH dans .env avant la mise a jour."
   else
-    die "Aucun partage SMB/NFS monte. Connectez un partage reseau dans l'application ou configurez MAINTENANCE_BACKUP_PATH dans .env."
+    destination_kind="docker"
   fi
 fi
-[[ -d "$DESTINATION_DIR" ]] ||
-  die "Dossier de maintenance introuvable: configurez MAINTENANCE_BACKUP_PATH sur un partage SMB/NFS monte."
-filesystem_type="$(findmnt -T "$DESTINATION_DIR" --first-only -n -o FSTYPE 2>/dev/null || true)"
-[[ "$filesystem_type" == "cifs" || "$filesystem_type" == "nfs" || "$filesystem_type" == "nfs4" ]] ||
-  die "La sauvegarde de maintenance exige un partage reseau SMB ou NFS monte."
+if [[ "$destination_kind" == "network" ]]; then
+  [[ -d "$DESTINATION_DIR" ]] ||
+    die "Dossier de maintenance introuvable: configurez MAINTENANCE_BACKUP_PATH sur un partage SMB/NFS monte."
+  filesystem_type="$(findmnt -T "$DESTINATION_DIR" --first-only -n -o FSTYPE 2>/dev/null || true)"
+  [[ "$filesystem_type" == "cifs" || "$filesystem_type" == "nfs" || "$filesystem_type" == "nfs4" ]] ||
+    die "La sauvegarde de maintenance exige un partage reseau SMB ou NFS monte."
+fi
 
 project_name="$(project_name_from_dir "$INSTALL_DIR")"
+if [[ "$destination_kind" == "docker" ]]; then
+  volume_name="${project_name}_maintenance_backups"
+  docker_exec volume create --label ai-deep-monitor.purpose=maintenance-backup "$volume_name" >/dev/null
+  log "Aucun partage reseau monte : sauvegarde de maintenance dans le volume Docker ${volume_name}."
+fi
 compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" config --quiet
 compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" up -d mysql >/dev/null
 mysql_container="$(compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" ps -q mysql)"
@@ -79,10 +96,17 @@ wait_for_container "$mysql_container" 180 || die "MySQL n'est pas pret."
 timestamp="$(date -u +%Y%m%d-%H%M%S)"
 version="$(read_env_value "$ENV_FILE" APP_VERSION)"
 version="${version:-unknown}"
-staging_dir="$(mktemp -d "${DESTINATION_DIR}/.ai-monitor-backup-staging-XXXXXX")"
-archive_path="${DESTINATION_DIR}/ai-deep-monitor-${version}-${timestamp}.tar.gz"
-partial_archive="${archive_path}.partial"
-trap 'rm -rf -- "$staging_dir"; rm -f -- "$partial_archive"' EXIT INT TERM
+archive_name="ai-deep-monitor-${version}-${timestamp}.tar.gz"
+partial_archive=""
+if [[ "$destination_kind" == "network" ]]; then
+  staging_dir="$(mktemp -d "${DESTINATION_DIR}/.ai-monitor-backup-staging-XXXXXX")"
+  archive_path="${DESTINATION_DIR}/${archive_name}"
+  partial_archive="${archive_path}.partial"
+else
+  staging_dir="$(mktemp -d -t ai-monitor-backup-staging-XXXXXX)"
+  archive_path="docker-volume://${volume_name}/${archive_name}"
+fi
+trap 'rm -rf -- "$staging_dir"; if [[ -n "$partial_archive" ]]; then rm -f -- "$partial_archive"; fi' EXIT INT TERM
 
 log "Sauvegarde MySQL..."
 container_dump="/tmp/ai-monitor-${timestamp}.sql"
@@ -129,9 +153,20 @@ cat >"${staging_dir}/manifest.json" <<EOF
 }
 EOF
 
-tar -C "$staging_dir" -cf - . | gzip -1 >"$partial_archive"
-mv -f -- "$partial_archive" "$archive_path"
-chmod 600 "$archive_path"
+if [[ "$destination_kind" == "network" ]]; then
+  tar -C "$staging_dir" -cf - . | gzip -1 >"$partial_archive"
+  mv -f -- "$partial_archive" "$archive_path"
+  chmod 600 "$archive_path"
+else
+  helper_image="$(docker_exec inspect --format '{{.Image}}' "$mysql_container")"
+  [[ -n "$helper_image" ]] || die "Image MySQL indisponible pour ecrire dans le volume Docker."
+  tar -C "$staging_dir" -cf - . | gzip -1 |
+    docker_exec run --rm -i --network none \
+      --mount "type=volume,source=${volume_name},target=/maintenance" \
+      --entrypoint sh "$helper_image" -c \
+      'umask 077; partial="/maintenance/$1.partial"; cat > "$partial" && mv -- "$partial" "/maintenance/$1"' \
+      sh "$archive_name"
+fi
 log "Sauvegarde terminee: ${archive_path}"
 log "Le cache du modele llama.cpp n'est pas inclus et sera retelcharge si necessaire."
 log "Les anciennes archives de sauvegarde ne sont pas imbriquees dans cette sauvegarde."
