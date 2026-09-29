@@ -73,10 +73,11 @@ $dockerConfigDir = Join-Path $tempRoot ("ai-deep-monitor-cosign-" + [guid]::NewG
 
 New-Item -ItemType Directory -Path $dockerConfigDir -Force | Out-Null
 try {
-  $GithubToken | & docker --config $dockerConfigDir login ghcr.io --username $GithubUser --password-stdin
-  if ($LASTEXITCODE -ne 0) {
-    throw "Authentification temporaire GHCR impossible pour la verification Cosign."
-  }
+  # The Windows credential helper is unavailable inside the Linux Cosign image.
+  # Share only this short-lived, helper-free Docker config with the container.
+  $authValue = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("${GithubUser}:${GithubToken}"))
+  $authConfig = @{ auths = @{ "ghcr.io" = @{ auth = $authValue } } } | ConvertTo-Json -Depth 4 -Compress
+  [IO.File]::WriteAllText((Join-Path $dockerConfigDir "config.json"), $authConfig, [Text.UTF8Encoding]::new($false))
 
   $repositories = @(
     "ghcr.io/$trustedOwner/ai-deep-monitor-api",
