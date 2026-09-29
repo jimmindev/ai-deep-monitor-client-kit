@@ -213,10 +213,19 @@ Une sauvegarde complete contient la base MySQL et les donnees applicatives,
 notamment les MIB et les fichiers geres par l'API. Elle doit etre stockee sur
 un partage reseau : `MAINTENANCE_BACKUP_PATH` pointe vers un montage SMB/NFS
 sous Linux ; `MAINTENANCE_BACKUP_UNC` pointe vers un chemin UNC sous Windows.
+Sous Linux, si un seul partage SMB/NFS connecté dans l'application est monté,
+le kit utilise automatiquement son sous-dossier `maintenance`. Si plusieurs
+partages sont montés, choisissez explicitement `MAINTENANCE_BACKUP_PATH`.
 Vous pouvez aussi fournir `--destination-dir` sous Linux ou `-DestinationDir`
 sous Windows. Sans destination reseau, la sauvegarde de maintenance et la mise
 a jour automatique s'arretent avant la migration. Si une sauvegarde externe
 verifiee existe deja, l'option `--skip-backup` permet une mise a jour Linux.
+
+Si une ancienne version du Client Kit bloque la mise à jour intégrée faute de
+destination, actualisez d'abord ses scripts sans changer la version Docker :
+`~/ai-deep-monitor/update-client.sh --refresh-kit-only`. Reprenez ensuite la
+mise à jour depuis l'application. L'archive de sécurité sera écrite uniquement
+sur le partage réseau monté.
 
 Le kit cree une sauvegarde:
 

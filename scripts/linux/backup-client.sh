@@ -40,8 +40,31 @@ fi
 if [[ -z "$DESTINATION_DIR" ]]; then
   DESTINATION_DIR="$(read_env_value "$ENV_FILE" MAINTENANCE_BACKUP_PATH)"
 fi
-[[ -n "$DESTINATION_DIR" && -d "$DESTINATION_DIR" ]] ||
-  die "Indiquez --destination-dir sur un partage SMB/NFS monte ou MAINTENANCE_BACKUP_PATH dans .env."
+if [[ -z "$DESTINATION_DIR" ]]; then
+  # A single share already connected in the application is unambiguous.
+  # Match the mount itself, not its parent: an offline share must never
+  # create a backup directory on the local filesystem.
+  network_mounts_root="${AI_DEEP_MONITOR_NETWORK_MOUNTS_ROOT:-/mnt/ai-deep-monitor-network}"
+  network_shares=()
+  for candidate in "$network_mounts_root"/*; do
+    [[ -d "$candidate" && ! -L "$candidate" ]] || continue
+    [[ "${candidate##*/}" =~ ^[0-9a-f]{24}$ ]] || continue
+    candidate_type="$(findmnt -M "$candidate" --first-only -n -o FSTYPE 2>/dev/null || true)"
+    if [[ "$candidate_type" == "cifs" || "$candidate_type" == "nfs" || "$candidate_type" == "nfs4" ]]; then
+      network_shares+=("$candidate")
+    fi
+  done
+  if ((${#network_shares[@]} == 1)); then
+    DESTINATION_DIR="${network_shares[0]}/maintenance"
+    mkdir -p -- "$DESTINATION_DIR" || die "Impossible d'ecrire dans le partage reseau de maintenance."
+  elif ((${#network_shares[@]} > 1)); then
+    die "Plusieurs partages reseau sont montes. Choisissez MAINTENANCE_BACKUP_PATH dans .env avant la mise a jour."
+  else
+    die "Aucun partage SMB/NFS monte. Connectez un partage reseau dans l'application ou configurez MAINTENANCE_BACKUP_PATH dans .env."
+  fi
+fi
+[[ -d "$DESTINATION_DIR" ]] ||
+  die "Dossier de maintenance introuvable: configurez MAINTENANCE_BACKUP_PATH sur un partage SMB/NFS monte."
 filesystem_type="$(findmnt -T "$DESTINATION_DIR" --first-only -n -o FSTYPE 2>/dev/null || true)"
 [[ "$filesystem_type" == "cifs" || "$filesystem_type" == "nfs" || "$filesystem_type" == "nfs4" ]] ||
   die "La sauvegarde de maintenance exige un partage reseau SMB ou NFS monte."

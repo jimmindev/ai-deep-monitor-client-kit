@@ -1733,7 +1733,12 @@ class HostAgent:
                         code="backup_failed",
                         step="Sauvegarde de sécurité",
                         reason=backup_reason,
-                        hint="Vérifiez l’espace disque disponible et l’accès de l’agent à Docker.",
+                        hint=(
+                            "Actualisez le Client Kit puis connectez un partage SMB ou NFS dans Sauvegarde / Restauration. "
+                            "Si plusieurs partages sont montés, indiquez MAINTENANCE_BACKUP_PATH dans .env."
+                            if "MAINTENANCE_BACKUP_PATH" in backup_reason
+                            else "Vérifiez l’espace disque disponible et l’accès de l’agent à Docker."
+                        ),
                         result=backup_result,
                     )
                     raise UpdateStepError(
