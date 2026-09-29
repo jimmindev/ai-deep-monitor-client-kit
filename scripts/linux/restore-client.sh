@@ -24,7 +24,18 @@ while (($#)); do
   esac
 done
 
-[[ -n "$BACKUP_FILE" && -f "$BACKUP_FILE" ]] || die "Fichier de sauvegarde introuvable."
+volume_backup=""
+volume_archive=""
+if [[ "$BACKUP_FILE" == docker-volume://* ]]; then
+  if [[ "$BACKUP_FILE" =~ ^docker-volume://([a-zA-Z0-9_.-]+)/([a-zA-Z0-9_.-]+\.tar\.gz)$ ]]; then
+    volume_backup="${BASH_REMATCH[1]}"
+    volume_archive="${BASH_REMATCH[2]}"
+  else
+    die "Reference d'archive Docker invalide."
+  fi
+else
+  [[ -n "$BACKUP_FILE" && -f "$BACKUP_FILE" ]] || die "Fichier de sauvegarde introuvable."
+fi
 ENV_FILE="${INSTALL_DIR}/.env"
 COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 [[ -f "$ENV_FILE" && -f "$COMPOSE_FILE" ]] || die "Installation incomplete dans ${INSTALL_DIR}."
@@ -32,6 +43,22 @@ ensure_docker
 
 staging_dir="$(mktemp -d -t ai-monitor-restore-XXXXXX)"
 trap 'rm -rf -- "$staging_dir"' EXIT
+if [[ -n "$volume_backup" ]]; then
+  project_name="$(project_name_from_dir "$INSTALL_DIR")"
+  [[ "$volume_backup" == "${project_name}_maintenance_backups" ]] ||
+    die "Ce volume Docker n'appartient pas a cette installation."
+  docker_exec volume inspect "$volume_backup" >/dev/null 2>&1 ||
+    die "Volume Docker de maintenance introuvable."
+  mysql_container="$(compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" ps -a -q mysql)"
+  [[ -n "$mysql_container" ]] || die "Conteneur MySQL introuvable pour lire le volume Docker."
+  helper_image="$(docker_exec inspect --format '{{.Image}}' "$mysql_container")"
+  [[ -n "$helper_image" ]] || die "Image MySQL indisponible pour lire le volume Docker."
+  BACKUP_FILE="${staging_dir}/${volume_archive}"
+  docker_exec run --rm --network none \
+    --mount "type=volume,source=${volume_backup},target=/maintenance,readonly" \
+    --entrypoint sh "$helper_image" -c 'cat -- "/maintenance/$1"' sh "$volume_archive" > "$BACKUP_FILE"
+  [[ -s "$BACKUP_FILE" ]] || die "Archive absente du volume Docker."
+fi
 
 case "$BACKUP_FILE" in
   *.tar.gz|*.tgz)
