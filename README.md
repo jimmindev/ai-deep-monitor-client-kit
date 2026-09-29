@@ -323,6 +323,12 @@ C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command update
 
 La mise a jour conserve les comptes, les volumes MySQL, les donnees
 applicatives et les ports de l'installation existante.
+Après le téléchargement, le Client Kit vérifie avec Cosign les signatures des
+deux images, avant toute migration ou redémarrage. La vérification utilise les
+identifiants GHCR en lecture seule déjà enregistrés dans `.env`. Un échec
+interrompt la mise à jour et conserve la version précédente. Les versions
+jusqu'à v0.1.50 conservent leur identité GitHub Actions ; à partir de
+v0.1.51, seule l'identité locale épinglée dans `signing-policy.json` est acceptée.
 
 ## Sauvegarde
 

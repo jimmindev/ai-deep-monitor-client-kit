@@ -1531,6 +1531,45 @@ class HostAgent:
                 environment_overrides=auth_environment,
             )
 
+    def verify_pulled_images(self, target_version: str) -> dict:
+        """Reject unsigned or untrusted pulled images before schema migration."""
+        env_path = self.install_dir / ".env"
+        github_user = read_env_value(env_path, "UPDATE_CHECK_USER")
+        github_token = read_env_value(env_path, "UPDATE_CHECK_TOKEN")
+        if not github_user or not github_token:
+            return {
+                "ok": False,
+                "exit_code": 1,
+                "timed_out": False,
+                "output_tail": "Identifiants GHCR absents pour la vérification Cosign.",
+            }
+        if os.name == "nt":
+            script = self.install_dir / "verify-images.ps1"
+            powershell = shutil.which("pwsh") or shutil.which("powershell.exe")
+            command = [
+                powershell,
+                "-NoLogo", "-NoProfile", "-NonInteractive",
+                "-ExecutionPolicy", "Bypass", "-File", str(script),
+                "-AppVersion", target_version,
+            ] if powershell else []
+        else:
+            script = self.install_dir / "verify-images.sh"
+            bash = shutil.which("bash", path=trusted_search_path())
+            command = [bash, str(script), "jimmindev", target_version] if bash else []
+        if not script.is_file() or not command:
+            return {
+                "ok": False,
+                "exit_code": 127,
+                "timed_out": False,
+                "output_tail": "Vérificateur Cosign absent de cette installation.",
+            }
+        return run_maintenance_process(
+            command,
+            cwd=self.install_dir,
+            timeout=300,
+            environment_overrides={"GHCR_USER": github_user, "GHCR_TOKEN": github_token},
+        )
+
     def refresh_client_kit(self, update_prefix: list[str]) -> dict:
         arguments = list(update_prefix)
         if os.name == "nt":
@@ -1779,6 +1818,28 @@ class HostAgent:
                         reason=failed_step_message("Le téléchargement des images a échoué", pull_result),
                         hint="Vérifiez Internet, l’accès à GHCR, le token GitHub et l’espace disque disponible.",
                         result=pull_result,
+                    )
+            if deployment_ok:
+                self.write_update_status(
+                    context,
+                    phase="downloading",
+                    progress=53,
+                    message="Vérification de la signature des images Docker.",
+                    backup_created=True,
+                )
+                signature_result = self.verify_pulled_images(target)
+                deployment_ok = bool(signature_result["ok"])
+                if not deployment_ok:
+                    record_update_failure(
+                        context,
+                        code="image_signature_failed",
+                        step="Vérification de la signature des images Docker",
+                        reason=failed_step_message(
+                            "La vérification de signature des images a échoué",
+                            signature_result,
+                        ),
+                        hint="Vérifiez que les deux images proviennent de la release officielle signée.",
+                        result=signature_result,
                     )
             migration_result = {}
             if deployment_ok:

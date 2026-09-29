@@ -9,6 +9,8 @@ cat > "$workspace/bin/docker" <<'MOCK'
 printf '%s\n' "$*" >> "$UPDATE_ORDER_LOG"
 case "$*" in
   'info --format '* ) echo 'linux|amd64' ;;
+  'image inspect ghcr.io/jimmindev/ai-deep-monitor-api:'* ) printf 'ghcr.io/jimmindev/ai-deep-monitor-api@sha256:%064d\n' 0 ;;
+  'image inspect ghcr.io/jimmindev/ai-deep-monitor-frontend:'* ) printf 'ghcr.io/jimmindev/ai-deep-monitor-frontend@sha256:%064d\n' 0 ;;
   'inspect '* ) echo healthy ;;
   *'run --rm --no-deps api alembic upgrade head'* ) exit "$UPDATE_ORDER_MIGRATION_EXIT" ;;
 esac
@@ -19,6 +21,7 @@ chmod +x "$workspace/bin/curl"
 for result in 0 1; do
   install="$workspace/client-$result"
   "$kit/scripts/linux/install-client.sh" --install-dir "$install" --no-start --skip-docker-login > /dev/null
+  printf 'UPDATE_CHECK_USER=test-reader\nUPDATE_CHECK_TOKEN=test-token\n' >> "$install/.env"
   export UPDATE_ORDER_LOG="$workspace/calls-$result" UPDATE_ORDER_MIGRATION_EXIT="$result"
   status=0
   PATH="$workspace/bin:$PATH" "$kit/scripts/linux/update-client.sh" --install-dir "$install" --app-version v0.1.99 --yes --skip-backup --skip-agent-install --skip-docker-login --skip-kit-refresh --llama-profile cpu > "$workspace/output-$result" 2>&1 || status=$?
