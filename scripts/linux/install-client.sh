@@ -146,6 +146,9 @@ kit_files=(
   uninstall-client.sh
   repair-terminal.sh
   verify-llama-gpu.sh
+  verify-images.sh
+  verify-images.ps1
+  signing-policy.json
   install-client.ps1
   check-update.ps1
   update-client.ps1
@@ -343,6 +346,10 @@ fi
 
 log "Telechargement des images Docker..."
 compose_runtime_pull "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE"
+GHCR_USER="$(read_env_value "$ENV_FILE" UPDATE_CHECK_USER)" \
+GHCR_TOKEN="$(read_env_value "$ENV_FILE" UPDATE_CHECK_TOKEN)" \
+  "${INSTALL_DIR}/verify-images.sh" "$GITHUB_OWNER" "$APP_VERSION" ||
+  die "La vérification Cosign des images a échoué. Installation interrompue."
 if ! compose_runtime_exec "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE" up -d; then
   show_startup_diagnostics "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE"
   die "Le stack Docker n'a pas demarre correctement. Le diagnostic ci-dessus indique le service bloque."

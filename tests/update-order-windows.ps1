@@ -7,14 +7,17 @@ try {
   foreach ($result in @(0, 1)) {
     $install = Join-Path $workspace "client-$result"
     & (Join-Path $kit "scripts/windows/install-client.ps1") -InstallDir $install -NoStart -SkipDockerLogin *> $null
+    Add-Content -LiteralPath (Join-Path $install ".env") -Value "UPDATE_CHECK_USER=test-reader`nUPDATE_CHECK_TOKEN=test-token"
     $global:UpdateOrderCalls = [Collections.Generic.List[string]]::new()
     $global:UpdateOrderMigrationExit = $result
     function global:docker {
-      param([Parameter(ValueFromRemainingArguments = $true)][string[]]$DockerArguments)
+      $DockerArguments = $args
       $command = $DockerArguments -join " "
       $global:UpdateOrderCalls.Add($command)
       $global:LASTEXITCODE = 0
       if ($command -like "info --format *") { return "linux|amd64" }
+      if ($command -like "image inspect ghcr.io/jimmindev/ai-deep-monitor-api:*") { return ('["ghcr.io/jimmindev/ai-deep-monitor-api@sha256:' + ('a' * 64) + '"]') }
+      if ($command -like "image inspect ghcr.io/jimmindev/ai-deep-monitor-frontend:*") { return ('["ghcr.io/jimmindev/ai-deep-monitor-frontend@sha256:' + ('b' * 64) + '"]') }
       if ($command -like "*run --rm --no-deps api alembic upgrade head*") {
         $global:LASTEXITCODE = $global:UpdateOrderMigrationExit
       }
@@ -44,11 +47,13 @@ try {
     }
     if ($result -eq 0) {
       function global:docker {
-        param([Parameter(ValueFromRemainingArguments = $true)][string[]]$DockerArguments)
+        $DockerArguments = $args
         $command = $DockerArguments -join " "
         $global:UpdateOrderCalls.Add($command)
         $global:LASTEXITCODE = 0
         if ($command -like "info --format *") { return "linux|amd64" }
+        if ($command -like "image inspect ghcr.io/jimmindev/ai-deep-monitor-api:*") { return ('["ghcr.io/jimmindev/ai-deep-monitor-api@sha256:' + ('a' * 64) + '"]') }
+        if ($command -like "image inspect ghcr.io/jimmindev/ai-deep-monitor-frontend:*") { return ('["ghcr.io/jimmindev/ai-deep-monitor-frontend@sha256:' + ('b' * 64) + '"]') }
       }
       try {
         & (Join-Path $kit "scripts/windows/update-client.ps1") -InstallDir $install -AppVersion v0.1.99 -Yes -SkipBackup -SkipAgentInstall -SkipDockerLogin -SkipKitRefresh *> $null

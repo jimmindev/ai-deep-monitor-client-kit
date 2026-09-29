@@ -386,6 +386,9 @@ $kitFiles = @(
   "uninstall-client.ps1",
   "repair-terminal.sh",
   "verify-llama-gpu.sh",
+  "verify-images.sh",
+  "verify-images.ps1",
+  "signing-policy.json",
   "repair-terminal.ps1",
   "AI-Deep-Monitor.cmd",
   "ai-deep-monitor.sh",
@@ -563,6 +566,17 @@ Resolve-AiMonitorLlamaRuntime `
   -Redetect:$RedetectLlamaRuntime
 Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("config", "--quiet")
 Invoke-AiMonitorComposePull -ComposePath $composePath -EnvPath $envPath
+try {
+  $env:GHCR_USER = $githubUser
+  $env:GHCR_TOKEN = $plainToken
+  & (Join-Path $InstallDir "verify-images.ps1") -GithubOwner $githubOwner -AppVersion $AppVersion
+  if (-not $?) { throw "La vérification Cosign des images a échoué." }
+} catch {
+  Copy-Item -LiteralPath $backupPath -Destination $envPath -Force
+  throw
+} finally {
+  Remove-Item Env:GHCR_USER, Env:GHCR_TOKEN -ErrorAction SilentlyContinue
+}
 Write-Host "Preparation de la base de donnees; les grandes bases peuvent demander plusieurs minutes."
 try {
   Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("up", "-d", "--wait", "--wait-timeout", "300", "mysql")

@@ -396,6 +396,9 @@ $kitFiles = @(
   "uninstall-client.sh",
   "repair-terminal.sh",
   "verify-llama-gpu.sh",
+  "verify-images.sh",
+  "verify-images.ps1",
+  "signing-policy.json",
   "install-client.ps1",
   "update-client.ps1",
   "check-update.ps1",
@@ -626,6 +629,15 @@ if (-not $SkipDockerLogin) {
 }
 
 Invoke-AiMonitorComposePull -ComposePath $composeTarget -EnvPath $envTarget
+$verifyEnvironment = Read-DotEnv -Path $envTarget
+$env:GHCR_USER = $verifyEnvironment["UPDATE_CHECK_USER"]
+$env:GHCR_TOKEN = $verifyEnvironment["UPDATE_CHECK_TOKEN"]
+try {
+  & (Join-Path $installPath.FullName "verify-images.ps1") -GithubOwner $GithubOwner -AppVersion $AppVersion
+  if ($LASTEXITCODE -ne 0) { throw "La vérification Cosign des images a échoué. Installation interrompue." }
+} finally {
+  Remove-Item Env:GHCR_USER, Env:GHCR_TOKEN -ErrorAction SilentlyContinue
+}
 try {
   Invoke-AiMonitorCompose -ComposePath $composeTarget -EnvPath $envTarget -CommandArguments @("up", "-d")
 } catch {

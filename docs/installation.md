@@ -200,6 +200,10 @@ scripts Windows/Linux, fichiers Compose, documentation et fichiers de l'agent
 terminal. La sauvegarde et la mise a jour des images applicatives commencent
 ensuite avec ces nouveaux outils. L'action reste donc utile si la version de
 l'application n'a pas change.
+Les nouveaux outils vérifient la signature Cosign des images téléchargées avant
+la migration de base de données. Le contrôle utilise le jeton GHCR en lecture
+seule de l'installation et bloque une image absente ou signée par une autre
+identité. Il s'applique aussi à la mise à jour lancée depuis le navigateur.
 
 Pour la transition, un poste qui possede une ancienne version du Client Kit
 doit telecharger et extraire une seule fois l'archive `latest`, puis lancer
