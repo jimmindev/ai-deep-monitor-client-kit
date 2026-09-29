@@ -39,6 +39,8 @@ for file in \
 done
 
 
+# Windows checkouts must not leak CRLF into Linux runtime scripts.
+find "$package_root" -type f \( -name '*.sh' -o -name '*.py' \) -exec sed -i 's/\r$//' {} +
 find "$package_root" -type f -name '*.sh' -exec chmod 0755 {} +
 find "$package_root" -type f ! -name '*.sh' -exec chmod 0644 {} +
 
