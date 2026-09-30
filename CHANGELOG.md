@@ -1,3 +1,7 @@
+# v0.1.53
+
+Les installateurs Linux et Windows utilisent la version applicative v0.1.53 par défaut.
+
 # Application v0.1.52 / agent 3.6.8
 
 Les nouvelles installations Linux, Jetson et Windows démarrent sur la version applicative v0.1.52 par défaut.
