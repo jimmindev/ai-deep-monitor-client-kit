@@ -1,3 +1,7 @@
+# Application v0.1.52 / agent 3.6.8
+
+Les nouvelles installations Linux, Jetson et Windows démarrent sur la version applicative v0.1.52 par défaut.
+
 # Agent 3.6.8
 
 Autoriser le retrait administratif des destinations de maintenance, sans suppression des archives distantes. Refuser le retrait pendant une mise à jour active.
