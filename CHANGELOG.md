@@ -2,6 +2,8 @@
 
 Les installateurs Linux et Windows utilisent la version applicative v0.1.53 par défaut.
 
+La vérification Cosign Linux conserve ses identifiants temporaires dans l’installation pour rester compatible avec l’isolation systemd PrivateTmp. Le conteneur utilise l’utilisateur de l’agent et un cache éphémère ; les signatures restent obligatoires et le jeton client reste en lecture seule.
+
 # Application v0.1.52 / agent 3.6.8
 
 Les nouvelles installations Linux, Jetson et Windows démarrent sur la version applicative v0.1.52 par défaut.
