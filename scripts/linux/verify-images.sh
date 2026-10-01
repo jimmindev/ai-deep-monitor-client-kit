@@ -5,7 +5,8 @@ TRUSTED_OWNER="jimmindev"
 TRUSTED_REPOSITORY="ai-deep-monitor"
 ISSUER="https://token.actions.githubusercontent.com"
 COSIGN_IMAGE="ghcr.io/sigstore/cosign/cosign:v3.1.3@sha256:9e5c2f2edc34351160407ca3416c61855bdf9403c3c5936e0f0be7fc261611b8"
-POLICY_FILE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/signing-policy.json"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
+POLICY_FILE="$SCRIPT_DIR/signing-policy.json"
 
 OWNER="${1:-$TRUSTED_OWNER}"
 APP_VERSION="${2:-}"
@@ -67,7 +68,11 @@ if [ "$(version_number "$APP_VERSION")" -ge "$(version_number "$local_from_versi
   fi
 fi
 
-docker_config_dir="$(mktemp -d "${TMPDIR:-/tmp}/ai-deep-monitor-cosign.XXXXXX")"
+# The host agent uses systemd PrivateTmp. Docker's daemon cannot see its /tmp.
+# Keep credentials in the shared installation, private to the invoking user.
+umask 077
+docker_config_dir="$(mktemp -d "$SCRIPT_DIR/.cosign-auth.XXXXXX")"
+cosign_user="$(id -u):$(id -g)"
 cleanup() {
   rm -rf -- "$docker_config_dir"
 }
@@ -92,16 +97,22 @@ for image_name in ai-deep-monitor-api ai-deep-monitor-frontend; do
   echo "Verification de la signature: $digest_reference"
   if [ "$local_signer_required" = true ]; then
     docker run --rm \
+      --user "$cosign_user" \
+      --env HOME=/tmp \
+      --tmpfs /tmp:rw,nosuid,nodev,size=32m \
       --env DOCKER_CONFIG=/auth \
-      --volume "$docker_config_dir:/auth:ro" \
+      --mount "type=bind,source=$docker_config_dir,target=/auth,readonly" \
       "$COSIGN_IMAGE" verify \
       --certificate-identity "$local_identity" \
       --certificate-oidc-issuer "$local_issuer" \
       "$digest_reference"
   else
     docker run --rm \
+      --user "$cosign_user" \
+      --env HOME=/tmp \
+      --tmpfs /tmp:rw,nosuid,nodev,size=32m \
       --env DOCKER_CONFIG=/auth \
-      --volume "$docker_config_dir:/auth:ro" \
+      --mount "type=bind,source=$docker_config_dir,target=/auth,readonly" \
       "$COSIGN_IMAGE" verify \
       --certificate-identity-regexp "$identity_regexp" \
       --certificate-oidc-issuer "$ISSUER" \
