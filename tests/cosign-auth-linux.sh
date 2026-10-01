@@ -4,7 +4,7 @@ KIT_DIR="${1:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
 TEST_DIR="$(mktemp -d)"
 trap 'rm -rf -- "$TEST_DIR"' EXIT
 mkdir -p "$TEST_DIR/bin" "$TEST_DIR/kit"
-cp "$KIT_DIR/scripts/linux/verify-images.sh" "$KIT_DIR/scripts/linux/signing-policy.json" "$TEST_DIR/kit/"
+cp "$KIT_DIR/scripts/linux/verify-images.sh" "$KIT_DIR/deploy/signing-policy.json" "$TEST_DIR/kit/"
 export EXPECTED_AUTH_ROOT="$TEST_DIR/kit" EXPECTED_UID="$(id -u):$(id -g)"
 export TMPDIR="$TEST_DIR/invisible-private-tmp" GHCR_USER=test-reader GHCR_TOKEN=test-token
 export PATH="$TEST_DIR/bin:$PATH"
