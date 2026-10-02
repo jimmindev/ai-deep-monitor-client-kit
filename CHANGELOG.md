@@ -1,3 +1,7 @@
+# Application v0.1.58
+
+Les nouvelles installations Linux, Jetson et Windows utilisent v0.1.58 par défaut. Les smoke tests Linux et Windows ainsi que la vérification Cosign conservent les contrôles de sécurité existants.
+
 # Application v0.1.57
 
 Les installateurs Linux, Jetson et Windows utilisent v0.1.57 par défaut. Les smoke tests vérifient cette version et le test Cosign Linux utilise la politique de signature du dossier deploy.
