@@ -43,6 +43,11 @@ Oublier les connexions SMB/NFS sans supprimer les fichiers distants. Protection 
 
 # Evolutions du Client Kit
 
+## 2026-10-05 — Application v0.1.64 par défaut
+
+- Aligne les installateurs Linux/Jetson et Windows, leurs tests et la documentation sur v0.1.64.
+- Conserve les vérificateurs Cosign et les garanties d’isolation de l’agent.
+
 ## v0.1.45
 
 Version applicative par défaut 0.1.45 et agent 3.6.6 avec lecture signée de l’horloge, du fuseau et de l’état NTP du serveur.
