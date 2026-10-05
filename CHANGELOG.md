@@ -1,3 +1,7 @@
+## v0.1.60
+
+Version applicative par défaut : v0.1.60.
+
 # Application v0.1.59
 
 Installations Linux, Jetson et Windows par défaut en v0.1.59 ; vérification des signatures conservée.
