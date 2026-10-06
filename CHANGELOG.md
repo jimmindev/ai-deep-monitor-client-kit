@@ -1,3 +1,7 @@
+# Application v0.1.66
+
+Installation par défaut de la v0.1.66 : découverte rapide et correction des faux états Hors ligne. Politique de signature inchangée.
+
 ## v0.1.60
 
 ## 2026-10-06 - Application v0.1.65
