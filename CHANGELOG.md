@@ -1,5 +1,9 @@
 ## v0.1.60
 
+## 2026-10-06 - Application v0.1.65
+
+Alignement des installations Linux, Jetson et Windows sur la version stable v0.1.65. Les verificateurs Cosign et le jeton client en lecture seule restent inchanges.
+
 Version applicative par défaut : v0.1.60.
 
 # Application v0.1.59
