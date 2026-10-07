@@ -1,3 +1,8 @@
+# Application v0.1.69 — 7 octobre 2026
+
+- Installation par défaut de v0.1.69 sur Windows, Linux et Jetson : découverte Modbus et vérification de lecture avant ajout.
+- Politique de signature et agents conservés.
+
 # Client Kit v0.1.67 — 7 octobre 2026
 
 - Version applicative par défaut alignée sur v0.1.67 pour Windows, Linux et Jetson.
