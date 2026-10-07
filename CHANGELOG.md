@@ -1,3 +1,8 @@
+## v0.1.70 — 2026-10-07
+
+- Version applicative par défaut des installations Linux/Jetson et Windows alignée sur v0.1.70.
+- Smoke tests et documentation alignés ; vérification des signatures et jeton client en lecture seule conservés.
+
 # Application v0.1.69 — 7 octobre 2026
 
 - Installation par défaut de v0.1.69 sur Windows, Linux et Jetson : découverte Modbus et vérification de lecture avant ajout.
