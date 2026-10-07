@@ -1,3 +1,8 @@
+# Client Kit v0.1.67 — 7 octobre 2026
+
+- Version applicative par défaut alignée sur v0.1.67 pour Windows, Linux et Jetson.
+- Agents, signatures et procédures de mise à jour conservés.
+
 # Application v0.1.66
 
 Installation par défaut de la v0.1.66 : découverte rapide et correction des faux états Hors ligne. Politique de signature inchangée.
