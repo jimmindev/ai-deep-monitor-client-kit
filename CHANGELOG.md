@@ -1,3 +1,7 @@
+## v0.1.71 — 2026-10-08
+
+- Installations Linux/Jetson et Windows : version applicative par défaut v0.1.71.
+
 ## v0.1.70 — 2026-10-07
 
 - Version applicative par défaut des installations Linux/Jetson et Windows alignée sur v0.1.70.
