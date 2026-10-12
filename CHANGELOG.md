@@ -1,3 +1,7 @@
+# v0.1.83
+
+- Installer par défaut v0.1.83 : placement rack, identification SNMP et mesures SmartState.
+
 ## v0.1.82
 
 - Installations Linux et Windows proposees en v0.1.82.
