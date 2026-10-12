@@ -15,6 +15,7 @@ kit_source() {
     "${SCRIPT_DIR}/${name}" \
     "${SCRIPT_DIR}/../windows/${name}" \
     "${KIT_ROOT}/${name}" \
+    "${KIT_ROOT}/scripts/${name}" \
     "${KIT_ROOT}/deploy/${name}"; do
     [[ -f "$candidate" ]] && { printf '%s\n' "$candidate"; return 0; }
   done
@@ -73,7 +74,7 @@ Usage: ./install-client.sh [options]
 
 Options:
   --install-dir CHEMIN       Dossier cible (defaut: ~/ai-deep-monitor)
-  --app-version VERSION      Version applicative (defaut: v0.1.79)
+  --app-version VERSION      Version applicative (defaut: v0.1.80)
   --github-owner NOM         Proprietaire des images GHCR
   --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
@@ -124,6 +125,7 @@ COMPOSE_FILE="${INSTALL_DIR}/docker-compose.release.yml"
 PROJECT_NAME="$(project_name_from_dir "$INSTALL_DIR")"
 
 kit_files=(
+  repair_update_access.py
   docker-compose.release.yml
   docker-compose.linux-host-storage.yml
   docker-compose.dhcp.yml

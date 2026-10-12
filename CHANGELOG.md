@@ -1,3 +1,9 @@
+## v0.1.80
+
+- Installation du composant de réparation des accès GitHub depuis Configuration, avec agent hôte 3.6.9.
+- Conservation de la version et reprise en cas de redémarrage API impossible.
+- Version proposée par défaut : v0.1.80, Linux et Windows.
+
 ## v0.1.71 â€” 2026-10-08
 
 - Installations Linux/Jetson et Windows : version applicative par dÃ©faut v0.1.71.

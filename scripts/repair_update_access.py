@@ -16,6 +16,8 @@ import urllib.parse
 import urllib.request
 import uuid
 
+DOCKER_EXECUTABLE = "docker"
+
 
 class RepairError(RuntimeError):
     pass
@@ -104,7 +106,8 @@ def private_write(path: Path, text: str) -> None:
 
 def docker_run(args: list[str], *, input_text: str | None = None) -> str:
     try:
-        result = subprocess.run(["docker", *args], input=input_text, text=True, capture_output=True, timeout=180)
+        result = subprocess.run([DOCKER_EXECUTABLE, *args], input=input_text, text=True, capture_output=True, timeout=180,
+                                creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0) if os.name=="nt" else 0)
     except (OSError, subprocess.TimeoutExpired):
         raise RepairError("Docker est indisponible ou la commande a dépassé le délai autorisé.") from None
     if result.returncode:

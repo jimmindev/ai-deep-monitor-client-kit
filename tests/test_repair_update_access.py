@@ -41,7 +41,7 @@ class AccessRecoveryTests(unittest.TestCase):
         return original
 
     def test_old_versions_keep_image_data_project_and_overrides(self):
-        for version in ("v0.1.13", "v0.1.56", "v0.1.77", "v0.1.78"):
+        for version in ("v0.1.13", "v0.1.56", "v0.1.70", "v0.1.77", "v0.1.78"):
             with self.subTest(version=version):
                 self.write_env(version)
                 commands = []
