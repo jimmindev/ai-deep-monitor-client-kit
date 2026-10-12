@@ -1,31 +1,35 @@
+## v0.1.81
+
+- Version proposée par défaut : v0.1.81, Linux et Windows.
+
 ## v0.1.80
 
-- Installation du composant de r�paration des acc�s GitHub depuis Configuration, avec agent h�te 3.6.9.
-- Conservation de la version et reprise en cas de red�marrage API impossible.
-- Version propos�e par d�faut : v0.1.80, Linux et Windows.
+- Installation du composant de réparation des accès GitHub depuis Configuration, avec agent hôte 3.6.9.
+- Conservation de la version et reprise en cas de redémarrage API impossible.
+- Version proposée par défaut : v0.1.80, Linux et Windows.
 
-## v0.1.71 — 2026-10-08
+## v0.1.71 â€” 2026-10-08
 
-- Installations Linux/Jetson et Windows : version applicative par défaut v0.1.71.
+- Installations Linux/Jetson et Windows : version applicative par dÃ©faut v0.1.71.
 
-## v0.1.70 — 2026-10-07
+## v0.1.70 â€” 2026-10-07
 
-- Version applicative par défaut des installations Linux/Jetson et Windows alignée sur v0.1.70.
-- Smoke tests et documentation alignés ; vérification des signatures et jeton client en lecture seule conservés.
+- Version applicative par dÃ©faut des installations Linux/Jetson et Windows alignÃ©e sur v0.1.70.
+- Smoke tests et documentation alignÃ©s ; vÃ©rification des signatures et jeton client en lecture seule conservÃ©s.
 
-# Application v0.1.69 — 7 octobre 2026
+# Application v0.1.69 â€” 7 octobre 2026
 
-- Installation par défaut de v0.1.69 sur Windows, Linux et Jetson : découverte Modbus et vérification de lecture avant ajout.
-- Politique de signature et agents conservés.
+- Installation par dÃ©faut de v0.1.69 sur Windows, Linux et Jetson : dÃ©couverte Modbus et vÃ©rification de lecture avant ajout.
+- Politique de signature et agents conservÃ©s.
 
-# Client Kit v0.1.67 — 7 octobre 2026
+# Client Kit v0.1.67 â€” 7 octobre 2026
 
-- Version applicative par défaut alignée sur v0.1.67 pour Windows, Linux et Jetson.
-- Agents, signatures et procédures de mise à jour conservés.
+- Version applicative par dÃ©faut alignÃ©e sur v0.1.67 pour Windows, Linux et Jetson.
+- Agents, signatures et procÃ©dures de mise Ã  jour conservÃ©s.
 
 # Application v0.1.66
 
-Installation par défaut de la v0.1.66 : découverte rapide et correction des faux états Hors ligne. Politique de signature inchangée.
+Installation par dÃ©faut de la v0.1.66 : dÃ©couverte rapide et correction des faux Ã©tats Hors ligne. Politique de signature inchangÃ©e.
 
 ## v0.1.60
 
@@ -33,57 +37,57 @@ Installation par défaut de la v0.1.66 : découverte rapide et correction des fa
 
 Alignement des installations Linux, Jetson et Windows sur la version stable v0.1.65. Les verificateurs Cosign et le jeton client en lecture seule restent inchanges.
 
-Version applicative par défaut : v0.1.60.
+Version applicative par dÃ©faut : v0.1.60.
 
 # Application v0.1.59
 
-Installations Linux, Jetson et Windows par défaut en v0.1.59 ; vérification des signatures conservée.
+Installations Linux, Jetson et Windows par dÃ©faut en v0.1.59 ; vÃ©rification des signatures conservÃ©e.
 
 # Application v0.1.58
 
-Les nouvelles installations Linux, Jetson et Windows utilisent v0.1.58 par défaut. Les smoke tests Linux et Windows ainsi que la vérification Cosign conservent les contrôles de sécurité existants.
+Les nouvelles installations Linux, Jetson et Windows utilisent v0.1.58 par dÃ©faut. Les smoke tests Linux et Windows ainsi que la vÃ©rification Cosign conservent les contrÃ´les de sÃ©curitÃ© existants.
 
 # Application v0.1.57
 
-Les installateurs Linux, Jetson et Windows utilisent v0.1.57 par défaut. Les smoke tests vérifient cette version et le test Cosign Linux utilise la politique de signature du dossier deploy.
+Les installateurs Linux, Jetson et Windows utilisent v0.1.57 par dÃ©faut. Les smoke tests vÃ©rifient cette version et le test Cosign Linux utilise la politique de signature du dossier deploy.
 
 # v0.1.53
 
-Les installateurs Linux et Windows utilisent la version applicative v0.1.53 par défaut.
+Les installateurs Linux et Windows utilisent la version applicative v0.1.53 par dÃ©faut.
 
-La vérification Cosign Linux conserve ses identifiants temporaires dans l’installation pour rester compatible avec l’isolation systemd PrivateTmp. Le conteneur utilise l’utilisateur de l’agent et un cache éphémère ; les signatures restent obligatoires et le jeton client reste en lecture seule.
+La vÃ©rification Cosign Linux conserve ses identifiants temporaires dans lâ€™installation pour rester compatible avec lâ€™isolation systemd PrivateTmp. Le conteneur utilise lâ€™utilisateur de lâ€™agent et un cache Ã©phÃ©mÃ¨re ; les signatures restent obligatoires et le jeton client reste en lecture seule.
 
 # Application v0.1.52 / agent 3.6.8
 
-Les nouvelles installations Linux, Jetson et Windows démarrent sur la version applicative v0.1.52 par défaut.
+Les nouvelles installations Linux, Jetson et Windows dÃ©marrent sur la version applicative v0.1.52 par dÃ©faut.
 
 # Agent 3.6.8
 
-Autoriser le retrait administratif des destinations de maintenance, sans suppression des archives distantes. Refuser le retrait pendant une mise à jour active.
+Autoriser le retrait administratif des destinations de maintenance, sans suppression des archives distantes. Refuser le retrait pendant une mise Ã  jour active.
 
 # v0.1.48 / agent 3.6.7
 
-Oublier les connexions SMB/NFS sans supprimer les fichiers distants. Protection des montages occupés et des sauvegardes de maintenance.
+Oublier les connexions SMB/NFS sans supprimer les fichiers distants. Protection des montages occupÃ©s et des sauvegardes de maintenance.
 
 # v0.1.47
 
-- Installation et mise à jour de l’application v0.1.47 par défaut.
+- Installation et mise Ã  jour de lâ€™application v0.1.47 par dÃ©faut.
 
 # v0.1.46
 
-- Installation et mise à jour vers la version applicative v0.1.46.
-- Accès aux partages réseau de maintenance conservé après réparation.
+- Installation et mise Ã  jour vers la version applicative v0.1.46.
+- AccÃ¨s aux partages rÃ©seau de maintenance conservÃ© aprÃ¨s rÃ©paration.
 
 # Evolutions du Client Kit
 
-## 2026-10-05 — Application v0.1.64 par défaut
+## 2026-10-05 â€” Application v0.1.64 par dÃ©faut
 
 - Aligne les installateurs Linux/Jetson et Windows, leurs tests et la documentation sur v0.1.64.
-- Conserve les vérificateurs Cosign et les garanties d’isolation de l’agent.
+- Conserve les vÃ©rificateurs Cosign et les garanties dâ€™isolation de lâ€™agent.
 
 ## v0.1.45
 
-Version applicative par défaut 0.1.45 et agent 3.6.6 avec lecture signée de l’horloge, du fuseau et de l’état NTP du serveur.
+Version applicative par dÃ©faut 0.1.45 et agent 3.6.6 avec lecture signÃ©e de lâ€™horloge, du fuseau et de lâ€™Ã©tat NTP du serveur.
 
 ## Application v0.1.44
 
@@ -102,16 +106,16 @@ Version applicative par défaut 0.1.45 et agent 3.6.6 avec lecture signée de l�
 
 ## Application v0.1.42
 
-- Les nouvelles installations ciblent AI Deep Monitor `v0.1.42` par défaut.
-- L’agent de stockage Linux refuse de supprimer un emplacement contenant une archive non répertoriée ou un fichier étranger, afin de préserver les données du support.
-- Les mises à jour intégrées conservent les montages Linux des clés USB et dossiers hôtes, y compris pendant un retour à la version précédente.
-- Les installations existantes peuvent se mettre à jour sans effacer leurs volumes, comptes ou réglages.
+- Les nouvelles installations ciblent AI Deep Monitor `v0.1.42` par dÃ©faut.
+- Lâ€™agent de stockage Linux refuse de supprimer un emplacement contenant une archive non rÃ©pertoriÃ©e ou un fichier Ã©tranger, afin de prÃ©server les donnÃ©es du support.
+- Les mises Ã  jour intÃ©grÃ©es conservent les montages Linux des clÃ©s USB et dossiers hÃ´tes, y compris pendant un retour Ã  la version prÃ©cÃ©dente.
+- Les installations existantes peuvent se mettre Ã  jour sans effacer leurs volumes, comptes ou rÃ©glages.
 
 ## Application v0.1.37
 
-- Version applicative par défaut : v0.1.37.
-- Réparation ciblée des droits de sauvegarde et rechargement du proxy après préparation du stockage Linux.
-- Inventaire des supports avec liens parent/enfant et type USB hérité par les volumes.
+- Version applicative par dÃ©faut : v0.1.37.
+- RÃ©paration ciblÃ©e des droits de sauvegarde et rechargement du proxy aprÃ¨s prÃ©paration du stockage Linux.
+- Inventaire des supports avec liens parent/enfant et type USB hÃ©ritÃ© par les volumes.
 
 
 Le Client Kit suit un canal permanent `latest` et ne possede plus de numero de
@@ -128,83 +132,83 @@ restreint sans embarquer les sources privees de l'application.
 
 ## Application v0.1.36
 
-- Les nouvelles installations utilisent AI Deep Monitor `v0.1.36` par défaut.
-- Le service Linux autorise la création de dossiers à la racine des disques de
-  données qu’il monte automatiquement, sans toucher aux fichiers existants ni
-  au disque système.
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.36` par dÃ©faut.
+- Le service Linux autorise la crÃ©ation de dossiers Ã  la racine des disques de
+  donnÃ©es quâ€™il monte automatiquement, sans toucher aux fichiers existants ni
+  au disque systÃ¨me.
 
 ## Application v0.1.35
 
-- Les nouvelles installations utilisent AI Deep Monitor `v0.1.35` par défaut.
-- Le dossier de sauvegarde Linux géré par le kit reçoit les droits d’écriture
-  requis par les conteneurs API et planificateur. Un chemin personnalisé n’est
-  pas modifié.
-- La fenêtre de sauvegarde conserve sa liste pendant l’actualisation des
-  volumes, sans saut répété de l’interface.
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.35` par dÃ©faut.
+- Le dossier de sauvegarde Linux gÃ©rÃ© par le kit reÃ§oit les droits dâ€™Ã©criture
+  requis par les conteneurs API et planificateur. Un chemin personnalisÃ© nâ€™est
+  pas modifiÃ©.
+- La fenÃªtre de sauvegarde conserve sa liste pendant lâ€™actualisation des
+  volumes, sans saut rÃ©pÃ©tÃ© de lâ€™interface.
 
 ## Application v0.1.34
 
-- Les nouvelles installations utilisent AI Deep Monitor `v0.1.34` par défaut.
-- Le kit Linux installe le service horaire hôte limité, utilisé par l'interface
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.34` par dÃ©faut.
+- Le kit Linux installe le service horaire hÃ´te limitÃ©, utilisÃ© par l'interface
   Docker pour appliquer le fuseau et le serveur NTP.
-- Le kit Linux active la découverte et le montage automatiques des disques de
-  données et expose leurs dossiers aux services de sauvegarde.
-- Les installations existantes conservent leurs identifiants et peuvent être
-  mises à jour via le menu du Client Kit.
+- Le kit Linux active la dÃ©couverte et le montage automatiques des disques de
+  donnÃ©es et expose leurs dossiers aux services de sauvegarde.
+- Les installations existantes conservent leurs identifiants et peuvent Ãªtre
+  mises Ã  jour via le menu du Client Kit.
 
 ## Application v0.1.31
 
-- Les nouvelles installations utilisent AI Deep Monitor `v0.1.31` par défaut.
-- L'agent hôte 3.6.3 remonte le modèle matériel et le pilote des cartes réseau
-  Linux et Raspberry Pi à partir des données udev et device tree lorsqu'elles
-  sont disponibles. La lecture ne modifie pas la configuration réseau.
+- Les nouvelles installations utilisent AI Deep Monitor `v0.1.31` par dÃ©faut.
+- L'agent hÃ´te 3.6.3 remonte le modÃ¨le matÃ©riel et le pilote des cartes rÃ©seau
+  Linux et Raspberry Pi Ã  partir des donnÃ©es udev et device tree lorsqu'elles
+  sont disponibles. La lecture ne modifie pas la configuration rÃ©seau.
 - Pour voir ces informations sur une installation existante, actualiser le
-  Client Kit afin de remplacer l'agent local, puis mettre à jour l'application.
+  Client Kit afin de remplacer l'agent local, puis mettre Ã  jour l'application.
 
 ## Application v0.1.30
 
 - Les nouvelles installations Windows, Linux, Jetson et Raspberry Pi utilisent
-  AI Deep Monitor `v0.1.30` par défaut.
-- L'API détecte les interfaces réseau Linux même lorsque l'agent hôte installé
-  est encore en version 3.6.0. Une mise à jour du Client Kit installe toujours
+  AI Deep Monitor `v0.1.30` par dÃ©faut.
+- L'API dÃ©tecte les interfaces rÃ©seau Linux mÃªme lorsque l'agent hÃ´te installÃ©
+  est encore en version 3.6.0. Une mise Ã  jour du Client Kit installe toujours
   l'agent 3.6.2 pour les diagnostics complets.
 
 ## Application v0.1.29
 
 - Les nouvelles installations Windows, Linux, Jetson et Raspberry Pi utilisent
-  AI Deep Monitor `v0.1.29` par défaut.
-- Cette version corrige le rendu des libellés du Builder 3D sur Chromium ARM,
-  afin que la pose et la sélection des racks restent disponibles.
+  AI Deep Monitor `v0.1.29` par dÃ©faut.
+- Cette version corrige le rendu des libellÃ©s du Builder 3D sur Chromium ARM,
+  afin que la pose et la sÃ©lection des racks restent disponibles.
 ## Application v0.1.28
 
 - Les nouvelles installations Windows, Linux et Jetson utilisent AI Deep Monitor
-  `v0.1.28` par défaut.
-- Le kit conserve les contrôles de mise à jour, de migration et de restauration
-  avant le redémarrage des services.
+  `v0.1.28` par dÃ©faut.
+- Le kit conserve les contrÃ´les de mise Ã  jour, de migration et de restauration
+  avant le redÃ©marrage des services.
 ## Application v0.1.26
 
-- Reprise des migrations MySQL interrompues, sans doublon d’index.
-- Migration préalable au redémarrage dans les outils Windows et Linux.
-- Agent 3.6.2 : délai de migration distinct de six heures, conteneur dédié et
-  nettoyage après dépassement ; intervention demandée si le nettoyage échoue.
-- Tests d’exécution des scripts sur succès et erreur de migration, obligatoires
+- Reprise des migrations MySQL interrompues, sans doublon dâ€™index.
+- Migration prÃ©alable au redÃ©marrage dans les outils Windows et Linux.
+- Agent 3.6.2 : dÃ©lai de migration distinct de six heures, conteneur dÃ©diÃ© et
+  nettoyage aprÃ¨s dÃ©passement ; intervention demandÃ©e si le nettoyage Ã©choue.
+- Tests dâ€™exÃ©cution des scripts sur succÃ¨s et erreur de migration, obligatoires
   avant publication des archives.
 
 ## Application v0.1.25
 
-- Images 0.1.25 et workers de sauvegarde, découverte et notification.
-- Licences cumulées, secrets de sauvegarde persistants et inventaire des interfaces hôte.
+- Images 0.1.25 et workers de sauvegarde, dÃ©couverte et notification.
+- Licences cumulÃ©es, secrets de sauvegarde persistants et inventaire des interfaces hÃ´te.
 - Profil DHCP Linux facultatif, sans activation automatique.
 
 ## Correctifs du canal permanent
 
-- L’agent 3.6.1 prépare les migrations de base de données avant de redémarrer
-  l’API, pour éviter qu’un contrôle de santé interrompe la création d’index
-  sur les grandes bases. Une erreur de migration bloque le déploiement.
+- Lâ€™agent 3.6.1 prÃ©pare les migrations de base de donnÃ©es avant de redÃ©marrer
+  lâ€™API, pour Ã©viter quâ€™un contrÃ´le de santÃ© interrompe la crÃ©ation dâ€™index
+  sur les grandes bases. Une erreur de migration bloque le dÃ©ploiement.
 
 - L'installation Windows/Linux cible maintenant AI Deep Monitor `v0.1.24`.
-  Cette publication conserve les données et le profil matériel pendant la
-  mise à jour, puis vérifie les services et la version exposée par l'API.
+  Cette publication conserve les donnÃ©es et le profil matÃ©riel pendant la
+  mise Ã  jour, puis vÃ©rifie les services et la version exposÃ©e par l'API.
 
 - L'installation Windows/Linux cible maintenant AI Deep Monitor `v0.1.23`.
   Les mises a jour conservent les donnees et le profil CPU/GPU detecte, tout
@@ -287,29 +291,29 @@ restreint sans embarquer les sources privees de l'application.
 - Une mise a jour Docker ne classe donc plus cet agent restreint comme non
   securise et ne rend plus le terminal indisponible.
 
-- Le téléchargement initial d'Ollama ne bloque plus le démarrage de l'API et
-  du frontend sur NVIDIA Jetson ou en cas d'indisponibilité temporaire.
-- Le premier modèle Ollama fonctionnel est conservé ; le modèle de secours
-  n'est tenté qu'après l'échec du modèle principal, avec relance automatique
-  limitée et diagnostic explicite.
-- Les installations utilisent AI Deep Monitor `v0.1.13` par défaut et
-  embarquent l'agent hôte `3.4.0` avec la politique terminal `2.3`.
-- Le mot de passe fixe de gestion des règles terminal est ajouté aux nouvelles
-  installations et aux mises à jour sans écraser une valeur personnalisée.
-- `cd`, le répertoire courant persistant et les règles personnalisées signées
-  sont livrés sur Windows, Linux et NVIDIA Jetson.
+- Le tÃ©lÃ©chargement initial d'Ollama ne bloque plus le dÃ©marrage de l'API et
+  du frontend sur NVIDIA Jetson ou en cas d'indisponibilitÃ© temporaire.
+- Le premier modÃ¨le Ollama fonctionnel est conservÃ© ; le modÃ¨le de secours
+  n'est tentÃ© qu'aprÃ¨s l'Ã©chec du modÃ¨le principal, avec relance automatique
+  limitÃ©e et diagnostic explicite.
+- Les installations utilisent AI Deep Monitor `v0.1.13` par dÃ©faut et
+  embarquent l'agent hÃ´te `3.4.0` avec la politique terminal `2.3`.
+- Le mot de passe fixe de gestion des rÃ¨gles terminal est ajoutÃ© aux nouvelles
+  installations et aux mises Ã  jour sans Ã©craser une valeur personnalisÃ©e.
+- `cd`, le rÃ©pertoire courant persistant et les rÃ¨gles personnalisÃ©es signÃ©es
+  sont livrÃ©s sur Windows, Linux et NVIDIA Jetson.
 - Le terminal hote accepte maintenant `ls` sur Windows, Linux et NVIDIA
   Jetson au travers d'une routine interne qui affiche uniquement les noms.
 - L'agent `3.3.0` et la politique `2.2` bloquent les options, la recursivite,
   les fichiers caches et les repertoires internes de l'application et Docker.
 - Les nouvelles installations utilisent AI Deep Monitor `v0.1.12` par defaut.
-- Lorsqu’une mise à jour échoue, l’agent conserve maintenant l’étape exacte,
-  la cause, le code de retour et les dernières lignes techniques utiles même
-  après une restauration automatique réussie.
+- Lorsquâ€™une mise Ã  jour Ã©choue, lâ€™agent conserve maintenant lâ€™Ã©tape exacte,
+  la cause, le code de retour et les derniÃ¨res lignes techniques utiles mÃªme
+  aprÃ¨s une restauration automatique rÃ©ussie.
 - Les sauvegardes lancees avant une mise a jour integree sont maintenant
   stockees dans l'espace prive et autorise de l'agent hote. Cela corrige leur
   echec sous Linux et NVIDIA Jetson sans relacher le confinement systemd.
 - Les erreurs de maintenance remontent un diagnostic court et expurge des
   mots de passe, tokens et autres secrets.
 
-Le suivi de migration est rafraîchi toutes les 30 secondes pour éviter une expiration pendant une opération SQL longue.
+Le suivi de migration est rafraÃ®chi toutes les 30 secondes pour Ã©viter une expiration pendant une opÃ©ration SQL longue.
