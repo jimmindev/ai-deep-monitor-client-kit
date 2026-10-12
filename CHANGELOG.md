@@ -1,3 +1,7 @@
+## v0.1.82
+
+- Installations Linux et Windows proposees en v0.1.82.
+
 ## v0.1.81
 
 - Version proposée par défaut : v0.1.81, Linux et Windows.
