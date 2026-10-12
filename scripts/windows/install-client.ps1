@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [string]$AppVersion = "v0.1.79",
+  [string]$AppVersion = "v0.1.80",
   [string]$GithubOwner = "jimmindev",
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
@@ -28,6 +28,7 @@ function Resolve-KitSource {
     (Join-Path $PSScriptRoot $Name),
     (Join-Path $PSScriptRoot "..\linux\$Name"),
     (Join-Path $kitRoot $Name),
+    (Join-Path $kitRoot "scripts\$Name"),
     (Join-Path $kitRoot "deploy\$Name")
   )
   if ($Name -eq "README_CLIENT.md") {
@@ -410,6 +411,7 @@ $kitFiles = @(
   "AI-Deep-Monitor.cmd",
   "ai-deep-monitor.sh",
   "ai-deep-monitor.ps1",
+  "repair_update_access.py",
   "README_CLIENT.md"
 )
 foreach ($fileName in $kitFiles) {

@@ -42,7 +42,7 @@ TerminalPolicyViolation = _POLICY_MODULE.TerminalPolicyViolation
 validate_terminal_command = _POLICY_MODULE.validate_terminal_command
 
 
-AGENT_VERSION = "3.6.8"
+AGENT_VERSION = "3.6.9"
 HOST_TIME_DIR = Path(os.getenv("AI_DEEP_HOST_TIME_DIR", "/var/lib/ai-deep-monitor-host-time"))
 MAX_DATABASE_MIGRATION_SECONDS = 6 * 60 * 60
 MIGRATION_STATUS_INTERVAL_SECONDS = 30
@@ -1114,6 +1114,7 @@ class HostAgent:
             "time_status_supported": self.host_family in {"linux", "jetson"},
             "time_config_supported": self.host_family in {"linux", "jetson"} and time_helper_ready(),
             "update_supported": update["supported"],
+            "update_access_supported": update["supported"] and (self.install_dir / "repair_update_access.py").is_file(),
             "update_reason": update["reason"],
             "installed_version": update["current_version"],
             "update_running": bool(self.update_thread and self.update_thread.is_alive()),
@@ -1635,6 +1636,54 @@ class HostAgent:
             time.sleep(2)
         return False
 
+    def access_repair_helper(self):
+        helper = self.install_dir / "repair_update_access.py"
+        if not helper.is_file():
+            raise RuntimeError("Actualisez le Client Kit pour activer la réparation depuis l’application.")
+        spec = importlib.util.spec_from_file_location("ai_deep_repair_access", helper)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def process_access_repair(self, payload: dict, context: dict) -> None:
+        """Repair with the current image; no application pull or migration."""
+        context.update(action="update_access_repair", current_version=str(payload.get("current_version") or ""),
+                       target_version=str(payload.get("current_version") or ""),
+                       requested_by=str(payload.get("requested_by") or "")[:100])
+        module = self.access_repair_helper()
+        docker = shutil.which("docker", path=trusted_search_path())
+        if not docker or not hasattr(module, "DOCKER_EXECUTABLE"):
+            raise RuntimeError("Actualisez le Client Kit pour activer la réparation depuis l’application.")
+        module.DOCKER_EXECUTABLE = docker
+        container = module.installation_api(self.install_dir)
+        self.write_update_status(context, phase="validating", progress=10,
+                                 message="Vérification du nouvel accès GitHub.")
+        # The installed API already contains AESGCM. Decrypt inside that image
+        # so the stdlib-only host agent needs no new Python dependency. Neither
+        # the key nor plaintext credential appears in argv or status/log data.
+        decrypt = "import base64,hashlib,hmac,os,sys; from pathlib import Path; from cryptography.hazmat.primitives.ciphers.aead import AESGCM; root=Path(os.getenv('HOST_TERMINAL_JOBS_DIR','/host-terminal/jobs')); key=bytes.fromhex((root/'.agent-key').read_text().strip()); data=base64.b64decode(sys.argv[2],validate=True); token=AESGCM(hmac.new(key,b'/update-access/v1',hashlib.sha256).digest()).decrypt(data[:12],data[12:],sys.argv[1].encode()); sys.stdout.buffer.write(token)"
+        try:
+            result = subprocess.run([docker, "exec", container["Id"], "python", "-c", decrypt,
+                                     context["id"], str(payload.get("encrypted_token") or "")],
+                                    capture_output=True, timeout=20, check=False,
+                                    creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0) if os.name=="nt" else 0)
+            if result.returncode:
+                raise RuntimeError("La demande de réparation ne peut pas être déchiffrée.")
+            token = result.stdout.decode("utf-8")
+        except (OSError, subprocess.TimeoutExpired, UnicodeError):
+            raise RuntimeError("La demande de réparation ne peut pas être déchiffrée.") from None
+        self.write_update_status(context, phase="restarting", progress=40,
+                                 message="Rechargement de l’accès aux mises à jour. L’API redémarre brièvement.")
+        try:
+            module.repair(self.install_dir, str(payload.get("username") or ""), token)
+        except module.RepairError:
+            raise RuntimeError("La réparation a échoué. Vérifiez l’accès GitHub et la santé de l’API.") from None
+        finally:
+            token = None
+            result = None
+        self.write_update_status(context, phase="completed", progress=100,
+                                 message="Accès aux mises à jour réparé. La version de l’application est conservée.")
+
     def process_update_job(self, job_path: Path) -> None:
         job_id = job_path.stem
         env_backup: Path | None = None
@@ -1657,6 +1706,9 @@ class HostAgent:
             )
             if str(payload.get("id")) != job_id:
                 raise ValueError("Identifiant de mise à jour incohérent.")
+            if payload.get("action") == "update_access_repair":
+                self.process_access_repair(payload, context)
+                return
             if payload.get("action") != "application_update":
                 raise ValueError("Action de maintenance non autorisée.")
             context.update(

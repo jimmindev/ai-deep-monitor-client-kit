@@ -30,7 +30,7 @@ grep -Fq -- '--skip-docker-login est reserve' "${INSTALL_DIR}/unsafe-login-bypas
   --skip-docker-login
 
 ! grep -q '^KIT_VERSION=' "${INSTALL_DIR}/.env"
-grep -Fxq 'APP_VERSION=v0.1.79' "${INSTALL_DIR}/.env"
+grep -Fxq 'APP_VERSION=v0.1.80' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_RUNTIME_PROFILE=auto' "${INSTALL_DIR}/.env"
@@ -49,6 +49,7 @@ grep -Fq 'compose_runtime_exec' "${INSTALL_DIR}/backup-client.sh"
 grep -Fq 'compose_runtime_exec' "${INSTALL_DIR}/restore-client.sh"
 grep -Fq 'compose_runtime_exec' "${INSTALL_DIR}/uninstall-client.sh"
 test -x "${INSTALL_DIR}/repair-terminal.sh"
+test -f "${INSTALL_DIR}/repair_update_access.py"
 test -x "${INSTALL_DIR}/verify-llama-gpu.sh"
 test -f "${INSTALL_DIR}/repair-terminal.ps1"
 test -f "${INSTALL_DIR}/AI-Deep-Monitor.cmd"

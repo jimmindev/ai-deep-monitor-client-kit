@@ -61,6 +61,7 @@ try {
     "backup-maintenance.ps1",
     "backup-maintenance.sh",
     "repair-terminal.ps1",
+    "repair_update_access.py",
     "repair-terminal.sh",
     "verify-llama-gpu.sh",
     "AI-Deep-Monitor.cmd",
@@ -82,7 +83,7 @@ try {
   if ($envContent -match "(?m)^API_PORT=18081\r?$") {
     throw "Le port API occupe n'a pas ete remplace."
   }
-  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.79\r?$") {
+  if ($envContent -notmatch "(?m)^APP_VERSION=v0\.1\.80\r?$") {
     throw "La version applicative attendue est absente."
   }
   if ($envContent -match "(?m)^KIT_VERSION=") {
@@ -336,4 +337,3 @@ try {
     Remove-Item -LiteralPath $clientKitReleaseDir -Recurse -Force
   }
 }
-
