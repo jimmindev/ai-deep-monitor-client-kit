@@ -59,6 +59,10 @@ resynchroniser les fichiers d'installation. Les clients possedant encore un
 ancien updater doivent telecharger et extraire une fois la nouvelle archive;
 les actualisations suivantes deviennent automatiques.
 
+Si une ancienne installation ne peut plus vérifier les mises à jour à cause d’un
+jeton GHCR expiré, consultez [la récupération de l’accès aux mises à jour](docs/update-access-recovery.md).
+L’outil du kit extrait répare cet accès sans exiger une nouvelle version de l’API.
+
 Si l'agent hôte est encore en version 3.6.0, utilisez **Mettre a jour** dans
 le menu du dernier kit telecharge. Cette action installe l'agent **3.6.3**
 avant de preparer la base, puis redemarre l'application. Un ancien agent deja
