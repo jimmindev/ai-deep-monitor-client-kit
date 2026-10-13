@@ -1,3 +1,7 @@
+## v0.1.85
+
+- Installer par défaut v0.1.85 : regroupements virtuels de mesures réelles, calculs SmartState, sélection par emplacement et recherche séparée par vue.
+
 ## v0.1.84
 
 - Installer par défaut v0.1.84 : navigation rack, historique et doublons SmartState corrigés.
