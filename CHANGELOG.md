@@ -1,3 +1,7 @@
+## v0.1.86
+
+- Installer par défaut v0.1.86 : identification des Devices dans SmartState et quatre emplacements PDU 0U.
+
 ## v0.1.85
 
 - Installer par défaut v0.1.85 : regroupements virtuels de mesures réelles, calculs SmartState, sélection par emplacement et recherche séparée par vue.
