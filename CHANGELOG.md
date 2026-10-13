@@ -1,3 +1,7 @@
+## v0.1.84
+
+- Installer par défaut v0.1.84 : navigation rack, historique et doublons SmartState corrigés.
+
 # v0.1.83
 
 - Installer par défaut v0.1.83 : placement rack, identification SNMP et mesures SmartState.
