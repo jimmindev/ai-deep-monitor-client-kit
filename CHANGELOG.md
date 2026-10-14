@@ -1,3 +1,7 @@
+## v0.1.90
+
+- Installer par défaut v0.1.90 : Dashboard uniforme et vue agrandie des graphiques.
+
 ## v0.1.89
 
 - Installer par défaut v0.1.89 : mesures communes regroupées et aperçu du rack sur la face enregistrée, en lecture seule.
