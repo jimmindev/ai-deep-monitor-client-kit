@@ -1,3 +1,7 @@
+## v0.1.89
+
+- Installer par défaut v0.1.89 : mesures communes regroupées et aperçu du rack sur la face enregistrée, en lecture seule.
+
 ## v0.1.88
 
 - Installer par défaut v0.1.88 : courbes à sources multiples simplifiées, filtres type/unité, statut rack indisponible et nettoyage des liens après suppression.
