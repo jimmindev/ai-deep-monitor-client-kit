@@ -1,3 +1,7 @@
+## v0.1.88
+
+- Installer par défaut v0.1.88 : courbes à sources multiples simplifiées, filtres type/unité, statut rack indisponible et nettoyage des liens après suppression.
+
 ## v0.1.87
 
 - Installer par défaut v0.1.87 : types UPS/PDU corrigés, placements 0/1, confirmations Builder, réordonnancement et courbes à sources multiples.
