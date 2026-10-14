@@ -1,3 +1,7 @@
+## v0.1.87
+
+- Installer par défaut v0.1.87 : types UPS/PDU corrigés, placements 0/1, confirmations Builder, réordonnancement et courbes à sources multiples.
+
 ## v0.1.86
 
 - Installer par défaut v0.1.86 : identification des Devices dans SmartState et quatre emplacements PDU 0U.
