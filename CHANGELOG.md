@@ -1,3 +1,7 @@
+# v0.1.91
+
+- Version applicative par défaut v0.1.91 pour les nouvelles installations.
+
 ## v0.1.90
 
 - Installer par défaut v0.1.90 : Dashboard uniforme et vue agrandie des graphiques.
