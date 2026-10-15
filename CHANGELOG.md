@@ -1,3 +1,7 @@
+# v0.1.94
+
+- Installateurs alignés sur le filtre et le tri des alertes importantes. Vérification des signatures conservée.
+
 # v0.1.93
 
 - Installateurs alignés sur la correction des états SmartState/Dashboard. Vérification des signatures conservée.
