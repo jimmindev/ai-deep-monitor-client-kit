@@ -1,3 +1,7 @@
+# v0.1.93
+
+- Installateurs alignés sur la correction des états SmartState/Dashboard. Vérification des signatures conservée.
+
 # v0.1.92
 
 - Installateurs alignés sur le correctif SNMP v0.1.92. Vérification des signatures conservée.
