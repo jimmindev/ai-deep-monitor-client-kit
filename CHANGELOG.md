@@ -1,3 +1,7 @@
+# v0.1.95
+
+- Installateurs Linux et Windows alignés sur v0.1.95.
+
 # v0.1.94
 
 - Installateurs alignés sur le filtre et le tri des alertes importantes. Vérification des signatures conservée.
