@@ -1,3 +1,7 @@
+# v0.1.92
+
+- Installateurs alignés sur le correctif SNMP v0.1.92. Vérification des signatures conservée.
+
 # v0.1.91
 
 - Version applicative par défaut v0.1.91 pour les nouvelles installations.
