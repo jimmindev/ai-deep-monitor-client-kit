@@ -1,3 +1,7 @@
+# v0.1.96
+
+- Installateurs Linux et Windows alignés sur v0.1.96.
+
 # v0.1.95
 
 - Installateurs Linux et Windows alignés sur v0.1.95.
