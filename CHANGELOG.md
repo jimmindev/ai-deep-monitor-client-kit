@@ -1,3 +1,7 @@
+# v0.1.97
+
+- Installateurs Linux et Windows alignés sur v0.1.97 : courbes Ouvert / Fermé des portes dans le Dashboard.
+
 # v0.1.96
 
 - Installateurs Linux et Windows alignés sur v0.1.96.
