@@ -1,3 +1,7 @@
+# v0.1.101
+
+- Version par défaut v0.1.101 : SmartState empilés sous leur emplacement dans le Canvas, sans superposition, avec tri enregistré.
+
 # v0.1.100
 
 - Version par défaut v0.1.100 : tri des SmartState par glisser-déposer et regroupement proche de leur emplacement dans le Canvas.
