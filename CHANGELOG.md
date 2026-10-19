@@ -1,3 +1,8 @@
+# v0.1.98
+
+- Installations Linux et Windows alignées sur v0.1.98 : création de SmartState depuis le Canvas, cellules de résultat et formulaire de calcul simplifié.
+- Vérificateurs Cosign et agent hôte conservés.
+
 # v0.1.97
 
 - Installateurs Linux et Windows alignés sur v0.1.97 : courbes Ouvert / Fermé des portes dans le Dashboard.
