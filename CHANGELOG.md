@@ -1,3 +1,7 @@
+# v0.1.99
+
+- Version applicative par défaut v0.1.99 : icône SmartState verte et placement des cellules du Canvas sans superposition.
+
 # v0.1.98
 
 - Installations Linux et Windows alignées sur v0.1.98 : création de SmartState depuis le Canvas, cellules de résultat et formulaire de calcul simplifié.
