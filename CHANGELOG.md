@@ -1,3 +1,7 @@
+# v0.1.100
+
+- Version par défaut v0.1.100 : tri des SmartState par glisser-déposer et regroupement proche de leur emplacement dans le Canvas.
+
 # v0.1.99
 
 - Version applicative par défaut v0.1.99 : icône SmartState verte et placement des cellules du Canvas sans superposition.
