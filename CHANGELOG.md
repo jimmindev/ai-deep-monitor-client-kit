@@ -1,5 +1,10 @@
 # v0.1.101
 
+## v0.1.104 — 2026-10-20
+
+- Installation par défaut de l’application v0.1.104 : contributeurs des calculs d’état, provenance Dashboard et organisation hiérarchique du Canvas SmartState.
+- Agents et vérification des signatures conservés.
+
 ## 2026-10-20 — Application v0.1.103
 
 - Nouvelles installations alignées sur v0.1.103 : SmartState imbriqués, sources mixtes et reprise des conflits de configuration.
