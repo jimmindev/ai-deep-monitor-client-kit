@@ -1,5 +1,10 @@
 # v0.1.101
 
+## 2026-10-20 — Application v0.1.103
+
+- Nouvelles installations alignées sur v0.1.103 : SmartState imbriqués, sources mixtes et reprise des conflits de configuration.
+
+
 ## 2026-10-20 — Application v0.1.102
 
 - Installations Linux, Jetson et Windows alignées sur v0.1.102 : Canvas SmartState dédié, hiérarchie des emplacements et résultats au clic.
