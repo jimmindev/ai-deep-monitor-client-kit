@@ -1,5 +1,10 @@
 # v0.1.101
 
+## 2026-10-20 — Application v0.1.102
+
+- Installations Linux, Jetson et Windows alignées sur v0.1.102 : Canvas SmartState dédié, hiérarchie des emplacements et résultats au clic.
+
+
 - Version par défaut v0.1.101 : SmartState empilés sous leur emplacement dans le Canvas, sans superposition, avec tri enregistré.
 
 # v0.1.100
