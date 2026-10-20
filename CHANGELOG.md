@@ -1,5 +1,9 @@
 # v0.1.101
 
+## v0.1.106 — 2026-10-20
+
+- Installation par défaut de l’application v0.1.106 : sources Device / SmartState distinctes, recherche par nom ou IP et détail filtrable pour les grandes listes.
+
 ## v0.1.105 — 2026-10-20
 
 - Installation par défaut de l’application v0.1.105 : SmartState regroupés avec provenance, modales stabilisées et graphiques aux graduations arrondies.
