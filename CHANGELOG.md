@@ -1,5 +1,9 @@
 # v0.1.101
 
+## v0.1.105 — 2026-10-20
+
+- Installation par défaut de l’application v0.1.105 : SmartState regroupés avec provenance, modales stabilisées et graphiques aux graduations arrondies.
+
 ## v0.1.104 — 2026-10-20
 
 - Installation par défaut de l’application v0.1.104 : contributeurs des calculs d’état, provenance Dashboard et organisation hiérarchique du Canvas SmartState.
