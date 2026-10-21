@@ -1,5 +1,10 @@
 # v0.1.101
 
+## v0.1.107 — 2026-10-21
+
+- Installation par défaut de v0.1.107 : formulaires Dashboard simplifiés, carte d’ajout finale et courbes basées sur les récoltes réelles.
+- Vérification des images signées conservée sur Linux, Jetson et Windows.
+
 ## v0.1.106 — 2026-10-20
 
 - Installation par défaut de l’application v0.1.106 : sources Device / SmartState distinctes, recherche par nom ou IP et détail filtrable pour les grandes listes.
