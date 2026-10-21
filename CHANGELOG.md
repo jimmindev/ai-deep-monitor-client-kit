@@ -1,8 +1,8 @@
 # v0.1.101
 
-## v0.1.110 — 2026-10-21
+## v0.1.111 — 2026-10-21
 
-- Installation par défaut de v0.1.110 : sources SmartState dans les cartes, Builder verrouillé par défaut et sélection SmartState par arborescence.
+- Installation par défaut de v0.1.111 : sources SmartState dans les cartes, Builder verrouillé par défaut et sélection SmartState par arborescence.
 - Vérification des images signées conservée sur Linux, Jetson et Windows.
 
 ## v0.1.107 — 2026-10-21
