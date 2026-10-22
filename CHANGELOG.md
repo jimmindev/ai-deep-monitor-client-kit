@@ -1,5 +1,10 @@
 # v0.1.101
 
+## v0.1.116 — 2026-10-22
+
+- Installateurs Linux, Jetson et Windows alignés sur v0.1.116 : navigation des badges Canvas et arborescence des devices virtuels.
+- Accès en lecture seule et vérification des signatures conservés.
+
 ## v0.1.115 — 2026-10-22
 
 - Installateurs Linux, Jetson et Windows alignés sur v0.1.115 : regroupement des mesures communes et filtres de création virtuelle sans présélection.
