@@ -1,5 +1,10 @@
 # v0.1.101
 
+## v0.1.114 — 2026-10-22
+
+- Installateurs Linux, Jetson et Windows alignés sur v0.1.114 : création virtuelle depuis le Canvas, badges, légende et icônes du panneau.
+- Vérification des signatures et contrôles d’accès conservés.
+
 ## v0.1.113 — 2026-10-21
 
 - Installation par défaut de v0.1.113 : sources SmartState dans les cartes, Builder verrouillé par défaut et sélection SmartState par arborescence.
