@@ -1,3 +1,7 @@
+## v0.1.123 — 2026-10-27
+
+Installations Linux/Jetson et Windows par défaut en v0.1.123 : suppression longue et historique des archives.
+
 # v0.1.101
 
 ## v0.1.116 — 2026-10-22
