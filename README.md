@@ -6,7 +6,7 @@ l'agent terminal local restreint. L'application est livree sous forme d'images
 Docker privees publiees sur GHCR.
 
 Le kit suit un canal permanent sans numero de version propre. La version
-applicative stable installee par defaut est `v0.1.126`.
+applicative stable installee par defaut est `v0.1.127`.
 
 Le guide pas a pas est disponible dans
 [docs/installation.md](docs/installation.md).
@@ -21,7 +21,7 @@ ai-deep-monitor-client-kit/
 |-- deploy/                  # definition Docker Compose
 |-- docs/                    # guide d'installation
 |-- host_terminal_agent/     # agent local restreint Windows/Linux/Jetson
-|-- host_storage_agent/      # montage des disques de données Linux
+|-- host_storage_agent/      # montage des disques de donnÃ©es Linux
 |-- scripts/                 # implementation interne Linux et Windows
 |-- tests/                   # tests de non-regression du kit
 |-- CHANGELOG.md
@@ -59,11 +59,11 @@ resynchroniser les fichiers d'installation. Les clients possedant encore un
 ancien updater doivent telecharger et extraire une fois la nouvelle archive;
 les actualisations suivantes deviennent automatiques.
 
-Si une ancienne installation ne peut plus vérifier les mises à jour à cause d’un
-jeton GHCR expiré, consultez [la récupération de l’accès aux mises à jour](docs/update-access-recovery.md).
-L’outil du kit extrait répare cet accès sans exiger une nouvelle version de l’API.
+Si une ancienne installation ne peut plus vÃ©rifier les mises Ã  jour Ã  cause dâ€™un
+jeton GHCR expirÃ©, consultez [la rÃ©cupÃ©ration de lâ€™accÃ¨s aux mises Ã  jour](docs/update-access-recovery.md).
+Lâ€™outil du kit extrait rÃ©pare cet accÃ¨s sans exiger une nouvelle version de lâ€™API.
 
-Si l'agent hôte est encore en version 3.6.0, utilisez **Mettre a jour** dans
+Si l'agent hÃ´te est encore en version 3.6.0, utilisez **Mettre a jour** dans
 le menu du dernier kit telecharge. Cette action installe l'agent **3.6.3**
 avant de preparer la base, puis redemarre l'application. Un ancien agent deja
 en execution ne se remplace pas par une simple actualisation des images
@@ -327,12 +327,12 @@ C:\ai-deep-monitor\ai-deep-monitor.ps1 -Command update
 
 La mise a jour conserve les comptes, les volumes MySQL, les donnees
 applicatives et les ports de l'installation existante.
-Après le téléchargement, le Client Kit vérifie avec Cosign les signatures des
-deux images, avant toute migration ou redémarrage. La vérification utilise les
-identifiants GHCR en lecture seule déjà enregistrés dans `.env`. Un échec
-interrompt la mise à jour et conserve la version précédente. Les versions
-jusqu'à v0.1.50 conservent leur identité GitHub Actions ; à partir de
-v0.1.51, seule l'identité locale épinglée dans `signing-policy.json` est acceptée.
+AprÃ¨s le tÃ©lÃ©chargement, le Client Kit vÃ©rifie avec Cosign les signatures des
+deux images, avant toute migration ou redÃ©marrage. La vÃ©rification utilise les
+identifiants GHCR en lecture seule dÃ©jÃ  enregistrÃ©s dans `.env`. Un Ã©chec
+interrompt la mise Ã  jour et conserve la version prÃ©cÃ©dente. Les versions
+jusqu'Ã  v0.1.50 conservent leur identitÃ© GitHub Actions ; Ã  partir de
+v0.1.51, seule l'identitÃ© locale Ã©pinglÃ©e dans `signing-policy.json` est acceptÃ©e.
 
 ## Sauvegarde
 

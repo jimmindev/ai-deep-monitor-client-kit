@@ -1,5 +1,9 @@
 ## v0.1.123 — 2026-10-27
 
+## 2026-10-29 — v0.1.127
+
+- Installation par défaut de v0.1.127 : formulaire unifié SmartState / Device virtuel sans étapes.
+
 Installations Linux/Jetson et Windows par défaut en v0.1.123 : suppression longue et historique des archives.
 
 # v0.1.101

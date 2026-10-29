@@ -74,7 +74,7 @@ Usage: ./install-client.sh [options]
 
 Options:
   --install-dir CHEMIN       Dossier cible (defaut: ~/ai-deep-monitor)
-  --app-version VERSION      Version applicative (defaut: v0.1.126)
+  --app-version VERSION      Version applicative (defaut: v0.1.127)
   --github-owner NOM         Proprietaire des images GHCR
   --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
@@ -351,7 +351,7 @@ compose_runtime_pull "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE"
 GHCR_USER="$(read_env_value "$ENV_FILE" UPDATE_CHECK_USER)" \
 GHCR_TOKEN="$(read_env_value "$ENV_FILE" UPDATE_CHECK_TOKEN)" \
   "${INSTALL_DIR}/verify-images.sh" "$GITHUB_OWNER" "$APP_VERSION" ||
-  die "La vérification Cosign des images a échoué. Installation interrompue."
+  die "La vÃ©rification Cosign des images a Ã©chouÃ©. Installation interrompue."
 if ! compose_runtime_exec "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE" up -d; then
   show_startup_diagnostics "$PROJECT_NAME" "$COMPOSE_FILE" "$ENV_FILE"
   die "Le stack Docker n'a pas demarre correctement. Le diagnostic ci-dessus indique le service bloque."
