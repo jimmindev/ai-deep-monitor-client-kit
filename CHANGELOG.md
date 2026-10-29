@@ -1,3 +1,7 @@
+# v0.1.130
+
+- Installations neuves alignées sur AI-Deep Monitor v0.1.130.
+
 ## v0.1.123 — 2026-10-27
 
 ## v0.1.129 — 2026-10-29
