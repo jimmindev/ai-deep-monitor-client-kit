@@ -1,5 +1,9 @@
 ## v0.1.123 — 2026-10-27
 
+## v0.1.128 — 2026-10-29
+
+Les nouvelles installations utilisent l’application v0.1.128. Aucun changement de l’agent ou de la politique de signature.
+
 ## 2026-10-29 — v0.1.127
 
 - Installation par défaut de v0.1.127 : formulaire unifié SmartState / Device virtuel sans étapes.
