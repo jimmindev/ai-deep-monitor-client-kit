@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [string]$AppVersion = "v0.1.126",
+  [string]$AppVersion = "v0.1.127",
   [string]$GithubOwner = "jimmindev",
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
@@ -636,7 +636,7 @@ $env:GHCR_USER = $verifyEnvironment["UPDATE_CHECK_USER"]
 $env:GHCR_TOKEN = $verifyEnvironment["UPDATE_CHECK_TOKEN"]
 try {
   & (Join-Path $installPath.FullName "verify-images.ps1") -GithubOwner $GithubOwner -AppVersion $AppVersion
-  if ($LASTEXITCODE -ne 0) { throw "La vérification Cosign des images a échoué. Installation interrompue." }
+  if ($LASTEXITCODE -ne 0) { throw "La vÃ©rification Cosign des images a Ã©chouÃ©. Installation interrompue." }
 } finally {
   Remove-Item Env:GHCR_USER, Env:GHCR_TOKEN -ErrorAction SilentlyContinue
 }
