@@ -6,7 +6,7 @@ l'agent terminal local restreint. L'application est livree sous forme d'images
 Docker privees publiees sur GHCR.
 
 Le kit suit un canal permanent sans numero de version propre. La version
-applicative stable installee par defaut est `v0.1.125`.
+applicative stable installee par defaut est `v0.1.126`.
 
 Le guide pas a pas est disponible dans
 [docs/installation.md](docs/installation.md).
