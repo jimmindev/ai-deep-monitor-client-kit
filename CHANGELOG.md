@@ -1,3 +1,7 @@
+# v0.1.131
+
+- Version applicative par défaut v0.1.131 : scan IP dans le sélecteur de mesures, confirmation guidée et SmartState toujours actifs.
+
 # v0.1.130
 
 - Installations neuves alignées sur AI-Deep Monitor v0.1.130.
