@@ -1,3 +1,7 @@
+# v0.1.132
+
+- Installations par défaut sur v0.1.132 : remplacement de sources, groupes virtuels et correction des scans SNMP.
+
 # v0.1.131
 
 - Version applicative par défaut v0.1.131 : scan IP dans le sélecteur de mesures, confirmation guidée et SmartState toujours actifs.
