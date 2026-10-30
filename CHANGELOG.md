@@ -1,3 +1,7 @@
+# v0.1.134
+
+- Default Linux/Windows installers now select v0.1.134 with simplified virtual Device source configuration. Signing policy and recovery tools are unchanged.
+
 # v0.1.133
 
 - Default Linux/Windows installers now select v0.1.133. Signing policy and recovery tools are unchanged.
