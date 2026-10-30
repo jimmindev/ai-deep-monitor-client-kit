@@ -1,3 +1,7 @@
+# v0.1.133
+
+- Default Linux/Windows installers now select v0.1.133. Signing policy and recovery tools are unchanged.
+
 # v0.1.132
 
 - Installations par défaut sur v0.1.132 : remplacement de sources, groupes virtuels et correction des scans SNMP.
