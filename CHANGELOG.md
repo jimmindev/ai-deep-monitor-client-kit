@@ -1,3 +1,7 @@
+## v0.1.138 — 2026-11-02
+
+- Installation par défaut de l’application v0.1.138 (Canvas, filtres de mesures et calculs).
+
 # Mise à jour applicative v0.1.137
 
 - Version par défaut des nouvelles installations alignée sur v0.1.137.
