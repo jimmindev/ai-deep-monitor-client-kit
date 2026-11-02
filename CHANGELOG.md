@@ -1,3 +1,7 @@
+# v0.1.136
+
+- Default installers select v0.1.136: compact Canvas source setup, automatic standby with primary recovery, and application-only offline simulation for Devices. Signing policy and recovery tools are unchanged.
+
 # v0.1.134
 
 - Default Linux/Windows installers now select v0.1.134 with simplified virtual Device source configuration. Signing policy and recovery tools are unchanged.
