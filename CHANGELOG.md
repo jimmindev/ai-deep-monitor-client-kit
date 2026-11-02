@@ -1,3 +1,9 @@
+# Mise à jour applicative v0.1.137
+
+- Version par défaut des nouvelles installations alignée sur v0.1.137.
+- Modales SmartState et Device virtuel épurées ; mesures explicites et périmètre limité à l’objet et ses enfants directs.
+- Aucun changement de jeton ni de politique de signature.
+
 # v0.1.136
 
 - Default installers select v0.1.136: compact Canvas source setup, automatic standby with primary recovery, and application-only offline simulation for Devices. Signing policy and recovery tools are unchanged.
