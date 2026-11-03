@@ -1,3 +1,9 @@
+# Changelog
+
+## 2026-11-03 — Application v0.1.139
+
+- Default application version updated to v0.1.139 for Linux, Jetson and Windows installers.
+
 ## v0.1.138 — 2026-11-02
 
 - Installation par défaut de l’application v0.1.138 (Canvas, filtres de mesures et calculs).
