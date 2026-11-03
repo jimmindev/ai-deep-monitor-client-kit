@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-03 — Application v0.1.140
+
+- Default application version updated to v0.1.140 for Linux, Jetson and Windows installers.
+
+
 ## 2026-11-03 — Application v0.1.139
 
 - Default application version updated to v0.1.139 for Linux, Jetson and Windows installers.
