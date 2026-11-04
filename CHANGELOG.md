@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.143 — 2026-11-04
+
+- Default installations use v0.1.143 with compact SmartState calculation settings and independent attribute units.
+- Preserve mandatory signature verification and read-only client registry access.
+
+
 ## v0.1.142 — 2026-11-04
 
 - Default installations use v0.1.142: custom Device names in all Builder modes and multiple virtual Device history curves.
