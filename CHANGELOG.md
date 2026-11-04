@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.144 — 2026-11-04
+
+- Installateurs Linux, Jetson et Windows : version par défaut v0.1.144.
+
 ## v0.1.143 — 2026-11-04
 
 - Default installations use v0.1.143 with compact SmartState calculation settings and independent attribute units.
