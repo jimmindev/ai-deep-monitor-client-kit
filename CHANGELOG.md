@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.142 — 2026-11-04
+
+- Default installations use v0.1.142: custom Device names in all Builder modes and multiple virtual Device history curves.
+- Image signature verification and client read-only update access remain required.
+
+
 ## 2026-11-04 — Application v0.1.141
 
 - Default application version updated to v0.1.141 for Linux, Jetson and Windows installers.
