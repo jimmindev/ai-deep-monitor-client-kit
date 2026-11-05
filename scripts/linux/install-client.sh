@@ -74,7 +74,7 @@ Usage: ./install-client.sh [options]
 
 Options:
   --install-dir CHEMIN       Dossier cible (defaut: ~/ai-deep-monitor)
-  --app-version VERSION      Version applicative (defaut: v0.1.146)
+  --app-version VERSION      Version applicative (defaut: v0.1.147)
   --github-owner NOM         Proprietaire des images GHCR
   --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
