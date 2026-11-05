@@ -1,5 +1,9 @@
 ## v0.1.149 — 2026-11-05
 
+## v0.1.153
+
+- Default installations to application v0.1.153 with bottom-aligned SmartState calculations and clarified mode order.
+
 ## v0.1.152
 
 - Default installations to application v0.1.152 with scientific SmartState calculations and typed logical outputs.
