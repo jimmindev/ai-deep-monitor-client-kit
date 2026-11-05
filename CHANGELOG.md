@@ -1,3 +1,7 @@
+## v0.1.147 — 2026-11-05
+
+- Installation par défaut : application v0.1.147, récoltes alignées sur des cycles UTC fixes.
+
 ## v0.1.146 — 2026-11-05
 
 - Installation par défaut : application v0.1.146.
