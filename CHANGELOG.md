@@ -1,3 +1,7 @@
+## v0.1.149 — 2026-11-05
+
+- Application v0.1.149 par défaut : calculs SmartState multiples et reprise des historiques des sources pour SmartState et Devices virtuels.
+
 ## v0.1.148 — 2026-11-05
 
 - Application v0.1.148 par défaut : heures à la minute dans les courbes numériques.
