@@ -1,5 +1,9 @@
 ## v0.1.149 — 2026-11-05
 
+## v0.1.152
+
+- Default installations to application v0.1.152 with scientific SmartState calculations and typed logical outputs.
+
 ## v0.1.151
 
 - Default installations to application v0.1.151 with compact SmartState calculation controls.
