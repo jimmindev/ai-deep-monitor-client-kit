@@ -1,3 +1,7 @@
+## v0.1.148 — 2026-11-05
+
+- Application v0.1.148 par défaut : heures à la minute dans les courbes numériques.
+
 ## v0.1.147 — 2026-11-05
 
 - Installation par défaut : application v0.1.147, récoltes alignées sur des cycles UTC fixes.
