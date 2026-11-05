@@ -1,3 +1,7 @@
+## v0.1.145 — 2026-11-05
+
+- Installation par défaut : application v0.1.145, configuration Dashboard avec aperçu permanent.
+
 # Changelog
 
 ## v0.1.144 — 2026-11-04
