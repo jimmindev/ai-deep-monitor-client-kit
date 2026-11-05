@@ -1,5 +1,9 @@
 ## v0.1.149 — 2026-11-05
 
+## v0.1.150
+
+- Default new installations to application v0.1.150, including the HTTP SmartState calculation fix.
+
 - Application v0.1.149 par défaut : calculs SmartState multiples et reprise des historiques des sources pour SmartState et Devices virtuels.
 
 ## v0.1.148 — 2026-11-05
