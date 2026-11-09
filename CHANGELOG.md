@@ -1,8 +1,8 @@
 ## v0.1.149 — 2026-11-05
 
-## Application v0.1.154 — 2026-11-06
+## Application v0.1.155 — 2026-11-06
 
-- Installations Linux/Jetson et Windows alignées sur la version applicative v0.1.154.
+- Installations Linux/Jetson et Windows alignées sur la version applicative v0.1.155.
 - Tests de version et documentation actualisés ; politique de signature inchangée.
 
 ## v0.1.153
