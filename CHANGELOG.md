@@ -1,3 +1,8 @@
+# v0.1.156 - 2026-11-11
+
+- Version applicative par défaut v0.1.156 : alertes simplifiées et destinations réutilisables.
+- Vérification des signatures et outils de récupération inchangés.
+
 ## v0.1.149 — 2026-11-05
 
 ## Application v0.1.155 — 2026-11-06
