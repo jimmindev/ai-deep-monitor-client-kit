@@ -1,3 +1,8 @@
+# v0.1.157 - 2026-11-12
+
+- Version par défaut v0.1.157 : fiabilité des alertes, escalade et sauvegardes séparées.
+- Vérification des signatures et récupération conservées.
+
 # v0.1.156 - 2026-11-11
 
 - Version applicative par défaut v0.1.156 : alertes simplifiées et destinations réutilisables.
