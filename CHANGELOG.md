@@ -1,3 +1,10 @@
+# v0.1.158 — 2026-11-13
+
+- Version applicative par défaut v0.1.158 pour les nouvelles installations Linux/Jetson et Windows.
+- Compatibilité avec les états logiques à variables locales, calculs liés et profils d’actions des alertes.
+- Lecture des digests compatible avec Windows PowerShell 5 ; aucun contournement de signature.
+- Politique de signature et vérificateurs inchangés.
+
 # v0.1.157 - 2026-11-12
 
 - Version par défaut v0.1.157 : fiabilité des alertes, escalade et sauvegardes séparées.

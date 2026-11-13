@@ -16,8 +16,8 @@ try {
       $global:UpdateOrderCalls.Add($command)
       $global:LASTEXITCODE = 0
       if ($command -like "info --format *") { return "linux|amd64" }
-      if ($command -like "image inspect ghcr.io/jimmindev/ai-deep-monitor-api:*") { return ('["ghcr.io/jimmindev/ai-deep-monitor-api@sha256:' + ('a' * 64) + '"]') }
-      if ($command -like "image inspect ghcr.io/jimmindev/ai-deep-monitor-frontend:*") { return ('["ghcr.io/jimmindev/ai-deep-monitor-frontend@sha256:' + ('b' * 64) + '"]') }
+      if ($command -like "image inspect *ghcr.io/jimmindev/ai-deep-monitor-api:*") { return ('["ghcr.io/jimmindev/ai-deep-monitor-api@sha256:' + ('a' * 64) + '"]') }
+      if ($command -like "image inspect *ghcr.io/jimmindev/ai-deep-monitor-frontend:*") { return ('["ghcr.io/jimmindev/ai-deep-monitor-frontend@sha256:' + ('b' * 64) + '"]') }
       if ($command -like "*run --rm --no-deps api alembic upgrade head*") {
         $global:LASTEXITCODE = $global:UpdateOrderMigrationExit
       }
@@ -52,8 +52,8 @@ try {
         $global:UpdateOrderCalls.Add($command)
         $global:LASTEXITCODE = 0
         if ($command -like "info --format *") { return "linux|amd64" }
-        if ($command -like "image inspect ghcr.io/jimmindev/ai-deep-monitor-api:*") { return ('["ghcr.io/jimmindev/ai-deep-monitor-api@sha256:' + ('a' * 64) + '"]') }
-        if ($command -like "image inspect ghcr.io/jimmindev/ai-deep-monitor-frontend:*") { return ('["ghcr.io/jimmindev/ai-deep-monitor-frontend@sha256:' + ('b' * 64) + '"]') }
+        if ($command -like "image inspect *ghcr.io/jimmindev/ai-deep-monitor-api:*") { return ('["ghcr.io/jimmindev/ai-deep-monitor-api@sha256:' + ('a' * 64) + '"]') }
+        if ($command -like "image inspect *ghcr.io/jimmindev/ai-deep-monitor-frontend:*") { return ('["ghcr.io/jimmindev/ai-deep-monitor-frontend@sha256:' + ('b' * 64) + '"]') }
       }
       try {
         & (Join-Path $kit "scripts/windows/update-client.ps1") -InstallDir $install -AppVersion v0.1.99 -Yes -SkipBackup -SkipAgentInstall -SkipDockerLogin -SkipKitRefresh *> $null

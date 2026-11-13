@@ -28,7 +28,9 @@ function Get-LocalDigestReference {
   if ($LASTEXITCODE -ne 0) {
     throw "Image locale introuvable apres telechargement: $taggedReference"
   }
-  $repoDigests = @($json | ConvertFrom-Json)
+  # Windows PowerShell 5 keeps JSON arrays nested when capturing a pipeline.
+  $parsedDigests = ConvertFrom-Json -InputObject ($json -join "`n")
+  $repoDigests = @($parsedDigests)
   $digestReference = $repoDigests |
     Where-Object { $_ -is [string] -and $_.StartsWith("${Repository}@sha256:", [StringComparison]::OrdinalIgnoreCase) } |
     Select-Object -First 1
