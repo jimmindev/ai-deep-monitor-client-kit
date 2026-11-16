@@ -74,7 +74,7 @@ Usage: ./install-client.sh [options]
 
 Options:
   --install-dir CHEMIN       Dossier cible (defaut: ~/ai-deep-monitor)
-  --app-version VERSION      Version applicative (defaut: v0.1.158)
+  --app-version VERSION      Version applicative (defaut: v0.1.159)
   --github-owner NOM         Proprietaire des images GHCR
   --frontend-port PORT       Port web souhaite (auto: 80 puis 8080)
   --api-port PORT            Port API souhaite
@@ -270,6 +270,7 @@ LLAMA_CPP_FLASH_ATTN=off
 LLAMA_CPP_AUTO_BUILD_CUDA=true
 NVIDIA_VISIBLE_DEVICES=all
 
+MYSQL_IMAGE=mysql:8.4.13@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
 MYSQL_ROOT_PASSWORD=$(new_secret)
 MYSQL_DATABASE=ai_monitor_prod
 MYSQL_USER=ai_user

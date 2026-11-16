@@ -1,6 +1,6 @@
 param(
   [string]$InstallDir = "C:\ai-deep-monitor",
-  [string]$AppVersion = "v0.1.158",
+  [string]$AppVersion = "v0.1.159",
   [string]$GithubOwner = "jimmindev",
   [int]$FrontendPort = 80,
   [int]$ApiPort = 8000,
@@ -509,6 +509,7 @@ LLAMA_CPP_MAX_TOKENS=512
 LLAMA_CPP_TIMEOUT_SECONDS=300
 NVIDIA_VISIBLE_DEVICES=all
 
+MYSQL_IMAGE=mysql:8.4.13@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
 MYSQL_ROOT_PASSWORD=$mysqlRootPassword
 MYSQL_DATABASE=ai_monitor_prod
 MYSQL_USER=ai_user

@@ -26,7 +26,7 @@ try {
     }
     $failed = $false
     try {
-      & $verifier -AppVersion v0.1.158 -GithubUser fixture -GithubToken fixture *> $null
+      & $verifier -AppVersion v0.1.159 -GithubUser fixture -GithubToken fixture *> $null
     } catch { $failed = $true; $failureMessage = $_.Exception.Message }
     if ($mode -eq "valid") {
       if ($failed -or $global:CosignJsonCalls.Count -ne 2) { throw "Valid single-item RepoDigests arrays were not verified: $failureMessage" }
