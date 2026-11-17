@@ -1,3 +1,9 @@
+# v0.1.160 — 2026-11-17
+
+- Installateurs Linux/Jetson et Windows alignés sur la version applicative v0.1.160.
+- Conservation des vérifications de signature, de l’accès en lecture seule et des données existantes.
+- Publication des archives sans installation automatique sur les clients.
+
 # v0.1.158 — 2026-11-13
 
 - Version applicative par défaut v0.1.158 pour les nouvelles installations Linux/Jetson et Windows.
