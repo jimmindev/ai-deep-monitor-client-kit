@@ -6,7 +6,7 @@ l'agent terminal local restreint. L'application est livree sous forme d'images
 Docker privees publiees sur GHCR.
 
 Le kit suit un canal permanent sans numero de version propre. La version
-applicative stable installee par defaut est `v0.1.161`.
+applicative stable installee par defaut est `v0.1.162`.
 
 Le guide pas a pas est disponible dans
 [docs/installation.md](docs/installation.md).
@@ -468,3 +468,7 @@ Ce comportement est inclus dans les images applicatives 0.1.26 corrigees.
 Une mise a jour depuis le menu rafraichit les images meme si la version
 installee est deja 0.1.26, afin de recuperer les correctifs publies sous ce
 numero. La sauvegarde et la preparation MySQL restent executees.
+
+## Reverse proxy /aideepmonitor/
+
+Voir `docs/reverse-proxy-subpath.md`. Le snippet sert directement le frontend Docker courant au lieu d une copie statique. Appliquer une fois `sudo bash deploy/nginx/install-aideepmonitor.sh` apres la mise a jour v0.1.162. Les mises a jour suivantes ne demandent aucune copie de fichiers.
