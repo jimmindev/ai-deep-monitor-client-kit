@@ -1,3 +1,8 @@
+# v0.1.161 — 2026-11-18
+
+- Installateurs Linux/Jetson et Windows alignés sur v0.1.161 : profils et scénarios d’alertes, sévérités et fiabilité Email/Webhook.
+- Vérification Cosign et droits clients en lecture seule conservés.
+
 # v0.1.160 — 2026-11-17
 
 - Installateurs Linux/Jetson et Windows alignés sur la version applicative v0.1.160.
