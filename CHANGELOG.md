@@ -1,3 +1,7 @@
+## v0.1.165
+
+- Installation par defaut alignee sur v0.1.165 : alertes, Discord et ports personnalises.
+
 ## v0.1.164
 
 - Default installation version aligned with alert actions, contacts and Builder updates.
