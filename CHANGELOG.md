@@ -1,3 +1,8 @@
+## v0.1.164
+
+- Default installation version aligned with alert actions, contacts and Builder updates.
+- Existing databases and update signature verification are preserved.
+
 # v0.1.161 — 2026-11-18
 
 - Installateurs Linux/Jetson et Windows alignés sur v0.1.161 : profils et scénarios d’alertes, sévérités et fiabilité Email/Webhook.
