@@ -1,3 +1,7 @@
+## Application v0.1.166
+
+- Default application version aligned to v0.1.166; existing data, read-only update access and image verification preserved.
+
 ## v0.1.165
 
 - Installation par defaut alignee sur v0.1.165 : alertes, Discord et ports personnalises.
