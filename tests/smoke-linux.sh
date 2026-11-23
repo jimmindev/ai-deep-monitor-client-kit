@@ -30,7 +30,7 @@ grep -Fq -- '--skip-docker-login est reserve' "${INSTALL_DIR}/unsafe-login-bypas
   --skip-docker-login
 
 ! grep -q '^KIT_VERSION=' "${INSTALL_DIR}/.env"
-grep -Fxq 'APP_VERSION=v0.1.167' "${INSTALL_DIR}/.env"
+grep -Fxq 'APP_VERSION=v0.1.168' "${INSTALL_DIR}/.env"
 grep -Fxq 'MYSQL_IMAGE=mysql:8.4.13@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M' "${INSTALL_DIR}/.env"

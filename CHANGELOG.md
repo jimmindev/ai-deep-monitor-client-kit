@@ -1,3 +1,7 @@
+## v0.1.168
+
+- Install AI-Deep Monitor v0.1.168 by default.
+
 ## v0.1.167
 
 - Installer AI-Deep Monitor v0.1.167 by default.
