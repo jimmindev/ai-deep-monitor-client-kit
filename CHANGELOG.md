@@ -1,3 +1,7 @@
+## v0.1.167
+
+- Installer AI-Deep Monitor v0.1.167 by default.
+
 ## Application v0.1.166
 
 - Default application version aligned to v0.1.166; existing data, read-only update access and image verification preserved.
