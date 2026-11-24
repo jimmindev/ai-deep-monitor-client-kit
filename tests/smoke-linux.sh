@@ -30,7 +30,7 @@ grep -Fq -- '--skip-docker-login est reserve' "${INSTALL_DIR}/unsafe-login-bypas
   --skip-docker-login
 
 ! grep -q '^KIT_VERSION=' "${INSTALL_DIR}/.env"
-grep -Fxq 'APP_VERSION=v0.1.169' "${INSTALL_DIR}/.env"
+grep -Fxq 'APP_VERSION=v0.1.170' "${INSTALL_DIR}/.env"
 grep -Fxq 'MYSQL_IMAGE=mysql:8.4.13@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902' "${INSTALL_DIR}/.env"
 grep -Fxq 'DOCKER_PLATFORM=linux/amd64' "${INSTALL_DIR}/.env"
 grep -Fxq 'LLAMA_CPP_MODEL=Llama-3.2-3B-Instruct-Q4_K_M' "${INSTALL_DIR}/.env"
@@ -190,7 +190,8 @@ assert "DB_INIT_RETRIES" in api_command
   docker compose \
     -f "${KIT_DIR}/deploy/docker-compose.release.yml" \
     --env-file "${INSTALL_DIR}/.env" \
-    config --services | grep -Fxq collector
+    config --services >"${INSTALL_DIR}/compose-services.txt"
+  grep -Fxq collector "${INSTALL_DIR}/compose-services.txt"
   docker compose \
     -f "${KIT_DIR}/deploy/docker-compose.release.yml" \
     -f "${KIT_DIR}/deploy/docker-compose.accel.nvidia.yml" \
