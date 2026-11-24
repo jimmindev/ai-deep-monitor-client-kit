@@ -190,7 +190,8 @@ assert "DB_INIT_RETRIES" in api_command
   docker compose \
     -f "${KIT_DIR}/deploy/docker-compose.release.yml" \
     --env-file "${INSTALL_DIR}/.env" \
-    config --services | grep -Fxq collector
+    config --services >"${INSTALL_DIR}/compose-services.txt"
+  grep -Fxq collector "${INSTALL_DIR}/compose-services.txt"
   docker compose \
     -f "${KIT_DIR}/deploy/docker-compose.release.yml" \
     -f "${KIT_DIR}/deploy/docker-compose.accel.nvidia.yml" \
