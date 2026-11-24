@@ -1,3 +1,7 @@
+## v0.1.170 - 2026-11-24
+
+- Installe AI-Deep Monitor v0.1.170 par defaut.
+
 ## Application v0.1.169
 
 - Install AI-Deep Monitor v0.1.169 by default.
