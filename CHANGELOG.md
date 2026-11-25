@@ -1,3 +1,7 @@
+## v0.1.172
+
+- Aligner les nouvelles installations sur AI-Deep Monitor v0.1.172.
+
 ## v0.1.171 - 2026-11-25
 
 - Aligner les nouvelles installations sur AI-Deep Monitor v0.1.171.
