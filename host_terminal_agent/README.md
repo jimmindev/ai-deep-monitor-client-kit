@@ -95,6 +95,20 @@ HOST_TERMINAL_QUEUE_GID=12003 sudo -E bash ./host_terminal_agent/install_linux_s
 Après une mise à jour de l'agent ou de la politique, relancez l'installateur : les
 fichiers protégés sont remplacés puis le service est redémarré.
 
+## macOS et Apple Silicon
+
+L’inventaire GPU doit s’exécuter sur macOS pour lire le modèle de la puce Apple.
+Depuis la racine de l’installation, lancez l’agent avec votre compte habituel.
+Le dossier `host_terminal_jobs` doit correspondre à celui déjà partagé avec l’API
+dans Docker Compose.
+
+```bash
+python3 host_terminal_agent/agent.py --jobs-dir ./host_terminal_jobs --install-dir .
+```
+
+La carte GPU affiche le modèle indiqué par macOS. Le taux d’utilisation et la
+mémoire GPU restent indisponibles pour cette source.
+
 ## Fonctionnement commun
 
 La communication passe uniquement par `host_terminal_jobs/`. Une clé aléatoire est

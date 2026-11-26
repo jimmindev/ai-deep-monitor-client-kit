@@ -190,8 +190,75 @@ def _empty_gpu_snapshot(name: str = "Non détecté") -> dict:
     }
 
 
+def _mac_gpu_snapshot() -> dict:
+    snapshot = _empty_gpu_snapshot()
+    try:
+        result = subprocess.run(
+            ["/usr/sbin/system_profiler", "SPDisplaysDataType", "-json"],
+            capture_output=True, text=True, encoding="utf-8", timeout=5, check=True,
+        )
+        payload = json.loads(result.stdout)
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return snapshot
+    devices = payload.get("SPDisplaysDataType") if isinstance(payload, dict) else None
+    if not isinstance(devices, list):
+        return snapshot
+    names = []
+    for device in devices:
+        name = device.get("sppci_model") if isinstance(device, dict) else None
+        if isinstance(name, str) and re.match(r"^(?:Apple M\d|AMD\b|Radeon\b)", name.strip(), re.IGNORECASE):
+            names.append(name.strip())
+    if names:
+        return snapshot | {"available": True, "name": " · ".join(names), "source": "host-macos-system-profiler"}
+    return snapshot
+
+
+def _linux_gpu_snapshot(*, amd_only: bool = False) -> dict:
+    snapshot = _empty_gpu_snapshot()
+    names = []
+    usage_values = []
+    memory_values = []
+    vendor_names = {"0x1002": "AMD", "0x10de": "NVIDIA", "0x8086": "Intel"}
+    for card in sorted(Path("/sys/class/drm").glob("card[0-9]*")):
+        device = card / "device"
+        if not re.fullmatch(r"card[0-9]+", card.name) or not device.is_dir():
+            continue
+        try:
+            vendor = (device / "vendor").read_text(encoding="ascii").strip().lower()
+        except OSError:
+            vendor = ""
+        if vendor == "0x1af4" or (amd_only and vendor != "0x1002"):
+            continue
+        names.append(vendor_names.get(vendor, f"GPU {vendor or 'Linux'}"))
+        try:
+            usage_values.append(float((device / "gpu_busy_percent").read_text(encoding="ascii").strip()))
+        except (OSError, ValueError):
+            pass
+        if vendor == "0x1002":
+            try:
+                used = int((device / "mem_info_vram_used").read_text(encoding="ascii"))
+                total = int((device / "mem_info_vram_total").read_text(encoding="ascii"))
+                memory_values.append((used, total))
+            except (OSError, ValueError):
+                pass
+    if not names:
+        return snapshot
+    complete_memory = len(memory_values) == len(names)
+    return snapshot | {
+        "available": True,
+        "name": " · ".join(dict.fromkeys(names)),
+        "usedPercent": round(sum(usage_values) / len(usage_values), 2) if usage_values else None,
+        "memoryUsedBytes": sum(used for used, _ in memory_values) if complete_memory else 0,
+        "memoryTotalBytes": sum(total for _, total in memory_values) if complete_memory else 0,
+        "source": "host-linux-sysfs",
+    }
+
+
 def collect_gpu_snapshot() -> dict:
     """Collect GPU facts on the host, outside the application container."""
+    host_system = platform.system()
+    if host_system == "Darwin":
+        return _mac_gpu_snapshot()
     nvidia_smi = shutil.which("nvidia-smi")
     if os.name == "nt" and not nvidia_smi:
         candidates = [
@@ -226,7 +293,7 @@ def collect_gpu_snapshot() -> dict:
             memory_used = [int(float(row[2])) for row in parsed if len(row) >= 4]
             memory_total = [int(float(row[3])) for row in parsed if len(row) >= 4]
             if names:
-                return {
+                snapshot = {
                     "available": True,
                     "name": " · ".join(names),
                     "usedPercent": round(sum(used) / len(used), 2),
@@ -234,6 +301,13 @@ def collect_gpu_snapshot() -> dict:
                     "memoryTotalBytes": sum(memory_total) * 1024 * 1024,
                     "source": "host-nvidia-smi",
                 }
+                amd = _linux_gpu_snapshot(amd_only=True) if host_system == "Linux" else None
+                if amd and amd["available"]:
+                    snapshot["name"] = " · ".join([*names, amd["name"]])
+                    snapshot["usedPercent"] = None
+                    for key in ("memoryUsedBytes", "memoryTotalBytes"):
+                        snapshot[key] = snapshot[key] + amd[key] if amd["memoryTotalBytes"] else 0
+                return snapshot
         except (OSError, subprocess.SubprocessError, ValueError, IndexError):
             pass
 
@@ -271,34 +345,8 @@ def collect_gpu_snapshot() -> dict:
                     }
         except (OSError, subprocess.SubprocessError, ValueError, TypeError, json.JSONDecodeError):
             pass
-    else:
-        try:
-            cards = sorted(Path("/sys/class/drm").glob("card[0-9]*"))
-            devices = [card / "device" for card in cards if (card / "device").is_dir()]
-            if devices:
-                usage_values = []
-                names = []
-                vendor_names = {"0x1002": "AMD", "0x10de": "NVIDIA", "0x8086": "Intel"}
-                for device in devices:
-                    try:
-                        vendor = (device / "vendor").read_text(encoding="ascii").strip().lower()
-                    except OSError:
-                        vendor = ""
-                    names.append(vendor_names.get(vendor, f"GPU {vendor or 'Linux'}"))
-                    try:
-                        usage_values.append(float((device / "gpu_busy_percent").read_text(encoding="ascii").strip()))
-                    except (OSError, ValueError):
-                        pass
-                return {
-                    "available": True,
-                    "name": " · ".join(dict.fromkeys(names)),
-                    "usedPercent": round(sum(usage_values) / len(usage_values), 2) if usage_values else None,
-                    "memoryUsedBytes": 0,
-                    "memoryTotalBytes": 0,
-                    "source": "host-linux-sysfs",
-                }
-        except OSError:
-            pass
+    elif host_system == "Linux":
+        return _linux_gpu_snapshot()
 
     return _empty_gpu_snapshot()
 
@@ -416,6 +464,8 @@ def is_privileged() -> bool:
 def detect_host_family() -> str:
     if os.name == "nt":
         return "windows"
+    if platform.system() == "Darwin":
+        return "macos"
     model = ""
     try:
         model = (Path("/proc/device-tree/model").read_bytes()).decode(
