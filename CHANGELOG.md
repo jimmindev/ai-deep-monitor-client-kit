@@ -2,6 +2,10 @@
 
 - Version par defaut des nouvelles installations : AI-Deep Monitor v0.1.173.
 
+## v0.1.174 - 2026-11-26
+
+- Align installer defaults with AI-Deep Monitor v0.1.174.
+
 ## v0.1.172
 
 - Aligner les nouvelles installations sur AI-Deep Monitor v0.1.172.
