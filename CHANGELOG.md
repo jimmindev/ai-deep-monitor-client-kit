@@ -1,3 +1,7 @@
+## v0.1.176 - 2026-11-26
+
+- Version par défaut v0.1.176 et redémarrage vérifié des services de collecte pendant une mise à jour.
+
 ## v0.1.173
 
 - Version par defaut des nouvelles installations : AI-Deep Monitor v0.1.173.

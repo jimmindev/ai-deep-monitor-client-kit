@@ -1923,7 +1923,18 @@ class HostAgent:
                     message="Redémarrage des services avec la nouvelle version.",
                     backup_created=True,
                 )
-                start_result = self.compose_command("up", "-d", timeout=900)
+                start_result = self.compose_command(
+                    "up", "-d", "--pull", "never", "--wait", "--wait-timeout", "300", "api",
+                    timeout=900,
+                )
+                if start_result["ok"]:
+                    start_result = self.compose_command(
+                        "up", "-d", "--no-deps", "--force-recreate", "--pull", "never",
+                        "--wait", "--wait-timeout", "300", "collector", "discovery-worker",
+                        timeout=900,
+                    )
+                if start_result["ok"]:
+                    start_result = self.compose_command("up", "-d", "--pull", "never", timeout=900)
                 deployment_ok = bool(start_result["ok"])
                 if not deployment_ok:
                     record_update_failure(

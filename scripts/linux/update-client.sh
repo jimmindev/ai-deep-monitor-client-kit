@@ -304,7 +304,9 @@ if ! compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" up -d --wa
   cp -f "${ENV_FILE}.before-${APP_VERSION}.bak" "$ENV_FILE"
   die "La migration a echoue. La version precedente est conservee; aucun service applicatif n'a ete redemarre."
 fi
-if ! compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" up -d; then
+if ! compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" up -d --pull never --wait --wait-timeout 300 api ||
+   ! compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" up -d --no-deps --force-recreate --pull never --wait --wait-timeout 300 collector discovery-worker ||
+   ! compose_runtime_exec "$project_name" "$COMPOSE_FILE" "$ENV_FILE" up -d --pull never; then
   show_startup_diagnostics "$project_name" "$COMPOSE_FILE" "$ENV_FILE"
   die "Le stack Docker n'a pas redemarre. Le fichier ${ENV_FILE}.before-${APP_VERSION}.bak permet un retour arriere."
 fi

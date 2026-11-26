@@ -74,7 +74,13 @@ class UpdateMigrationTest(unittest.TestCase):
                     starts = [i for i,c in enumerate(calls) if "up" in c]
                     if migration_ok:
                         self.assertEqual(status["phase"], "completed")
-                        self.assertTrue(starts and starts[0] > migration_pos)
+                        self.assertEqual(len(starts), 3)
+                        self.assertTrue(migration_pos < starts[0] < starts[1] < starts[2])
+                        self.assertEqual(calls[starts[0]][-1], "api")
+                        self.assertEqual(calls[starts[1]][-11:], [
+                            "up", "-d", "--no-deps", "--force-recreate", "--pull", "never",
+                            "--wait", "--wait-timeout", "300", "collector", "discovery-worker",
+                        ])
                     else:
                         self.assertEqual(status["failure_code"], "database_migration_failed")
                         self.assertEqual(status["phase"], "rolled_back")

@@ -589,13 +589,15 @@ try {
   throw "La migration a echoue. La version precedente est conservee; aucun service applicatif n'a ete redemarre. $($_.Exception.Message)"
 }
 try {
-  Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("up", "-d")
+  Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("up", "-d", "--pull", "never", "--wait", "--wait-timeout", "300", "api")
+  Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("up", "-d", "--no-deps", "--force-recreate", "--pull", "never", "--wait", "--wait-timeout", "300", "collector", "discovery-worker")
+  Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("up", "-d", "--pull", "never")
 } catch {
   Write-Warning "Etat des services:"
   $composeArguments = Get-AiMonitorComposeArguments -ComposePath $composePath -EnvPath $envPath
   & docker compose @composeArguments ps
   Write-Warning "Derniers journaux utiles:"
-  & docker compose @composeArguments logs --tail=120 mysql sandbox llama-cpp api collector
+  & docker compose @composeArguments logs --tail=120 mysql sandbox llama-cpp api collector discovery-worker
   throw
 }
 Invoke-AiMonitorCompose -ComposePath $composePath -EnvPath $envPath -CommandArguments @("ps")
