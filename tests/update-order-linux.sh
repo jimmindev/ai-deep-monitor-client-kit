@@ -32,12 +32,16 @@ from pathlib import Path
 log, result, status, env = sys.argv[1:]
 calls=Path(log).read_text().splitlines()
 migration=next(i for i,c in enumerate(calls) if 'run --rm --no-deps api alembic upgrade head' in c)
-starts=[i for i,c in enumerate(calls) if c.endswith(' up -d')]
+starts=[i for i,c in enumerate(calls) if ' up -d --pull never' in c]
+worker_starts=[i for i,c in enumerate(calls) if c.endswith(
+    'up -d --no-deps --force-recreate --pull never --wait --wait-timeout 300 collector discovery-worker')]
 if result=='0':
-    assert status=='0' and starts and starts[0]>migration
+    assert status=='0' and len(starts)==2 and len(worker_starts)==1
+    assert migration < starts[0] < worker_starts[0] < starts[1]
+    assert calls[starts[0]].endswith('api')
     assert 'APP_VERSION=v0.1.99' in Path(env).read_text()
 else:
-    assert status!='0' and not starts
+    assert status!='0' and not starts and not worker_starts
     assert 'APP_VERSION=v0.1.99' not in Path(env).read_text()
 print('LINUX_UPDATE_ORDER_OK migration_exit='+result)
 PY
@@ -45,6 +49,7 @@ PY
     PATH="$workspace/bin:$PATH" "$kit/scripts/linux/update-client.sh" --install-dir "$install" --app-version v0.1.99 --yes --skip-backup --skip-agent-install --skip-docker-login --skip-kit-refresh > "$workspace/output-repeat" 2>&1 || { cat "$workspace/output-repeat"; exit 1; }
     [[ "$(grep -c 'run --rm --no-deps api alembic upgrade head' "$UPDATE_ORDER_LOG")" == "2" ]]
     [[ "$(grep -c ' pull$' "$UPDATE_ORDER_LOG")" == "2" ]]
+    [[ "$(grep -c ' --force-recreate --pull never --wait --wait-timeout 300 collector discovery-worker$' "$UPDATE_ORDER_LOG")" == "2" ]]
     echo LINUX_SAME_VERSION_REFRESH_OK
   fi
 done

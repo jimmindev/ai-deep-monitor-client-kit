@@ -33,17 +33,21 @@ try {
     }
     $calls = @($global:UpdateOrderCalls)
     $migration = -1
+    $api = -1
+    $collection = -1
     $start = -1
     for ($i = 0; $i -lt $calls.Count; $i++) {
       if ($calls[$i] -like "*run --rm --no-deps api alembic upgrade head*") { $migration = $i }
-      if ($calls[$i] -match " up -d$") { $start = $i }
+      if ($calls[$i] -match " up -d --pull never --wait --wait-timeout 300 api$") { $api = $i }
+      if ($calls[$i] -match " up -d --no-deps --force-recreate --pull never --wait --wait-timeout 300 collector discovery-worker$") { $collection = $i }
+      if ($calls[$i] -match " up -d --pull never$") { $start = $i }
     }
     if ($migration -lt 0) { throw "Migration not executed" }
     $envText = Get-Content -LiteralPath (Join-Path $install ".env") -Raw
     if ($result -eq 0) {
-      if ($failed -or $start -le $migration -or $envText -notmatch "APP_VERSION=v0.1.99") { throw "Invalid successful update order" }
+      if ($failed -or $api -le $migration -or $collection -le $api -or $start -le $collection -or $envText -notmatch "APP_VERSION=v0.1.99") { throw "Invalid successful update order" }
     } else {
-      if (-not $failed -or $start -ne -1 -or $envText -match "APP_VERSION=v0.1.99") { throw "Failed migration restarted services or changed version" }
+      if (-not $failed -or $api -ne -1 -or $collection -ne -1 -or $start -ne -1 -or $envText -match "APP_VERSION=v0.1.99") { throw "Failed migration restarted services or changed version" }
     }
     if ($result -eq 0) {
       function global:docker {
@@ -62,7 +66,8 @@ try {
       }
       $migrations = @($global:UpdateOrderCalls | Where-Object { $_ -like "*run --rm --no-deps api alembic upgrade head*" })
       $pulls = @($global:UpdateOrderCalls | Where-Object { $_ -match " pull$" })
-      if ($migrations.Count -ne 2 -or $pulls.Count -ne 2) { throw "Same-version update skipped the published patch" }
+      $collectionRestarts = @($global:UpdateOrderCalls | Where-Object { $_ -match " --force-recreate --pull never --wait --wait-timeout 300 collector discovery-worker$" })
+      if ($migrations.Count -ne 2 -or $pulls.Count -ne 2 -or $collectionRestarts.Count -ne 2) { throw "Same-version update skipped the published patch" }
       Write-Output "WINDOWS_SAME_VERSION_REFRESH_OK"
     }
     Write-Output "WINDOWS_UPDATE_ORDER_OK migration_exit=$result"
